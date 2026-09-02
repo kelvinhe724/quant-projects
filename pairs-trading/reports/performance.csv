@@ -1,0 +1,11 @@
+,in-sample (formation),out-of-sample
+annual return (gross),+6.52%,+0.56%
+annual return (net),+6.03%,+0.08%
+annual vol,1.97%,3.86%
+Sharpe (gross),3.21,0.16
+Sharpe (net),2.98,0.04
+max drawdown,-1.28%,-7.01%
+trades,809,1127
+hit rate,77.0%,63.5%
+avg hold (days),30,34
+annual turnover,9.1x,9.5x

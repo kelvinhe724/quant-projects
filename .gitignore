@@ -9,3 +9,6 @@ source-material/
 # teaching scaffolding and interview prep, not part of the projects
 walk.py
 DEFENSE.md
+!pairs-trading/reports/performance.csv
+!pairs-trading/reports/selected_pairs.csv
+!pairs-trading/reports/cost_sensitivity.csv
