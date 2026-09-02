@@ -1,0 +1,12 @@
+yfinance
+pandas
+numpy
+statsmodels
+matplotlib
+pandas-datareader
+arch
+scipy
+lightgbm
+scikit-learn
+xlrd
+certifi
