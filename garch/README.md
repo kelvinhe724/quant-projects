@@ -35,26 +35,29 @@ Normal-innovation fits:
 
 | index | omega | alpha | beta | persistence | days |
 |---|---|---|---|---|---|
-| FTSE 100 | 0.0590 | 0.176 | 0.755 | 0.931 | 2,718 |
-| S&P 500 | 0.0389 | 0.177 | 0.793 | 0.970 | 2,671 |
-| Nikkei 225 | 0.0989 | 0.154 | 0.788 | 0.942 | 2,553 |
-| EURO STOXX 50 | 0.0693 | 0.166 | 0.787 | 0.953 | 2,693 |
+| FTSE 100 | 0.0599 | 0.171 | 0.759 | 0.930 | 2,777 |
+| S&P 500 | 0.0395 | 0.175 | 0.794 | 0.968 | 2,765 |
+| Nikkei 225 | 0.1198 | 0.156 | 0.773 | 0.929 | 2,687 |
+| EURO STOXX 50 | 0.0625 | 0.154 | 0.805 | 0.959 | 2,762 |
 
-The S&P 500 is the most persistent at 0.970. A volatility shock there decays
-with a half-life of about 23 days, against 10 days for the FTSE at 0.931. The
-Nikkei is the most volatile in level terms (daily sd 1.30 vs the FTSE's 0.97)
-but not the most persistent, which is a useful reminder that the two are
+The S&P 500 is the most persistent at 0.968. A volatility shock there decays
+with a half-life of about 22 days, against 10 days for the FTSE at 0.930. The
+Nikkei is the most volatile in level terms (daily sd 1.32 vs the FTSE's 0.97)
+but the least persistent, which is a useful reminder that the two are
 different questions.
 
 Student-t beats normal on both AIC and BIC for all four indices, by a wide
-margin: S&P AIC 6712.9 vs 6902.4, FTSE 6414.6 vs 6612.6, Nikkei 7807.4 vs
-7973.6, EURO STOXX 7587.4 vs 7780.1. Daily equity returns have fat tails even
+margin: S&P AIC 6952.3 vs 7152.2, FTSE 6595.8 vs 6793.2, Nikkei 8338.2 vs
+8500.3, EURO STOXX 7834.4 vs 8045.5. Daily equity returns have fat tails even
 after conditioning on GARCH volatility.
 
-The 5% VaR backtest comes in a little conservative everywhere: FTSE 4.67%, S&P
-4.16%, Nikkei 4.50%, EURO STOXX 4.20% against an expected 5.0%. The model
-over-reserves slightly, which is the direction you would rather err in, but it
-means the t-distribution's tails are a shade too heavy for this sample.
+The 5% VaR backtest uses the parametric quantile of the fitted student-t, mean
+included, and comes in hot everywhere: FTSE 6.12%, S&P 6.76%, Nikkei 6.40%,
+EURO STOXX 6.84% against an expected 5.0%. The model under-reserves: the fitted
+t tails are a shade too thin for this sample, so the 5% line gets crossed more
+often than it should. An earlier version of this test scaled by the empirical
+quantile of the model's own residuals, which pins the hit rate to 5% by
+construction and tests nothing.
 
 Charts in `reports/`: `returns.png`, `conditional_vol.png`, `persistence.png`.
 

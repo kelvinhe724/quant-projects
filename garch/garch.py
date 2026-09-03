@@ -36,9 +36,15 @@ def fit_all(rets, dist="normal"):
 
 
 def var_backtest(returns, res, level=0.05):
-    """Fraction of days the loss beat the level-VaR. Should land near `level`."""
+    """Fraction of days the loss beat the level-VaR. Should land near `level`.
+
+    The quantile comes from the fitted distribution, not from the empirical
+    residuals: the empirical quantile lands on `level` by construction and
+    tests nothing.
+    """
     r = returns.dropna()
-    q = res.std_resid.quantile(level)
-    var = res.conditional_volatility * q
+    dist = res.model.distribution
+    q = dist.ppf(level, res.params[dist.parameter_names()].to_numpy())
+    var = res.params["mu"] + res.conditional_volatility * q
     hit_rate = (r < var).mean()
     return {"expected": level, "observed": hit_rate, "n_days": len(r)}

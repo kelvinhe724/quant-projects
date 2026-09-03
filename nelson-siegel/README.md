@@ -13,10 +13,12 @@ follow.
 
 Eleven FRED series, DGS1MO through DGS30, covering maturities from one month to
 30 years. Pulled with `pandas-datareader` and cached to
-`reports/treasury_curve.csv`, so every rerun after the first is offline. Series
-are forward-filled individually and days with fewer than six available
-maturities are dropped. The real pull came back with 31,559 observations over
-2,869 trading days, 2015-01-02 to 2025-12-31, with no day missing a maturity.
+`reports/treasury_curve.csv`, so every rerun after the first is offline. Days
+FRED never published (federal holidays come back as all-NaN rows) are dropped
+before the per-series forward fill, so the fill cannot fabricate trading days
+by cloning the previous curve. The real pull came back with 30,250 observations
+over 2,750 trading days, 2015-01-02 to 2025-12-31, with no day missing a
+maturity.
 
 A Brent futures path sits behind `run.py --brent`. It uses a Bloomberg CSV at
 `../source-material/brent_settles.csv` if one is present and a clearly labelled
@@ -41,20 +43,25 @@ synthetic panel otherwise. That synthetic generator also backs `check.py`.
 
 ## Results
 
-Penalty strength was tuned on the first 75% of the sample and scored on the
-untouched remainder.
+Penalty strength and the change-scale normaliser are both computed from the
+first 75% of the sample; the remainder is untouched.
 
-| model | full-sample RMSE | eval RMSE | mean daily factor change | lambda sd |
-|---|---|---|---|---|
-| static, random starts | 5.25 bp | 6.50 bp | 7.74 bp | 1.89 |
-| ridge change penalty | 5.25 bp | 6.53 bp | 4.98 bp | 1.50 |
-| L1 change penalty | 5.22 bp | 6.48 bp | 5.28 bp | 1.59 |
+| model | full RMSE | eval RMSE | full factor change | eval factor change | lambda sd |
+|---|---|---|---|---|---|
+| static, random starts | 5.25 bp | 6.53 bp | 7.96 bp | 7.45 bp | 1.89 |
+| ridge change penalty | 5.33 bp | 6.75 bp | 4.54 bp | 6.07 bp | 1.55 |
+| L1 change penalty | 5.23 bp | 6.52 bp | 5.34 bp | 7.24 bp | 1.89 |
 
-Same fit quality, roughly 35% less day-to-day factor churn. That is the whole
-result: the penalty buys stability at no cost in cross-sectional fit.
+Full-sample, ridge cuts daily factor churn 43% and L1 cuts it 33%. The honest
+column is the eval one, and it is smaller: 19% less churn for ridge, 3% for L1,
+with ridge paying about 0.2 bp of eval RMSE for it. The full-sample number
+flatters the penalty because the tuning segment sits inside it. So the penalty
+does buy stability at almost no cost in cross-sectional fit, but on data it
+never touched the gain is a fifth of the churn for ridge and close to nothing
+for L1.
 
 The factors mean what they are supposed to. corr(beta0, actual 10y yield) is
-+0.9463 for ridge, +0.9511 static, +0.9461 for L1. corr(-beta1, 10y minus 3m
++0.9458 for ridge, +0.9511 static, +0.9441 for L1. corr(-beta1, 10y minus 3m
 spread) is +0.98 across all three. The level factor is the long yield and the
 slope factor is the term spread, which is the check worth running before
 trusting any of the rest.

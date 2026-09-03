@@ -33,10 +33,12 @@ except NotImplementedError:
     print("fit_capm not written yet")
 
 try:
-    df = fit_all(pd.DataFrame({"FAKE1": stock, "FAKE2": 0.5 * market}), market)
-    check("fit_all: one row per ticker", len(df) == 2)
-    check("fit_all: sorted by beta", df["beta"].is_monotonic_increasing
-          or df["beta"].is_monotonic_decreasing)
+    # three tickers with known betas 0.5 < 1.4 < 2.0, so the sort is testable
+    df = fit_all(pd.DataFrame({"FAKE1": stock, "FAKE2": 0.5 * market,
+                               "FAKE3": 2.0 * market}), market)
+    check("fit_all: one row per ticker", len(df) == 3)
+    check("fit_all: sorted ascending by beta",
+          list(df["ticker"]) == ["FAKE2", "FAKE1", "FAKE3"])
 except NotImplementedError:
     print("fit_all not written yet")
 
@@ -54,3 +56,4 @@ if checks and all(checks):
     print(f"ALL {len(checks)} CHECKS PASS")
 else:
     print(f"{sum(checks)}/{len(checks)} passing")
+raise SystemExit(0 if checks and all(checks) else 1)

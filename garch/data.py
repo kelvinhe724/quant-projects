@@ -18,5 +18,8 @@ def get_prices(start="2015-01-01", end="2026-01-01"):
 
 
 def log_returns(px):
-    # x100 keeps the optimizer on numbers near 1 instead of 1e-4
-    return (np.log(px) - np.log(px.shift(1))) * 100
+    # x100 keeps the optimizer on numbers near 1 instead of 1e-4.
+    # difference each index on its own trading days: shifting the raw frame
+    # would punch a NaN hole in one market's returns every time another
+    # market takes a holiday
+    return px.apply(lambda s: np.log(s.dropna()).diff()) * 100

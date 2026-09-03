@@ -4,8 +4,8 @@ Screens within-sector stock pairs for cointegration, trades the spread when its
 trailing z-score gets far from zero, and evaluates the result on a window that
 was never used to pick the pairs or the parameters.
 
-The headline is a negative one. In-sample Sharpe is 2.98. Out-of-sample Sharpe
-is 0.04, and it goes negative if I assume more than about 15bps of round-trip
+The headline is a negative one. In-sample Sharpe is 3.01. Out-of-sample Sharpe
+is 0.08, and it goes negative if I assume more than about 17bps of round-trip
 cost. That gap is the entire point of the project: the in-sample number is what
 you get when you let the same data choose the pairs and score the strategy.
 
@@ -17,7 +17,7 @@ Daily adjusted closes from Yahoo Finance via `yfinance`, 2015-01-02 to
 The universe is 182 liquid S&P 500 names, roughly 12-20 per GICS sector, not the
 full 500. That is a deliberate simplification and it matters for the numbers
 below: 182 names give 1,480 within-sector pairs, where the full index would give
-124,750 all-pairs tests. Eight of the 192 tickers I listed dropped out for lack
+124,750 all-pairs tests. Eight of the 190 tickers I listed dropped out for lack
 of continuous history (DOW spun off in 2019, HES was acquired) or a failed
 download.
 
@@ -96,22 +96,22 @@ is flat, which is mildly reassuring:
 
 | entry \ exit | 0.00 | 0.25 | 0.50 |
 |---|---|---|---|
-| 1.5 | 2.98 | 2.90 | 2.89 |
-| 2.0 | 2.90 | 2.84 | 2.74 |
-| 2.5 | 2.55 | 2.49 | 2.47 |
+| 1.5 | 3.01 | 2.93 | 2.93 |
+| 2.0 | 2.94 | 2.88 | 2.78 |
+| 2.5 | 2.58 | 2.52 | 2.51 |
 
 ## Results
 
 | | in-sample (formation) | out-of-sample |
 |---|---|---|
-| annual return, gross | +6.52% | +0.56% |
-| annual return, net | +6.03% | +0.08% |
-| annual vol | 1.97% | 3.86% |
-| Sharpe, gross | 3.21 | 0.16 |
-| Sharpe, net | 2.98 | 0.04 |
-| max drawdown | -1.28% | -7.01% |
+| annual return, gross | +6.60% | +0.72% |
+| annual return, net | +6.11% | +0.25% |
+| annual vol | 1.98% | 3.86% |
+| Sharpe, gross | 3.24 | 0.21 |
+| Sharpe, net | 3.01 | 0.08 |
+| max drawdown | -1.26% | -7.19% |
 | trades | 809 | 1,127 |
-| hit rate | 77.0% | 63.5% |
+| hit rate | 77.4% | 62.9% |
 | average hold | 30 days | 34 days |
 | annual turnover | 9.1x | 9.5x |
 
@@ -122,31 +122,31 @@ Out-of-sample, by year:
 
 | year | net return | Sharpe |
 |---|---|---|
-| 2020 | -1.28% | -0.16 |
-| 2021 | -2.31% | -0.82 |
-| 2022 | +0.15% | 0.06 |
-| 2023 | +3.85% | 1.40 |
-| 2024 | -0.85% | -0.31 |
-| 2025 | +2.62% | 0.88 |
-| 2026 (to Aug) | -1.48% | -0.57 |
+| 2020 | -0.16% | 0.01 |
+| 2021 | -2.73% | -0.97 |
+| 2022 | +0.40% | 0.13 |
+| 2023 | +4.20% | 1.53 |
+| 2024 | -0.70% | -0.25 |
+| 2025 | +2.47% | 0.83 |
+| 2026 (to Aug) | -1.68% | -0.65 |
 
 Four of seven years are negative. Per pair, the median out-of-sample Sharpe is
-0.02 and 19 of the 35 pairs are positive, which is a coin flip. The best is
-LIN/SHW at 0.99, the worst C/MET at -0.55.
+0.03 and 19 of the 35 pairs are positive, which is a coin flip. The best is
+LIN/SHW at 1.00, the worst C/MET at -0.53.
 
 Transaction costs:
 
 | round trip | in-sample Sharpe | out-of-sample Sharpe |
 |---|---|---|
-| 0bps | 3.21 | 0.16 |
-| 5bps | 3.09 | 0.10 |
-| 10bps | 2.98 | 0.04 |
-| 20bps | 2.75 | -0.08 |
-| 30bps | 2.52 | -0.21 |
+| 0bps | 3.24 | 0.21 |
+| 5bps | 3.13 | 0.14 |
+| 10bps | 3.01 | 0.08 |
+| 20bps | 2.78 | -0.04 |
+| 30bps | 2.55 | -0.16 |
 
-At 9.5x annual turnover, 10bps of round-trip cost is about 48bps a year, which
-eats 85% of the 56bps gross out-of-sample return. Breakeven is somewhere near
-15bps. In-sample the strategy is comfortably profitable at any of these costs,
+At 9.5x annual turnover, 10bps of round-trip cost is about 47bps a year, which
+eats two thirds of the 72bps gross out-of-sample return. Breakeven is somewhere
+near 17bps. In-sample the strategy is comfortably profitable at any of these costs,
 which is exactly the trap: cost realism alone would not have caught this.
 
 `reports/sample_pair.png` shows what went wrong on one pair. BDX/ISRG has the
@@ -185,7 +185,7 @@ never reverted. The bias inflates the results, and it inflates the in-sample
 number more than the out-of-sample one because the formation window is further
 in the past. I cannot size it without point-in-time index membership, but the
 standard estimate in the literature for US equity strategies is on the order of
-1-4% a year on returns; against a 0.56% gross out-of-sample return, that alone
+1-4% a year on returns; against a 0.72% gross out-of-sample return, that alone
 could account for the whole thing.
 
 **One split, no rolling re-formation.** Pairs chosen in 2019 are still being

@@ -10,10 +10,10 @@ so the code can be verified without a network connection.
 | project | what it does | headline result |
 |---|---|---|
 | `capm/` | Alpha, beta, R² and rolling beta for 10 US stocks against the S&P 500 | Betas 0.10 (JNJ) to 1.46 (AMZN); no alpha significant at 5% |
-| `garch/` | GARCH(1,1) volatility on four equity indices, normal vs student-t, VaR backtest | S&P persistence 0.970, FTSE 0.931; student-t wins on AIC/BIC everywhere |
-| `nelson-siegel/` | Dynamic Nelson-Siegel on the US Treasury curve, ridge and L1 penalties on daily factor changes | Same 5.2 bp RMSE as independent fits with 35% less factor churn |
-| `gradient-boosting/` | LightGBM against a logistic baseline on credit-card default | AUC 0.784 vs 0.747 baseline; 5-fold CV 0.7864 ± 0.0080 |
-| `pairs-trading/` | Cointegration pair screening on 182 S&P 500 names, strict formation/out-of-sample split | Sharpe 2.98 in-sample, 0.04 out of sample; 99 pairs pass p<0.05 against 74 expected by chance |
+| `garch/` | GARCH(1,1) volatility on four equity indices, normal vs student-t, VaR backtest | S&P persistence 0.968, FTSE 0.930; student-t wins on AIC/BIC everywhere |
+| `nelson-siegel/` | Dynamic Nelson-Siegel on the US Treasury curve, ridge and L1 penalties on daily factor changes | Ridge cuts factor churn 43% full-sample, 19% on the untouched eval period, at ~0.2 bp of eval RMSE |
+| `gradient-boosting/` | LightGBM against a logistic baseline on credit-card default | AUC 0.784 vs 0.747 baseline; 5-fold CV 0.7851 ± 0.0084 |
+| `pairs-trading/` | Cointegration pair screening on 182 S&P 500 names, strict formation/out-of-sample split | Sharpe 3.01 in-sample, 0.08 out of sample; 99 pairs pass p<0.05 against 74 expected by chance |
 
 ## Setup
 

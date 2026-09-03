@@ -8,7 +8,7 @@ import yfinance as yf
 CACHE = os.path.join(os.path.dirname(__file__), "reports", "prices.csv")
 
 # A liquid subset of the S&P 500, roughly 16-20 names per GICS sector. Not the
-# full 500: 192 names keeps the within-sector pair count near 1,600 instead of
+# full 500: 190 names keeps the within-sector pair count near 1,600 instead of
 # 125,000, which is the whole point of the sector restriction.
 UNIVERSE = {
     "AAPL": "Information Technology", "MSFT": "Information Technology",

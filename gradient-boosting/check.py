@@ -45,3 +45,4 @@ if checks and all(checks):
     print(f"ALL {len(checks)} CHECKS PASS")
 else:
     print(f"{sum(checks)}/{len(checks)} passing")
+raise SystemExit(0 if checks and all(checks) else 1)

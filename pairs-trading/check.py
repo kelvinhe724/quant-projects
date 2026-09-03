@@ -97,8 +97,13 @@ rules = dict(lookback=60, entry_z=2.0, exit_z=0.5, stop_z=4.0, max_hold=60)
 free = pair_backtest(log_px, pair, cost_bps=0.0, **rules)
 costly = pair_backtest(log_px, pair, cost_bps=20.0, **rules)
 
+# `pos` above was built from the same spread with the same rules, so it is the
+# unshifted target; the held position must be exactly that series lagged one day
 check("position at t is the signal from t-1",
-      (free["position"] != 0).sum() > 0 and free["position"].iloc[0] == 0)
+      free["position"].iloc[0] == 0
+      and np.allclose(free["position"].iloc[1:].to_numpy(),
+                      pos.fillna(0.0).iloc[:-1].to_numpy())
+      and (free["position"] != 0).sum() > 0)
 check("gross return is identical whatever the cost assumption",
       np.allclose(free["gross"], costly["gross"]))
 check(f"costs reduce the net return ({free['net'].sum():.4f} -> {costly['net'].sum():.4f})",

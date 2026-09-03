@@ -65,6 +65,9 @@ for i, d in enumerate(pd.bdate_range("2026-01-02", periods=40)):
 ridge2 = fit_sequential(slices2, "ridge", strength=1e-4, scale=scale, burn_in=5)
 check(f"ridge follows a real level shift (end beta0 {ridge2[-1]['beta0']:.3f})",
       abs(ridge2[-1]["beta0"] - 4.40) < 0.02)
+l1_2 = fit_sequential(slices2, "l1", strength=1e-4, scale=scale, burn_in=5)
+check(f"l1 follows a real level shift (end beta0 {l1_2[-1]['beta0']:.3f})",
+      abs(l1_2[-1]["beta0"] - 4.40) < 0.02)
 
 check("COH6 last trade = end Jan 2026 per ICE rule",
       str(last_trading_date("COH6").date()) == "2026-01-30")
@@ -85,3 +88,4 @@ if checks and all(checks):
     print(f"ALL {len(checks)} CHECKS PASS")
 else:
     print(f"{sum(checks)}/{len(checks)} passing")
+raise SystemExit(0 if checks and all(checks) else 1)

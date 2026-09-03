@@ -51,11 +51,12 @@ The first `run.py` downloads the dataset; after that it reads the cache.
 |---|---|
 | logistic regression baseline | 0.7469 |
 | LightGBM, 92 trees after early stopping | 0.7840 |
-| LightGBM, 5-fold stratified CV | 0.7864 ± 0.0080 |
+| LightGBM, 5-fold stratified CV | 0.7851 ± 0.0084 |
 
-Fold AUCs were 0.7876, 0.7731, 0.7831, 0.7918, 0.7966. That lands inside the
-published band for this dataset, roughly 0.77 to 0.79, so nothing here is
-suspiciously good.
+Fold AUCs were 0.7877, 0.7714, 0.7803, 0.7918, 0.7946. Inside each CV fold,
+early stopping monitors a 20% split carved from the training data, so the
+scored fold never touches training. That lands inside the published band for
+this dataset, roughly 0.77 to 0.79, so nothing here is suspiciously good.
 
 Top five features by gain: PAY_0 (16012), MAX_DELINQUENCY (10858), N_DELINQUENT
 (8897), PAY_AMT_TOTAL (3202), BILL_AMT1 (1619). Repayment history dominates.

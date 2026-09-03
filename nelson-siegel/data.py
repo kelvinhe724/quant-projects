@@ -27,7 +27,9 @@ def load_treasury_curve(start="2015-01-01", end="2025-12-31", refresh=False):
 
     from pandas_datareader import data as pdr
     wide = pdr.DataReader(list(FRED_SERIES), "fred", start, end)
-    wide = wide.ffill()
+    # drop days FRED never published (federal holidays come back as NaN rows)
+    # before filling, otherwise ffill clones the previous day's curve into them
+    wide = wide[wide.count(axis=1) >= MIN_MATURITIES].ffill()
     long = wide.stack().rename("yield").reset_index()
     long.columns = ["date", "series", "yield"]
     long["maturity_years"] = long["series"].map(FRED_SERIES)

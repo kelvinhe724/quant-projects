@@ -30,7 +30,8 @@ def fit_everything(slices, grids=None):
     n = len(slices)
     burn_in, tune_end = 20, int(n * 0.75)
     bench = fit_all_static(slices, mode="random")
-    scale = np.maximum(change_scale(bench), SCALE_FALLBACK / 10)
+    # scale comes from the tuning segment only; the eval period stays untouched
+    scale = np.maximum(change_scale(bench[:tune_end]), SCALE_FALLBACK / 10)
     grids = grids or {"ridge": [1e-5, 1e-4, 1e-3], "l1": [1e-5, 1e-4, 1e-3]}
 
     fitted, chosen = {"static": bench}, {}

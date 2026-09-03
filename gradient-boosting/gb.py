@@ -5,7 +5,7 @@ import pandas as pd
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_auc_score
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import StratifiedKFold, train_test_split
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
@@ -69,9 +69,17 @@ def importance(booster):
 
 
 def cv_auc(X, y, n_splits=5, seed=0):
-    """Per-fold LightGBM AUCs from a stratified k-fold."""
+    """Per-fold LightGBM AUCs from a stratified k-fold.
+
+    Early stopping gets its own split carved out of the training fold; the
+    scored fold never touches training, so the AUC is a clean estimate.
+    """
     aucs = []
     for tr, va in StratifiedKFold(n_splits, shuffle=True, random_state=seed).split(X, y):
-        _, auc = fit_lgbm(X.iloc[tr], y.iloc[tr], X.iloc[va], y.iloc[va])
-        aucs.append(auc)
+        X_tr, X_es, y_tr, y_es = train_test_split(
+            X.iloc[tr], y.iloc[tr], test_size=0.2, stratify=y.iloc[tr],
+            random_state=seed)
+        booster, _ = fit_lgbm(X_tr, y_tr, X_es, y_es)
+        pred = booster.predict(X.iloc[va], num_iteration=booster.best_iteration)
+        aucs.append(roc_auc_score(y.iloc[va], pred))
     return np.array(aucs)

@@ -19,7 +19,8 @@ def pair_backtest(log_px, pair, lookback, entry_z, exit_z, stop_z, max_hold,
     # Signal at t, fill at t+1. Everything downstream reads `held`, never `target`.
     held = target.shift(1).fillna(0.0)
 
-    ret = log_px.diff()
+    # simple returns, so the (1+r).cumprod() compounding in metrics() is exact
+    ret = np.expm1(log_px.diff())
     gross_exposure = 1.0 + abs(beta)
     leg = (ret[a] - beta * ret[b]) / gross_exposure
     gross = held * leg
