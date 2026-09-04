@@ -1,6 +1,6 @@
 # Quant projects
 
-Twenty projects from the OSG Global Quant Curriculum, each implemented from the
+Twenty-three projects from the OSG Global Quant Curriculum, each implemented from the
 spec rather than from a reference solution. They run on real market data:
 Yahoo Finance for equity prices, the VIX and option chains, FRED for Treasury
 yields and the T-bill rate, the UCI archive for the credit dataset, Binance's
@@ -35,6 +35,14 @@ connection.
 | `vol-risk-premium/` | Implied vs subsequent realised vol on SPY 2010-2026, GARCH forecast, delta-hedged short straddle with cost and tail accounting | Gap +3.78 vol points, Newey-West t 8.35; strategy 9.55%/yr net, Sharpe 1.74, skew -5.2, max drawdown -13.6%; dropping the worst 1% of days lifts Sharpe to 3.75 |
 | `monte-carlo/` | Risk-neutral GBM engine for European, arithmetic Asian and barrier options, antithetic / control-variate / scrambled-Sobol variance reduction, pathwise, likelihood-ratio and finite-difference Greeks, live SPY quote check | European MC matches Black-Scholes 5.4721 inside 2 SE at every path count; Sobol cuts variance 19x (8.9x after wall time), geometric-Asian control variate 3,666x on the Asian; barrier from 150 to 105 removes 99% of value; common-random-number finite difference matches pathwise delta, independent seeds are 10x noisier |
 | `svi/` | Raw SVI fits to a live SPY option chain (7 expiries, 407 clean quotes after filtering), implied vols from an own Black-76 solver, Durrleman butterfly and calendar no-arbitrage checks enforced in the fit | Mean slice RMSE 0.25 vol points (worst 0.35); unconstrained fits violate butterfly on 7/7 slices and calendar on 5/6, constrained fits 0/7 and 0/6; the market mids themselves show negative butterflies on 28% of strikes; own IVs vs Yahoo's column RMSE 1.41 vp |
+
+### Anomalies & Regimes
+
+| project | what it does | headline result |
+|---|---|---|
+| `overnight-anomaly/` | Close-to-open vs open-to-close return decomposition on SPY, QQQ, IWM, nine sector SPDRs and twelve large caps, 2000-2026, Newey-West t-stats, stale-open filter, pre/post-2016 split, two-trades-a-day cost model | SPY +7.1%/yr overnight vs +1.1% intraday (NW t 3.77 vs 0.86); dividends are 24% of the SPY overnight leg; breakeven one-way cost 1.49bps, so the overnight-only trade is worth nothing after costs on every asset but one |
+| `dispersion/` | Implied vs realised correlation on SPY and its ten largest names: own Black-Scholes solver on live chains, eleven-year gap history from a VIX-and-trailing-vol proxy, monthly delta-hedged dispersion book with costs, 2015-2020 formation and 2021+ test | Live chains put implied correlation at 0.03 vs realised 0.08; full-sample net Sharpe swings from +0.91 to -1.19 across plausible values of two unobservable proxy constants; what the data does pin down is a -0.76 correlation between monthly P&L and the correlation surprise, skew -0.9, and worst months April 2020 and May 2025 |
+| `regime-hmm/` | 2-state Gaussian HMM on daily SPY, 2000-2026, causal forward filter vs smoothed probabilities, expanding-window refit each January from 2010, 5bps costs, benchmarked against 15% vol targeting | Out of sample the HMM lifts net Sharpe 0.86 to 0.90 and cuts max drawdown -33.7% to -13.8%, but 15% vol targeting gets 0.97 and the HMM gives up a third of the return; the in-sample smoothed version shows Sharpe 1.88, which is the trap |
 
 ### Market Microstructure
 

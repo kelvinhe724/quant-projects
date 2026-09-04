@@ -1,0 +1,7 @@
+,net mean,single leg mean,index leg mean,net Sharpe,max drawdown
+"k=1.00, wedge=0.0",2.26,-0.1,3.56,0.91,-43.8
+"k=1.00, wedge=2.6",-0.33,-0.1,0.97,-0.13,-103.0
+"k=1.09, wedge=0.0",-0.62,-2.97,3.56,-0.23,-111.8
+"k=1.09, wedge=2.6",-3.2,-2.97,0.97,-1.19,-434.4
+"k=1.00, wedge=0.0, correlation-weighted",3.48,0.76,3.56,1.93,-28.5
+"k=1.09, wedge=2.6, correlation-weighted",-0.26,-0.53,0.97,-0.15,-86.5
