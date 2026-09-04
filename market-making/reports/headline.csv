@@ -1,0 +1,14 @@
+,naive,skewed,avellaneda-stoikov
+mean P&L,42.69,44.17,44.17
+P&L sd,11.7,6.51,6.18
+Sharpe (session),3.65,6.78,7.15
+Sharpe (annual),57.94,107.71,113.46
+5th pct P&L,22.87,33.78,34.51
+losing sessions,0.0,0.0,0.0
+mean max drawdown,-7.2,-1.73,-1.87
+worst drawdown,-49.1,-6.56,-11.9
+inventory sd,2.85,1.31,1.38
+mean max |inv|,8.85,3.55,4.15
+worst |inv|,20.0,6.0,12.0
+fills,56.2,58.84,70.26
+limit-bound steps,0.72,0.0,0.0
