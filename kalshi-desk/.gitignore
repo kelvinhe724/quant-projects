@@ -1,0 +1,6 @@
+.env
+keys/
+*.key
+*.sqlite
+*.log
+__pycache__/

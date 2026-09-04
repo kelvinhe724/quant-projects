@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kalshi Desk</title>
+<style>
+:root{
+  --bg:#05080a;--surface:rgba(8,16,19,.66);--surface-solid:#0a1214;
+  --text:#e6efee;--muted:#5d7a7e;
+  --green:hsl(190 85% 58%);--green-dark:hsl(190 75% 44%);--green-dim:hsl(190 85% 58% / .12);
+  --gold:#d4a843;--amber:#e0b45c;--red:#ff5f56;
+  --border:rgba(140,190,200,.14);--rule:rgba(140,190,200,.15);
+  --font-body:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-heading:"Orbitron",var(--font-body);
+  --mono:ui-monospace,"SF Mono",Menlo,monospace;
+  --ease:cubic-bezier(.16,1,.3,1);
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font:400 15px/1.55 var(--font-body)}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;
+  background:radial-gradient(60% 40% at 50% -10%,var(--green-dim),transparent 70%),
+  repeating-linear-gradient(0deg,transparent 0 2px,hsl(190 85% 58% / .02) 2px 4px)}
+.shell{position:relative;padding:14px 32px 10px;min-height:100vh;display:flex;flex-direction:column;gap:22px}
+header{display:flex;align-items:center;gap:22px;border-bottom:1px solid var(--border);padding-bottom:10px}
+.brand{font-family:var(--font-heading);font-weight:600;font-size:22px;letter-spacing:.08em;text-transform:uppercase}
+.brand b{color:var(--green);font-weight:600}
+.hint{font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+.right{margin-left:auto;display:flex;align-items:center;gap:18px}
+.pill{display:inline-block;padding:1px 6px;border-radius:4px;font-size:9.5px;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--gold);border:1px solid var(--gold)}
+.pill.env-demo{color:var(--green);border-color:var(--green-dark)}
+.books{display:flex;gap:6px}
+.books button{font:inherit;cursor:pointer;background:none;padding:2px 9px;border-radius:4px;font-size:9.5px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--muted);border:1px solid var(--border);transition:all .2s var(--ease)}
+.books button.on{color:var(--green);border-color:var(--green-dark);box-shadow:0 0 10px var(--green-dim)}
+.books button.empty-book{opacity:.5}
+.cmp4{display:grid;grid-template-columns:auto 1fr 1fr 1fr;gap:6px 18px;font-size:13px;font-variant-numeric:tabular-nums}
+.cmp4 .h{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.cmp4 .k{color:var(--muted)}
+.cmp4 .on{color:var(--green)}
+.clock{font-size:26px;font-weight:500;font-variant-numeric:tabular-nums;line-height:1}
+.clock small{font-size:14px;color:var(--green)}
+.live{font-family:var(--font-heading);font-size:22px;letter-spacing:.14em;text-transform:uppercase;
+  padding:10px 18px;border:1px solid var(--border);border-radius:6px;color:var(--muted);
+  transition:all .3s var(--ease)}
+.live.on{color:var(--red);border-color:var(--red);box-shadow:0 0 14px rgba(255,95,86,.3)}
+.live.off{color:var(--green);border-color:var(--green-dark);box-shadow:0 0 12px var(--green-dim)}
+.live .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:10px;vertical-align:middle;background:currentColor;box-shadow:0 0 6px currentColor}
+.live.off .dot{animation:pulse 2s infinite}
+@keyframes pulse{50%{opacity:.35}}
+main{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:26px 34px;align-content:start}
+.card{background:none;border:0;padding:0;min-width:0}
+.card.wide{grid-column:1/-1}
+.card .name{display:flex;align-items:baseline;gap:10px;font-weight:500;font-size:10px;letter-spacing:.22em;
+  text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--rule);padding-bottom:4px;margin-bottom:9px}
+.card .name .meta{margin-left:auto;letter-spacing:.1em}
+.tile-body{font-size:13px}
+.card.grey .tile-body{opacity:.45}
+.setup{font-size:12.5px;color:var(--amber);border:1px solid rgba(224,180,92,.35);border-radius:6px;padding:9px 11px;margin-bottom:10px;line-height:1.5}
+.setup code{font-family:var(--mono);font-size:11.5px;color:var(--text)}
+.stats{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:10px}
+.stat{font-size:26px;font-weight:400;line-height:1.1;font-variant-numeric:tabular-nums}
+.stat .q{display:block;font-size:12px;color:var(--muted);margin-top:3px}
+.pos{color:var(--green)}.neg{color:var(--red)}
+table{width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums}
+th{font-weight:500;font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);text-align:left;padding:4px 6px 4px 0;border-bottom:1px solid var(--rule)}
+td{padding:6px 6px 6px 0;border-bottom:1px solid var(--border);white-space:nowrap}
+td.num,th.num{text-align:right}
+td.mono{font-family:var(--mono);font-size:11px}
+tr:hover td{background:var(--surface-solid)}
+.scroll{overflow-x:auto;max-height:420px;overflow-y:auto}
+.empty{color:var(--muted);font-size:12.5px;padding:6px 0}
+.side-yes{color:var(--green)}.side-no{color:var(--amber)}
+svg{width:100%;height:150px;display:block}
+.cmp{display:grid;grid-template-columns:auto 1fr 1fr;gap:6px 18px;font-size:13px;font-variant-numeric:tabular-nums}
+.cmp .h{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.cmp .k{color:var(--muted)}
+footer{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);border-top:1px solid var(--border);padding-top:8px;margin-top:auto}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media (max-width:980px){.shell{padding:12px 14px}main{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="shell">
+<header>
+  <div>
+    <div class="brand">Kalshi <b>Desk</b></div>
+    <div class="hint">longshot-bias forward test</div>
+  </div>
+  <span id="env" class="pill env-demo">demo</span>
+  <div class="books" id="books">
+    <button data-book="shadow">shadow</button><button data-book="demo">demo</button><button data-book="live">live</button>
+  </div>
+  <div class="right">
+    <div id="live" class="live off"><span class="dot"></span>LIVE OFF</div>
+    <div class="clock" id="clock">--:--<small>:--</small></div>
+  </div>
+</header>
+
+<main>
+  <section class="card" id="account">
+    <div class="name">Account <span class="meta" id="acct-env"></span></div>
+    <div class="tile-body"><div class="empty">loading</div></div>
+  </section>
+
+  <section class="card" id="compare">
+    <div class="name">Backtest vs forward <span class="meta">quoted spread</span></div>
+    <div class="tile-body"><div class="empty">loading</div></div>
+  </section>
+
+  <section class="card" id="equity">
+    <div class="name"><span id="eq-name">Paper equity</span> <span class="meta" id="eq-meta"></span></div>
+    <div class="tile-body"><svg id="eq-svg" viewBox="0 0 600 150" preserveAspectRatio="none"></svg></div>
+  </section>
+
+  <section class="card" id="books-cmp">
+    <div class="name">Books side by side <span class="meta" id="books-meta"></span></div>
+    <div class="tile-body"><div class="empty">loading</div></div>
+  </section>
+
+  <section class="card wide" id="scanner">
+    <div class="name">Scanner <span class="meta" id="scan-meta"></span></div>
+    <div class="tile-body scroll"><div class="empty">loading</div></div>
+  </section>
+
+  <section class="card wide" id="ledger">
+    <div class="name"><span id="ledger-name">Paper book</span> <span class="meta" id="ledger-meta"></span></div>
+    <div class="tile-body scroll"><div class="empty">loading</div></div>
+  </section>
+</main>
+<footer id="foot">caps: loading</footer>
+</div>
+
+<script>
+(function(){
+  var $ = function(s){ return document.querySelector(s); };
+  var f2 = function(x){ return (x === null || x === undefined || isNaN(x)) ? '-' : Number(x).toFixed(2); };
+  var f3 = function(x){ return (x === null || x === undefined || isNaN(x)) ? '-' : Number(x).toFixed(3); };
+  var f4 = function(x){ return (x === null || x === undefined || isNaN(x)) ? '-' : Number(x).toFixed(4); };
+  var sgn = function(x, fn){ if (x === null || x === undefined || isNaN(x)) return '-'; return (x > 0 ? '+' : '') + fn(x); };
+  var cls = function(x){ return x > 0 ? 'pos' : (x < 0 ? 'neg' : ''); };
+  var esc = function(s){ return String(s == null ? '' : s).replace(/[&<>]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]; }); };
+  var short = function(t){ return t && t.length > 34 ? t.slice(0, 32) + '..' : t; };
+
+  function tick(){
+    var d = new Date();
+    var p = function(n){ return (n < 10 ? '0' : '') + n; };
+    $('#clock').innerHTML = p(d.getHours()) + ':' + p(d.getMinutes()) + '<small>:' + p(d.getSeconds()) + '</small>';
+  }
+  setInterval(tick, 1000); tick();
+
+  function renderAccount(a){
+    var card = $('#account'), body = card.querySelector('.tile-body');
+    $('#acct-env').textContent = a.env;
+    if (!a.ok){
+      card.classList.add('grey');
+      body.innerHTML = '<div class="setup">' + esc(a.hint) + '</div>' +
+        '<div class="stats"><div class="stat">-<span class="q">balance</span></div>' +
+        '<div class="stat">-<span class="q">positions</span></div></div>';
+      return;
+    }
+    card.classList.remove('grey');
+    var h = '<div class="stats"><div class="stat">$' + f2(a.balance) + '<span class="q">balance</span></div>' +
+      '<div class="stat">' + a.positions.length + '<span class="q">positions</span></div>' +
+      '<div class="stat">' + a.fills.length + '<span class="q">recent fills</span></div></div>';
+    if (a.positions.length){
+      h += '<table><tr><th>ticker</th><th class="num">pos</th><th class="num">exposure</th><th class="num">realised</th></tr>';
+      a.positions.forEach(function(p){
+        h += '<tr><td class="mono">' + esc(short(p.ticker)) + '</td><td class="num">' + p.position +
+          '</td><td class="num">' + f2(p.exposure) + '</td><td class="num ' + cls(p.realized) + '">' + sgn(p.realized, f2) + '</td></tr>';
+      });
+      h += '</table>';
+    } else h += '<div class="empty">no open positions</div>';
+    body.innerHTML = h;
+  }
+
+  function renderCompare(bt, fw){
+    var b = $('#compare .tile-body');
+    var row = function(k, x, y, fn, signed){
+      return '<div class="k">' + k + '</div><div>' + (signed ? sgn(x, fn) : fn(x)) + '</div>' +
+        '<div class="' + (signed ? cls(y) : '') + '">' + (signed ? sgn(y, fn) : fn(y)) + '</div>';
+    };
+    b.innerHTML = '<div class="cmp"><div class="h"></div><div class="h">backtest</div><div class="h">forward</div>' +
+      '<div class="k">contracts</div><div>' + bt.n + '</div><div>' + fw.n + '</div>' +
+      row('payoff per $', bt.mean_payoff, fw.mean_payoff, f4, true) +
+      row('t-stat', bt.t, fw.t, f2, true) +
+      row('Brier', bt.brier, fw.brier, f4, false) +
+      '<div class="k">P&amp;L net</div><div>-</div><div class="' + cls(fw.pnl_net) + '">' + sgn(fw.pnl_net, f2) + '</div>' +
+      '<div class="k">staked</div><div>-</div><div>$' + f2(fw.staked) + '</div></div>' +
+      (fw.n < 30 ? '<div class="empty" style="margin-top:8px">' + fw.n + ' settled contracts. The backtest t-stat came from 4,223; read nothing into fewer than a few hundred.</div>' : '');
+  }
+
+  function renderEquity(pts){
+    var svg = $('#eq-svg');
+    $('#eq-meta').textContent = pts.length ? pts.length + ' settlements' : 'no settlements yet';
+    if (!pts.length){ svg.innerHTML = '<line x1="0" y1="75" x2="600" y2="75" stroke="rgba(140,190,200,.15)"/>'; return; }
+    var ys = pts.map(function(p){ return p.equity; }); ys.push(0);
+    var lo = Math.min.apply(null, ys), hi = Math.max.apply(null, ys); if (hi === lo) hi = lo + 1;
+    var X = function(i){ return pts.length === 1 ? 300 : 4 + i * 592 / (pts.length - 1); };
+    var Y = function(v){ return 140 - (v - lo) / (hi - lo) * 130; };
+    var d = pts.map(function(p, i){ return (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(p.equity).toFixed(1); }).join(' ');
+    var last = pts[pts.length - 1].equity;
+    svg.innerHTML = '<line x1="0" y1="' + Y(0) + '" x2="600" y2="' + Y(0) + '" stroke="rgba(140,190,200,.15)"/>' +
+      '<path d="' + d + '" fill="none" stroke="' + (last >= 0 ? 'hsl(190 85% 58%)' : '#ff5f56') + '" stroke-width="1.5" vector-effect="non-scaling-stroke"/>' +
+      '<text x="596" y="' + (Y(last) - 6) + '" text-anchor="end" font-size="11" fill="#e6efee">' + sgn(last, f2) + '</text>';
+  }
+
+  function renderBooks(books, ledger, cur){
+    var b = $('#books-cmp .tile-body'), names = ['shadow', 'demo', 'live'];
+    var cell = function(k, v){ return '<div class="' + k + '">' + v + '</div>'; };
+    var row = function(label, fn){
+      return cell('k', label) + names.map(function(n){ return cell(n === cur ? 'on' : '', fn(books[n])); }).join('');
+    };
+    var h = '<div class="cmp4"><div class="h"></div>' + names.map(function(n){ return cell('h' + (n === cur ? ' on' : ''), n); }).join('') +
+      row('signals', function(s){ return s.orders; }) +
+      row('fills', function(s){ return s.fills; }) +
+      row('settled', function(s){ return s.n; }) +
+      row('P&amp;L net', function(s){ return '<span class="' + cls(s.pnl_net) + '">' + sgn(s.pnl_net, f2) + '</span>'; }) +
+      row('payoff per $', function(s){ return sgn(s.mean_payoff, f4); }) +
+      row('t-stat', function(s){ return sgn(s.t, f2); }) +
+      row('Brier', function(s){ return f4(s.brier); }) +
+      row('at risk', function(s){ return '$' + f2(s.exposure); }) + '</div>';
+    // Divergence: the same ticker filled in shadow and demo, cost paid in each.
+    var by = {}; ledger.fills.forEach(function(f){ (by[f.ticker] = by[f.ticker] || {})[f.book] = f; });
+    var both = Object.keys(by).filter(function(t){ return by[t].shadow && by[t].demo; });
+    if (both.length){
+      var d = both.map(function(t){ return by[t].demo.cost - by[t].shadow.cost; });
+      var mean = d.reduce(function(a, x){ return a + x; }, 0) / d.length;
+      h += '<div class="empty" style="margin-top:8px">' + both.length + ' tickers filled in both shadow and demo. demo paid ' +
+        sgn(mean, f4) + ' per contract vs the shadow touch; P&amp;L gap demo minus shadow ' + sgn(books.demo.pnl_net - books.shadow.pnl_net, f2) + '.</div>';
+    } else {
+      var only = names.filter(function(n){ return books[n].fills; });
+      h += '<div class="empty" style="margin-top:8px">' + (only.length > 1 ? 'no ticker filled in two books yet' :
+        (only.length ? 'only the ' + only[0] + ' book has fills; divergence needs a second book' : 'no fills in any book')) + '</div>';
+    }
+    $('#books-meta').textContent = 'shadow has no account';
+    b.innerHTML = h;
+  }
+
+  function renderScan(s){
+    var b = $('#scanner .tile-body');
+    if (!s){ $('#scan-meta').textContent = 'no scan cached'; b.innerHTML = '<div class="empty">run <span class="mono">python scanner.py</span></div>'; return; }
+    $('#scan-meta').textContent = s.n_listed + ' listed / ' + s.n_candidates + ' candidates / ' + s.ranked.length + ' booked, ' + String(s.ts).slice(0, 16).replace('T', ' ') + 'Z';
+    var h = '<table><tr><th>ticker</th><th>title</th><th>side</th><th class="num">bid</th><th class="num">ask</th><th class="num">mid</th>' +
+      '<th class="num">model</th><th class="num">edge mid</th><th class="num">edge after spread</th><th class="num">kelly f</th><th class="num">stake</th><th class="num">hrs</th><th class="num">vol</th></tr>';
+    s.ranked.slice(0, 40).forEach(function(r){
+      h += '<tr><td class="mono">' + esc(short(r.ticker)) + '</td><td>' + esc(short(r.title)) + '</td>' +
+        '<td class="side-' + r.side + '">' + r.side + '</td><td class="num">' + f2(r.bid) + '</td><td class="num">' + f2(r.ask) + '</td>' +
+        '<td class="num">' + f3(r.mid) + '</td><td class="num">' + f3(r.p_model) + '</td>' +
+        '<td class="num">' + sgn(r.edge_mid, f3) + '</td><td class="num ' + cls(r.edge) + '">' + sgn(r.edge, f3) + '</td>' +
+        '<td class="num">' + f3(r.f) + '</td><td class="num">$' + f2(r.stake) + '</td><td class="num">' + Math.round(r.hours) + '</td><td class="num">' + Math.round(r.volume) + '</td></tr>';
+    });
+    b.innerHTML = h + '</table>';
+  }
+
+  function renderLedger(l, cur, st){
+    var b = $('#ledger .tile-body');
+    var orders = l.orders.filter(function(o){ return o.book === cur; });
+    var fills = l.fills.filter(function(f){ return f.book === cur; });
+    var settled = {}; l.settlements.forEach(function(s){ settled[s.ticker] = s.result; });
+    var nSettled = fills.filter(function(f){ return settled[f.ticker]; }).length;
+    $('#ledger-name').textContent = cur + ' book';
+    $('#ledger-meta').textContent = orders.length + ' orders / ' + fills.length + ' fills / ' + nSettled + ' settled / $' + f2(st.exposure) + ' at risk';
+    if (!orders.length){
+      b.innerHTML = '<div class="empty">' + (cur === 'shadow' ? 'no shadow orders. run <span class="mono">python shadow.py place</span>' :
+        'no ' + cur + ' orders. run <span class="mono">python ' + (cur === 'live' ? 'live.py' : 'paper.py place') + '</span> once a ' + (cur === 'live' ? 'prod' : 'demo') + ' key is installed') + '</div>';
+      return;
+    }
+    var h = '<table><tr><th>placed</th><th>env</th><th>ticker</th><th>side</th><th class="num">cost</th><th class="num">count</th><th class="num">remaining</th><th>status</th><th class="num">edge</th><th>result</th><th>note</th></tr>';
+    orders.forEach(function(o){
+      var r = settled[o.ticker];
+      h += '<tr><td class="mono">' + String(o.placed_at).slice(0, 16).replace('T', ' ') + '</td><td>' + o.env + '</td><td class="mono">' + esc(short(o.ticker)) + '</td>' +
+        '<td class="side-' + o.side + '">' + o.side + '</td><td class="num">' + f2(o.cost) + '</td><td class="num">' + o.count + '</td><td class="num">' + o.remaining + '</td>' +
+        '<td>' + o.status + '</td><td class="num">' + sgn(o.edge, f3) + '</td><td class="' + (r ? (r === o.side ? 'pos' : 'neg') : '') + '">' + (r || 'open') + '</td>' +
+        '<td class="mono">' + esc(o.note) + '</td></tr>';
+    });
+    b.innerHTML = h + '</table>';
+  }
+
+  var cur = null, last = null;
+  function render(s){
+    var st = s.books[cur];
+    $('#books').querySelectorAll('button').forEach(function(btn){
+      var n = btn.getAttribute('data-book');
+      btn.className = (n === cur ? 'on' : '') + (s.books[n].orders ? '' : ' empty-book');
+    });
+    $('#eq-name').textContent = cur + ' equity';
+    renderCompare(s.backtest, st);
+    renderEquity(st.equity);
+    renderBooks(s.books, s.ledger, cur);
+    renderLedger(s.ledger, cur, st);
+    $('#foot').textContent = 'caps $' + s.caps.order + ' per order, $' + s.caps.open + ' open, kelly ' + s.caps.k +
+      '. scoring uses production books; ' + (cur === 'shadow' ? 'shadow fills are simulated at the public touch, no account.' : 'orders go to ' + (cur === 'live' ? 'prod' : 'demo') + '.');
+  }
+  $('#books').addEventListener('click', function(e){
+    var n = e.target.getAttribute && e.target.getAttribute('data-book');
+    if (n && last){ cur = n; render(last); }
+  });
+
+  function load(){
+    fetch('/api/state').then(function(r){ return r.json(); }).then(function(s){
+      last = s; cur = cur || s.book;
+      var live = $('#live');
+      live.className = 'live ' + (s.live ? 'on' : 'off');
+      live.innerHTML = '<span class="dot"></span>LIVE ' + (s.live ? 'ON' : 'OFF');
+      var env = $('#env'); env.textContent = s.env; env.className = 'pill env-' + s.env;
+      renderAccount(s.account);
+      renderScan(s.scan);
+      render(s);
+    }).catch(function(e){ $('#account .tile-body').innerHTML = '<div class="setup">desk.py unreachable: ' + esc(e) + '</div>'; });
+  }
+  load();
+  setInterval(load, 60000);
+})();
+</script>
+</body>
+</html>
