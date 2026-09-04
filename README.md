@@ -1,6 +1,6 @@
 # Quant projects
 
-Twenty-seven projects from the OSG Global Quant Curriculum, each implemented from the
+Twenty-eight projects from the OSG Global Quant Curriculum, each implemented from the
 spec rather than from a reference solution. They run on real market data:
 Yahoo Finance for equity prices, the VIX and option chains, FRED for Treasury
 yields and the T-bill rate, the UCI archive for the credit dataset, Binance's
@@ -88,3 +88,9 @@ yield-curve-recession cache their downloads, so only the first `run.py` in those
 
 Each project has its own README with the data source, the full result tables and
 what I would do differently.
+
+## Portfolio & Execution
+
+| project | what it does | headline result |
+|---|---|---|
+| `framework/` | The book: a daily target-weight simulator (as-of data guard, next-open fills, commission + spread + impact costs, vol targeting, drawdown and kill overlay) wrapped by skfolio, purgedcv, quantstats and alpaca-py; three ETF-only sleeves ported from the research (trend, FX carry, long/flat crypto trend), 1/N vs ERC allocation, purged walk-forward and deflated Sharpe with the real trial count, a shadow paper daemon and an Alpaca paper bridge | Combined net Sharpe 0.26, 1.0%/yr at 4.3% vol, max drawdown -13.4%, PSR 0.89, DSR 0.21 over 16 trials; ERC does not beat 1/N out of sample so 1/N is live; the trend sleeve ports exactly (targets match the research project to 0 at all 266 month ends) but earns 0.44 vs 0.52 because next-open fills give up the month-end overnight gap; falsification: holding the ETF universe (Sharpe 0.59) beats the trend signal (0.41) |
