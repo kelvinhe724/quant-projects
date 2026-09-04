@@ -1,6 +1,6 @@
 # Quant projects
 
-Twenty-nine projects from the OSG Global Quant Curriculum, each implemented from the
+Thirty projects from the OSG Global Quant Curriculum, each implemented from the
 spec rather than from a reference solution. They run on real market data:
 Yahoo Finance for equity prices, the VIX and option chains, FRED for Treasury
 yields and the T-bill rate, the UCI archive for the credit dataset, Binance's
@@ -37,6 +37,7 @@ connection.
 | `vol-risk-premium/` | Implied vs subsequent realised vol on SPY 2010-2026, GARCH forecast, delta-hedged short straddle with cost and tail accounting | Gap +3.78 vol points, Newey-West t 8.35; strategy 9.55%/yr net, Sharpe 1.74, skew -5.2, max drawdown -13.6%; dropping the worst 1% of days lifts Sharpe to 3.75 |
 | `monte-carlo/` | Risk-neutral GBM engine for European, arithmetic Asian and barrier options, antithetic / control-variate / scrambled-Sobol variance reduction, pathwise, likelihood-ratio and finite-difference Greeks, live SPY quote check | European MC matches Black-Scholes 5.4721 inside 2 SE at every path count; Sobol cuts variance 19x (8.9x after wall time), geometric-Asian control variate 3,666x on the Asian; barrier from 150 to 105 removes 99% of value; common-random-number finite difference matches pathwise delta, independent seeds are 10x noisier |
 | `svi/` | Raw SVI fits to a live SPY option chain (7 expiries, 407 clean quotes after filtering), implied vols from an own Black-76 solver, Durrleman butterfly and calendar no-arbitrage checks enforced in the fit | Mean slice RMSE 0.25 vol points (worst 0.35); unconstrained fits violate butterfly on 7/7 slices and calendar on 5/6, constrained fits 0/7 and 0/6; the market mids themselves show negative butterflies on 28% of strikes; own IVs vs Yahoo's column RMSE 1.41 vp |
+| `options-collector/` | Daily after-close snapshot of the full option chain on SPY, QQQ, IWM and the ten largest SPY names, every expiry to 400 days, stored raw and never overwritten; own Black-76 inversion via the `svi/` cleaning pipeline, ATM and 25-delta skew per expiry, 30/60/90-day vols in total variance, basket implied correlation on the SPY row; launchd job written | First real snapshot 2026-09-04 (intraday, 36,406 quotes, 5.6 MB a day, 40/40 checks): SPY ATM 11.6 / 12.8 / 13.3% at 30 / 60 / 90 days against a VIX of 14.10, so the ATM-to-VIX basis the VRP backtest had to guess at is about 2.5 points; SPY 25-delta skew climbs from +1.0 vol points at 4 days to +5.8 at a year; implied correlation of the eight names with a clean slice -0.015, a level artifact of a ten-name sub-basket; JPM and BRK-B had no clean slice before the book filled in; nothing here is useful for a backtest until roughly 60 trading days for term structure and a year for a VRP or dispersion redo |
 
 ### Anomalies & Regimes
 
