@@ -95,6 +95,56 @@ check("FXCarryETF: long the two highest rates, short the two lowest, USD as cash
 check("carry_weights: fewer than 2 * n_leg quoted rates gives a flat book",
       (carry_weights(pd.Series({"EUR": 1.0, "JPY": np.nan, "USD": 2.0, "GBP": 3.0})) == 0).all())
 
+print("\nEWMAC\n")
+from framework.book.strategies import (EWMAC, FORECAST_CAP, buffered, combined_forecast, ewmac,
+                                       forecast_scalar, robust_vol)
+from framework.book.validate import attribution
+
+trending = synthetic(n_days=252 * 6, instruments=("UP", "DOWN", "FLAT"), drift=(0.6, -0.6, 0.0), vol=0.15, seed=5)
+fc = combined_forecast(trending.close)
+tail = fc.iloc[-500:]
+check("EWMAC: forecast is positive on a planted uptrend and negative on a planted downtrend on 90%+ of days",
+      (tail["UP"] > 0).mean() > 0.9 and (tail["DOWN"] < 0).mean() > 0.9,
+      f"up {(tail['UP'] > 0).mean():.2f}, down {(tail['DOWN'] < 0).mean():.2f}")
+check("EWMAC: a view shorter than 500 days has no forecast, so nothing is backfilled",
+      combined_forecast(trending.close.iloc[:499]).isna().all().all()
+      and combined_forecast(trending.close.iloc[:600]).iloc[-1].notna().all())
+raw = ewmac(base.close, robust_vol(base.close.diff()), 16, 64)
+check("forecast scalar: scaling a raw forecast by 3 divides the scalar by 3 and the scaled |median| stays 10",
+      np.isclose(forecast_scalar(raw * 3), forecast_scalar(raw) / 3)
+      and np.isclose((raw * forecast_scalar(raw)).abs().median(axis=1).mean(), 10.0))
+check("forecast scalar: fewer than 500 days gives NaN", np.isnan(forecast_scalar(raw.iloc[:400])))
+check("forecast cap: every combined forecast is within +/-20 and the cap binds somewhere on a planted trend",
+      fc.abs().max().max() <= FORECAST_CAP and (fc.abs() == FORECAST_CAP).any().any())
+check("buffer: inside 10% of the target no trade, outside it moves to the band edge",
+      buffered(1.0, 0.95) is None and buffered(1.0, 0.5) == 0.9 and buffered(1.0, 1.5) == 1.1
+      and buffered(-1.0, 0.0) == -0.9)
+ew = EWMAC(classes={"UP": "a", "DOWN": "b", "FLAT": "c"})
+res_ew = run(ew, trending, config=COSTS)
+w_last = res_ew.weights.iloc[-1]
+check("EWMAC through the engine: long the uptrend, short the downtrend at the end of the sample",
+      w_last["UP"] > 0 and w_last["DOWN"] < 0, f"{w_last.round(3).to_dict()}")
+later = np.where(np.asarray(trending.calendar > cut)[:, None], 1.1, 1.0)
+mut_ew = run(EWMAC(classes={"UP": "a", "DOWN": "b", "FLAT": "c"}),
+             Bars({f: trending.field(f) * (later if f != "volume" else 1.0)
+                   for f in ("open", "high", "low", "close", "volume")}), config=COSTS)
+t0, t1 = res_ew.trades[res_ew.trades.date <= cut], mut_ew.trades[mut_ew.trades.date <= cut]
+a0, a1 = res_ew.trades[res_ew.trades.date > cut].quantity.head(30), mut_ew.trades[mut_ew.trades.date > cut].quantity.head(30)
+check("EWMAC mutation test: rewriting prices after the cut leaves every trade up to the cut identical and changes later ones",
+      len(t0) == len(t1) and np.allclose(t0.quantity, t1.quantity) and (len(a0) != len(a1) or not np.allclose(a0, a1)),
+      f"{len(t0)} trades compared")
+
+bench = synthetic(n_days=252 * 8, instruments=("X",), vol=0.15, seed=7)
+x = bench.close["X"].pct_change().fillna(0.0)
+planted = 0.0003 + 0.7 * x + rng.normal(0, 0.003, len(x))
+a = attribution(pd.Series(planted, index=x.index), bench, ["X"])["1/N"]
+check("attribution: regression recovers a planted alpha of 7.6% a year and beta of 0.7",
+      abs(a["alpha"] - 0.0003 * 252) < 0.02 and abs(a["beta"] - 0.7) < 0.05,
+      f"alpha {a['alpha']:.3f} t {a['t_alpha']:.1f} beta {a['beta']:.3f}")
+b = attribution(pd.Series(0.3 * x.to_numpy() + rng.normal(0, 0.001, len(x)), index=x.index), bench, ["X"])["1/N"]
+check("attribution: pure beta scores near-zero alpha and a residual Sharpe near zero",
+      abs(b["alpha"]) < 0.01 and abs(b["residual_sharpe"]) < 0.3, f"alpha {b['alpha']:.3f} resid {b['residual_sharpe']:.2f}")
+
 print("\nBROKER AND DAEMON\n")
 import json
 import tempfile

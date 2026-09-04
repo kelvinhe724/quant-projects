@@ -21,7 +21,7 @@ from purgedcv import (WalkForwardSplit, deflated_sharpe_ratio, min_track_record_
 from scipy.stats import kurtosis, skew
 
 from framework.book import allocate, universe
-from framework.book.strategies import TrendETF, book_config, sleeves
+from framework.book.strategies import EWMAC, SPEEDS, TrendETF, book_config, ex_ante_vol, sleeves
 from framework.engine import Strategy, run, sharpe
 
 REPORTS = allocate.REPORTS
@@ -147,6 +147,57 @@ def falsify(bars, alloc):
     }
 
 
+def attribution(returns, bars, instruments, target_vol=0.10):
+    """Regress a sleeve's live net returns on owning its universe.
+
+    Two benchmarks: the daily-rebalanced 1/N return of the instruments, and
+    that return scaled to `target_vol` by the same 60-day EWMA vol the sleeves
+    use, lagged one day and capped at 3x. Per benchmark: annualised alpha,
+    its Newey-West t (Newey-West 1994 lag rule), beta, the benchmark Sharpe,
+    and the Sharpe of returns minus beta x benchmark, which is alpha plus
+    residual, the part of the sleeve that owning the universe does not explain.
+    """
+    import statsmodels.api as sm
+
+    r = returns.loc[returns.ne(0).idxmax():]
+    eq = bars.close[list(instruments)].pct_change().mean(axis=1)
+    scale = (target_vol / ex_ante_vol(eq).shift(1)).clip(upper=3.0)
+    out = {}
+    for name, x in (("1/N", eq), ("1/N vol-targeted", eq * scale)):
+        d = pd.DataFrame({"y": r, "x": x.reindex(r.index)}).dropna()
+        lags = int(4 * (len(d) / 100) ** (2 / 9))
+        fit = sm.OLS(d["y"], sm.add_constant(d["x"])).fit(cov_type="HAC", cov_kwds={"maxlags": lags})
+        a, b = float(fit.params["const"]), float(fit.params["x"])
+        out[name] = {"alpha": a * 252, "t_alpha": float(fit.tvalues["const"]), "beta": b,
+                     "benchmark_sharpe": sharpe(d["x"]), "residual_sharpe": sharpe(d["y"] - b * d["x"]),
+                     "sleeve_sharpe": sharpe(d["y"]), "n_obs": len(d)}
+    return out
+
+
+def v2_candidates(bars, trend):
+    """EWMAC at each speed and combined, gross and net, next to TrendETF over the window both are live."""
+    runs = {"TrendETF": trend, "EWMAC": run(EWMAC(), bars, config=book_config(kill=False))}
+    for f, s in SPEEDS:
+        runs[f"EWMAC {f}/{s}"] = run(EWMAC(speeds=[(f, s)]), bars, config=book_config(kill=False))
+    log_trial("EWMAC", {"v": 2, "speeds": "combined"}, runs["EWMAC"].returns)
+    for f, s in SPEEDS:
+        log_trial("EWMAC", {"v": 2, "speeds": f"{f}/{s}"}, runs[f"EWMAC {f}/{s}"].returns)
+    gross = {"TrendETF": run(TrendETF(), bars, config=book_config(kill=False, cost_scale=0.0)),
+             "EWMAC": run(EWMAC(), bars, config=book_config(kill=False, cost_scale=0.0))}
+    log_trial("TrendETF", {"v": 1, "cost_scale": 0.0}, gross["TrendETF"].returns)
+    log_trial("EWMAC", {"v": 2, "speeds": "combined", "cost_scale": 0.0}, gross["EWMAC"].returns)
+    start = max(r.returns.ne(0).idxmax() for r in runs.values())
+    table = {}
+    for k, res in runs.items():
+        r = res.returns.loc[start:]
+        s = stats(r)
+        s["sharpe_gross"] = sharpe(gross[k].returns.loc[start:]) if k in gross else np.nan
+        s["turnover"] = float(res.turnover.loc[start:].sum() / (len(r) / 252))
+        s["trades"] = int((res.trades["date"] >= start).sum())
+        table[k] = s
+    return table, {k: res.returns for k, res in runs.items()}
+
+
 def md_table(d, cols=("sharpe", "annual_return", "annual_vol", "max_drawdown")):
     out = ["| variant | " + " | ".join(cols) + " |", "|---|" + "---|" * len(cols)]
     for k, s in d.items():
@@ -187,6 +238,9 @@ def main():
 
     fals = falsify(bars, alloc)
     xcheck = dsr_crosscheck()
+    v2_table, v2_returns = v2_candidates(bars, results["TrendETF"])
+    attr = {k: attribution(res.returns, bars, universe.SLEEVES[k]) for k, res in results.items()}
+    attr["EWMAC"] = attribution(v2_returns["EWMAC"], bars, universe.SLEEVES["TrendETF"])
 
     # Every configuration above is now in trials.csv; count after, not before.
     tr = trials()
@@ -211,6 +265,7 @@ def main():
 
     with open(os.path.join(REPORTS, "validation.json"), "w") as fh:
         json.dump({"headline": head, "allocator": alloc, "walk_forward": wf, "falsification": fals,
+                   "v2_candidates": v2_table, "attribution": attr,
                    "dsr_crosscheck": xcheck, "kill_dates": kill_dates, "panel_hash": universe.panel_hash(bars),
                    "run_at": pd.Timestamp.now().isoformat(timespec="seconds")}, fh, indent=2, default=str)
 
@@ -253,6 +308,29 @@ def main():
         md_table(fals["vol_scaling_only"]), "",
         "**Cost stress.** Book at multiples of the cost model:", "", md_table(fals["cost_stress"]), "",
         "**Signal delay.** Every sleeve's targets held back N extra bars:", "", md_table(fals["signal_delay"]), "",
+        "## v2 candidate: EWMAC", "",
+        f"EWMAC at {', '.join(f'{f}/{s}' for f, s in SPEEDS)} and the three combined with a forecast "
+        "diversification multiplier, forecast scalars estimated on trailing data only (expanding, NaN for the "
+        "first 500 days), cap 20, forecast / 10 x TrendETF's 40% per-asset target (35-day vol where TrendETF "
+        "uses 60-day) and class balance, daily, same universe, cost model and overlay. The 10% buffer sits on "
+        "the raw targets; on any day one instrument leaves its band the whole sleeve is re-sent and the overlay "
+        f"re-scales it, so it cuts trades less than the same buffer on final positions would. Window "
+        f"{v2_table['EWMAC']['start']} to {v2_table['EWMAC']['end']}, where both rules are live. Gross is the "
+        "same run with every cost coefficient at zero, run for the combined rule only. Turnover is traded "
+        "notional over equity per year. The combined rule gross and net and each speed net are logged trials.", "",
+        md_table(v2_table, ("sharpe_gross", "sharpe", "annual_return", "annual_vol", "max_drawdown", "turnover",
+                            "trades")), "",
+        "## Signal vs beta", "",
+        "Each sleeve's live net returns regressed on its own universe: the daily-rebalanced 1/N return of its "
+        "instruments, and that return scaled to the sleeves' 10% vol target (60-day EWMA vol, one-day lag, 3x "
+        "cap). Alpha is annualised with a Newey-West t; residual Sharpe is the Sharpe of the sleeve minus "
+        "beta x benchmark. A sleeve whose residual Sharpe is below the benchmark's own Sharpe is not adding "
+        "return beyond owning the universe.", "",
+        "| sleeve | benchmark | benchmark Sharpe | sleeve Sharpe | alpha | t | beta | residual Sharpe |",
+        "|---|---|---|---|---|---|---|---|",
+        *[f"| {k} | {b} | {s['benchmark_sharpe']:.3f} | {s['sleeve_sharpe']:.3f} | {s['alpha']:+.2%} | "
+          f"{s['t_alpha']:.2f} | {s['beta']:.3f} | {s['residual_sharpe']:.3f} |"
+          for k, d in attr.items() for b, s in d.items()], "",
         "## Kill switch", "",
         "Backtests above run with `kill_dd=None`. With the live 25% kill on, the sleeves would have been "
         "flattened permanently on: " + ", ".join(f"{k} {v}" for k, v in kill_dates.items()) + ". Live, a kill "
