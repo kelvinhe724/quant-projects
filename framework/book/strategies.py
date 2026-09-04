@@ -3,8 +3,8 @@
 TrendETF and CryptoTrend port trend-following/trend.py, FXCarryETF ports
 fx-carry/carry.py::carry_weights. Each on_bar returns target weights only at
 month end, built from data through that day; the engine fills them at the
-next open, so no function here shifts anything. EWMAC runs daily and is not
-in sleeves() until it earns its place in validate.py.
+next open, so no function here shifts anything. EWMAC and ETFBeta run daily;
+the engine's buffer decides what actually trades.
 """
 import numpy as np
 import pandas as pd
@@ -142,7 +142,6 @@ FORECAST_CAP = 20.0
 SCALAR_MIN_PERIODS = 500
 VOL_DAYS = 35
 VOL_FLOOR_DAYS = 500
-BUFFER = 0.10
 
 
 def robust_vol(x, days=VOL_DAYS, floor_days=VOL_FLOOR_DAYS):
@@ -185,21 +184,15 @@ def combined_forecast(close, speeds=SPEEDS, cap=FORECAST_CAP):
     return combined.clip(-cap, cap)
 
 
-def buffered(target, held, buffer=BUFFER):
-    """Move `held` to the edge of a band of +/- buffer * |target| around `target`; None if inside it."""
-    band = buffer * abs(target)
-    if abs(held - target) <= band:
-        return None
-    return target - band if held < target else target + band
-
-
 class EWMAC(Strategy):
-    """Continuous EWMAC forecasts, forecast / 10 x vol-target sizing, class-balanced, daily with a 10% buffer."""
+    """Continuous EWMAC forecasts, forecast / 10 x vol-target sizing, class-balanced, sent every day.
 
-    def __init__(self, classes=None, speeds=SPEEDS, target=TARGET_VOL, scheme="class", buffer=BUFFER):
+    The engine's position buffer decides which of these targets trade.
+    """
+
+    def __init__(self, classes=None, speeds=SPEEDS, target=TARGET_VOL, scheme="class"):
         self.classes = pd.Series(universe.ETFS if classes is None else classes)
-        self.speeds, self.target, self.scheme, self.buffer = tuple(speeds), target, scheme, buffer
-        self.last = {}
+        self.speeds, self.target, self.scheme = tuple(speeds), target, scheme
 
     def on_bar(self, asof, bars):
         names = [n for n in self.classes.index if n in bars.instruments]
@@ -209,20 +202,35 @@ class EWMAC(Strategy):
             return None
         vol = robust_vol(px.pct_change()).iloc[-1] * np.sqrt(TRADING_DAYS)
         pos = (fc / FORECAST_TARGET * self.target / vol).to_frame().T
-        want = portfolio_weights(pos, self.classes[names], self.scheme).iloc[0]
-        moves = {n: buffered(want[n], self.last.get(n, 0.0), self.buffer) for n in names}
-        if all(m is None for m in moves.values()):
-            return None
-        self.last = {n: self.last.get(n, 0.0) if m is None else m for n, m in moves.items()}
-        return dict(self.last)
+        return portfolio_weights(pos, self.classes[names], self.scheme).iloc[0].to_dict()
+
+
+class ETFBeta(Strategy):
+    """1/N of the ETFs with a price today, sent every day; the overlay sizes it to the vol target."""
+
+    def __init__(self, instruments=None):
+        self.instruments = list(universe.ETFS if instruments is None else instruments)
+
+    def on_bar(self, asof, bars):
+        live = bars.close.iloc[-1].reindex(self.instruments).dropna()
+        return {n: 1 / len(live) for n in live.index} if len(live) else None
 
 
 CAPITAL = 100_000.0
+BUFFER = 0.10
+
+# Candidate books, compared in validate.py; allocate.LIVE_BOOK names the one the daemon runs.
+BOOKS = {
+    "v1": (TrendETF, FXCarryETF, CryptoTrend),
+    "v1+ewmac": (TrendETF, FXCarryETF, CryptoTrend, EWMAC),
+    "ewmac-for-trend": (EWMAC, FXCarryETF, CryptoTrend),
+    "beta+alpha": (ETFBeta, EWMAC),
+}
 
 
-def sleeves():
-    """The three v1 sleeves with their frozen parameters."""
-    return [TrendETF(), FXCarryETF(), CryptoTrend()]
+def sleeves(book="v1"):
+    """Fresh sleeves of one book with their frozen parameters."""
+    return [cls() for cls in BOOKS[book]]
 
 
 def book_config(allocations=None, kill=True, cost_scale=1.0, capital=CAPITAL):
@@ -231,9 +239,10 @@ def book_config(allocations=None, kill=True, cost_scale=1.0, capital=CAPITAL):
     Costs are 5 bps commission, 2 bps half spread, sqrt impact and 50 bps a
     year on shorts, on purpose harsher than Alpaca paper's NBBO fills. Each
     sleeve runs behind the same overlay: 10% vol target, 3x gross cap, half
-    size past a 15% drawdown, flat past 25%. kill=False drops the last rule for
-    long backtests, where one 2008 breach would zero a sleeve forever; live, a
-    kill is a human decision to restart.
+    size past a 15% drawdown, flat past 25%, and a 10% position buffer on the
+    final weights. kill=False drops the kill for long backtests, where one
+    2008 breach would zero a sleeve forever; live, a kill is a human decision
+    to restart.
     """
     from framework.engine import Config, CostModel, RiskConfig
 
@@ -242,5 +251,5 @@ def book_config(allocations=None, kill=True, cost_scale=1.0, capital=CAPITAL):
                                   impact_coef=0.1 * cost_scale),
                   borrow_bps=50 * cost_scale,
                   risk=RiskConfig(target_vol=0.10, max_gross=3.0, dd_threshold=0.15,
-                                  kill_dd=0.25 if kill else None),
+                                  kill_dd=0.25 if kill else None, buffer=BUFFER),
                   allocations=allocations)

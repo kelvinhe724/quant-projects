@@ -68,14 +68,15 @@ class ShadowBroker:
     def targets(self):
         """What the whole book should hold tomorrow, as weights of total equity.
 
-        A sleeve with fresh targets contributes them; one without contributes
-        what it holds, so a quiet sleeve is left alone rather than re-traded.
+        A sleeve's fresh targets override what it holds; anything the buffer
+        left alone, and a quiet sleeve, contribute what they hold, so nothing
+        is re-traded that the engine did not trade.
         """
         total = self.equity
         out = {}
         for k, b in self.results.books.items():
             share = float(b["equity"].iloc[-1]) / total
-            w = b["pending"] if b["pending"] else b["weights"].iloc[-1].to_dict()
+            w = {**b["weights"].iloc[-1].to_dict(), **(b["pending"] or {})}
             for n, x in w.items():
                 out[n] = out.get(n, 0.0) + float(x) * share
         return {n: x for n, x in out.items() if abs(x) > 1e-9}

@@ -1,105 +1,148 @@
 # Validation
 
-Run 2026-09-04 02:54, panel hash `aa436bbc6c2e4712`, 2004-07-01 to 2026-08-31 (22.1 years), shadow cost model, kill switch off for backtests (see below).
+Run 2026-09-04 04:54, panel hash `aa436bbc6c2e4712`, 2003-06-03 to 2026-08-31 (23.2 years), shadow cost model, kill switch off for backtests (see below).
 
 ## Headline (book, live allocator, net)
 
 | Sharpe | ann. return | ann. vol | max drawdown | PSR | DSR | trials | MinBTL | MinTRL |
 |---|---|---|---|---|---|---|---|---|
-| 0.262 | 1.04% | 4.30% | -13.5% | 0.890 | 0.058 | 22 | 55.0 y (have 22.1) | 39.8 y |
+| 0.810 | 5.71% | 7.17% | -12.1% | 1.000 | 0.627 | 56 | 8.2 y (have 23.2) | 4.3 y |
 
-DSR uses n_trials = 22: every configuration this file runs on the real panel (sleeves, the trend grid, allocators, cost and delay variants, kill on) is appended to `trials.csv` (80 rows so far) and identical return streams count once; the variance of their daily Sharpes is 3.75e-04. The per-asset vol target is undone by the sleeve-level 10% target, so the trend grid is really four lookbacks. The 20 placebo draws are a null, not candidates; counting them too gives DSR 0.026. PSR is the probability the true Sharpe is above zero; DSR the same after deflating for selection. MinTRL is the track length needed to reject zero at 95%.
+Live book `beta+alpha`. DSR uses n_trials = 56: every configuration this file runs on the real panel (sleeves, the trend grid, allocators, cost and delay variants, kill on, the EWMAC variants, the candidate books) is appended to `trials.csv` (148 rows so far) and identical return streams count once; the variance of their daily Sharpes is 4.06e-04. Trials are tagged with the engine settings ({'buffer': 0.1}), so the runs before the buffer moved into the engine still count: they were looked at. The per-asset vol target is undone by the sleeve-level 10% target, so the trend grid is really four lookbacks. The 20 placebo draws are a null, not candidates; counting them too gives DSR 0.560. PSR is the probability the true Sharpe is above zero; DSR the same after deflating for selection. MinTRL is the track length needed to reject zero at 95%.
 
 ## Allocator: ERC vs 1/N, out of sample
 
-Quarterly refits, three-year window, Ledoit-Wolf covariance, weights applied to the next quarter. Live allocator: **equal** with weights {'TrendETF': 0.3333, 'FXCarryETF': 0.3333, 'CryptoTrend': 0.3333} (ERC would have been {'TrendETF': 0.3184, 'FXCarryETF': 0.4203, 'CryptoTrend': 0.2613}).
+Quarterly refits, three-year window, Ledoit-Wolf covariance, weights applied to the next quarter. Live allocator: **equal** with weights {'ETFBeta': 0.5, 'EWMAC': 0.5} (ERC would have been {'ETFBeta': 0.3516, 'EWMAC': 0.6484}).
 
 |               | erc        | equal      |
 |:--------------|:-----------|:-----------|
-| sharpe        | 0.2275     | 0.2327     |
-| annual_return | 0.0113     | 0.0118     |
-| annual_vol    | 0.0565     | 0.0574     |
-| max_drawdown  | -0.1495    | -0.148     |
-| start         | 2005-07-01 | 2005-07-01 |
+| sharpe        | 0.8553     | 0.8705     |
+| annual_return | 0.0598     | 0.063      |
+| annual_vol    | 0.0709     | 0.0733     |
+| max_drawdown  | -0.1072    | -0.1122    |
+| start         | 2004-07-01 | 2004-07-01 |
 | end           | 2026-08-31 | 2026-08-31 |
 
 Sharpe by year:
 
 |      |   erc |   equal |
 |-----:|------:|--------:|
-| 2005 |  1.15 |    1.15 |
-| 2006 | -0.01 |   -0.01 |
-| 2007 |  1.82 |    1.81 |
-| 2008 | -0.59 |   -0.63 |
-| 2009 | -0.33 |   -0.32 |
-| 2010 | -0.71 |   -0.68 |
-| 2011 | -0.1  |   -0.13 |
-| 2012 |  1.22 |    1.31 |
-| 2013 |  0.26 |    0.33 |
-| 2014 |  0.06 |    0.22 |
-| 2015 |  0.44 |    0.74 |
-| 2016 | -1.18 |   -1.28 |
-| 2017 | -0.13 |    0.08 |
-| 2018 | -0.67 |   -0.75 |
-| 2019 |  0.95 |    1.01 |
-| 2020 | -1.05 |   -1.03 |
-| 2021 |  0.52 |    0.45 |
-| 2022 | -0.22 |   -0.18 |
-| 2023 | -0.08 |   -0.11 |
-| 2024 |  1.31 |    1.31 |
-| 2025 |  0.29 |    0.16 |
-| 2026 |  1.55 |    1.47 |
+| 2004 |  3.03 |    3.03 |
+| 2005 |  1.33 |    1.33 |
+| 2006 |  1.36 |    1.36 |
+| 2007 |  1.88 |    1.88 |
+| 2008 |  0.39 |    0.43 |
+| 2009 |  0.13 |    0.07 |
+| 2010 |  1.6  |    1.57 |
+| 2011 |  0.73 |    0.8  |
+| 2012 | -0.18 |   -0.27 |
+| 2013 |  0.53 |    0.67 |
+| 2014 |  0.79 |    0.92 |
+| 2015 | -0.75 |   -0.5  |
+| 2016 |  0.52 |    0.43 |
+| 2017 |  1.94 |    1.65 |
+| 2018 | -0.5  |   -0.36 |
+| 2019 |  1.8  |    1.34 |
+| 2020 |  0.52 |    0.8  |
+| 2021 |  0.58 |    0.55 |
+| 2022 |  0.52 |    0.89 |
+| 2023 | -0.69 |   -0.89 |
+| 2024 |  0.86 |    0.86 |
+| 2025 |  1.75 |    1.77 |
+| 2026 |  0.9  |    1.12 |
 
 ## Walk-forward over the trend grid
 
-Grid: lookback (3, 6, 9, 12) months x per-asset vol target (0.2, 0.4). purgedcv WalkForwardSplit, 5 folds of 3 years, the variant with the best training Sharpe is held in the test window. Selected-in-sample OOS Sharpe **0.441** vs frozen v1 **0.310** over the same test windows.
+Grid: lookback (3, 6, 9, 12) months x per-asset vol target (0.2, 0.4). purgedcv WalkForwardSplit, 5 folds of 3 years, the variant with the best training Sharpe is held in the test window. Selected-in-sample OOS Sharpe **0.453** vs frozen v1 **0.378** over the same test windows.
 
 |   fold | test_start   | test_end   | picked                          |   picked_train_sharpe |   picked_test_sharpe |   v1_test_sharpe |
 |-------:|:-------------|:-----------|:--------------------------------|----------------------:|---------------------:|-----------------:|
-|      1 | 2011-08-18   | 2014-08-20 | TrendETF lookback=9 target=0.2  |                 0.619 |                0.085 |            0.062 |
-|      2 | 2014-08-21   | 2017-08-21 | TrendETF lookback=9 target=0.2  |                 0.511 |               -0.087 |            0.476 |
-|      3 | 2017-08-22   | 2020-08-21 | TrendETF lookback=12 target=0.2 |                 0.461 |                0.225 |            0.225 |
-|      4 | 2020-08-24   | 2023-08-24 | TrendETF lookback=9 target=0.2  |                 0.475 |                0.534 |           -0.222 |
-|      5 | 2023-08-25   | 2026-08-31 | TrendETF lookback=9 target=0.2  |                 0.483 |                1.068 |            0.87  |
+|      1 | 2011-08-18   | 2014-08-20 | TrendETF lookback=9 target=0.2  |                 0.631 |                0.094 |            0.051 |
+|      2 | 2014-08-21   | 2017-08-21 | TrendETF lookback=9 target=0.2  |                 0.523 |               -0.04  |            0.458 |
+|      3 | 2017-08-22   | 2020-08-21 | TrendETF lookback=12 target=0.2 |                 0.462 |                0.219 |            0.219 |
+|      4 | 2020-08-24   | 2023-08-24 | TrendETF lookback=9 target=0.2  |                 0.484 |                0.539 |            0.053 |
+|      5 | 2023-08-25   | 2026-08-31 | TrendETF lookback=9 target=0.2  |                 0.492 |                1.141 |            0.98  |
 
 ## Falsification
 
-**Placebo.** Trend sleeve with a fixed random sign per ETF, 20 draws: actual Sharpe 0.412, placebo mean -0.016, p95 0.413, beats 19 of 20.
+**Placebo.** Trend sleeve with a fixed random sign per ETF, 20 draws: actual Sharpe 0.459, placebo mean -0.009, p95 0.382, beats 20 of 20.
 
 **Vol scaling without the signal.** Same sizing, every sign forced long:
 
 | variant | sharpe | annual_return | annual_vol | max_drawdown |
 |---|---|---|---|---|
-| trend_signal | 0.412 | 0.031 | 0.083 | -0.198 |
-| long_only_vol_scaled | 0.590 | 0.046 | 0.082 | -0.234 |
+| trend_signal | 0.459 | 0.036 | 0.084 | -0.203 |
+| long_only_vol_scaled | 0.618 | 0.047 | 0.079 | -0.234 |
 
 **Cost stress.** Book at multiples of the cost model:
 
 | variant | sharpe | annual_return | annual_vol | max_drawdown |
 |---|---|---|---|---|
-| 1x | 0.262 | 0.010 | 0.043 | -0.135 |
-| 2x | 0.130 | 0.004 | 0.040 | -0.154 |
-| 4x | -0.090 | -0.004 | 0.037 | -0.238 |
+| 1x | 0.810 | 0.057 | 0.072 | -0.121 |
+| 2x | 0.726 | 0.050 | 0.071 | -0.125 |
+| 4x | 0.550 | 0.034 | 0.065 | -0.194 |
 
 **Signal delay.** Every sleeve's targets held back N extra bars:
 
 | variant | sharpe | annual_return | annual_vol | max_drawdown |
 |---|---|---|---|---|
-| +1 | 0.133 | 0.004 | 0.039 | -0.146 |
-| +2 | 0.214 | 0.008 | 0.043 | -0.122 |
-| +5 | 0.027 | 0.000 | 0.039 | -0.180 |
+| +1 | 0.815 | 0.058 | 0.072 | -0.123 |
+| +2 | 0.827 | 0.059 | 0.073 | -0.126 |
+| +5 | 0.761 | 0.054 | 0.073 | -0.136 |
 
 ## v2 candidate: EWMAC
 
-EWMAC at 16/64, 32/128, 64/256 and the three combined with a forecast diversification multiplier, forecast scalars estimated on trailing data only (expanding, NaN for the first 500 days), cap 20, forecast / 10 x TrendETF's 40% per-asset target (35-day vol where TrendETF uses 60-day) and class balance, daily, same universe, cost model and overlay. The 10% buffer sits on the raw targets; on any day one instrument leaves its band the whole sleeve is re-sent and the overlay re-scales it, so it cuts trades less than the same buffer on final positions would. Window 2005-06-09 to 2026-08-31, where both rules are live. Gross is the same run with every cost coefficient at zero, run for the combined rule only. Turnover is traded notional over equity per year. The combined rule gross and net and each speed net are logged trials.
+EWMAC at 16/64, 32/128, 64/256 and the three combined with a forecast diversification multiplier, forecast scalars estimated on trailing data only (expanding, NaN for the first 500 days), cap 20, forecast / 10 x TrendETF's 40% per-asset target (35-day vol where TrendETF uses 60-day) and class balance, sent daily, same universe, cost model and overlay. The engine's 10% buffer sits on the final weights after the overlay, per instrument: an instrument trades only when its held weight is outside target x (1 +/- 0.1). Window 2005-06-09 to 2026-08-31, where both rules are live. Gross is the same path with each day's trade costs and borrow added back. Turnover is traded notional over equity per year. Each variant is a logged trial.
 
 | variant | sharpe_gross | sharpe | annual_return | annual_vol | max_drawdown | turnover | trades |
 |---|---|---|---|---|---|---|---|
-| TrendETF | 0.402 | 0.382 | 0.028 | 0.082 | -0.198 | 6.783 | 3900 |
-| EWMAC | 0.842 | 0.711 | 0.070 | 0.103 | -0.201 | 19.288 | 72860 |
-| EWMAC 16/64 | nan | 0.538 | 0.049 | 0.098 | -0.177 | 26.728 | 72867 |
-| EWMAC 32/128 | nan | 0.703 | 0.072 | 0.106 | -0.167 | 18.844 | 72867 |
-| EWMAC 64/256 | nan | 0.568 | 0.054 | 0.102 | -0.195 | 13.943 | 72810 |
+| TrendETF | 0.520 | 0.432 | 0.033 | 0.083 | -0.203 | 6.506 | 2506 |
+| EWMAC | 0.837 | 0.681 | 0.066 | 0.102 | -0.194 | 18.537 | 27050 |
+| EWMAC 16/64 | 0.746 | 0.527 | 0.048 | 0.098 | -0.177 | 26.098 | 34220 |
+| EWMAC 32/128 | 0.861 | 0.712 | 0.072 | 0.105 | -0.165 | 18.028 | 25871 |
+| EWMAC 64/256 | 0.774 | 0.658 | 0.065 | 0.103 | -0.196 | 13.254 | 20373 |
+
+## EWMAC: walk-forward and the untouched window
+
+Walk-forward over the four EWMAC variants on the sessions before the untouched window, 4 folds of 3 years, best training Sharpe held in the test window. Selected-in-sample OOS Sharpe **0.722** vs the frozen combined rule **0.659** over the same test windows.
+
+|   fold | test_start   | test_end   | picked       |   picked_train_sharpe |   picked_test_sharpe |   v1_test_sharpe |
+|-------:|:-------------|:-----------|:-------------|----------------------:|---------------------:|-----------------:|
+|      1 | 2009-12-28   | 2012-12-27 | EWMAC        |                 0.954 |                0.569 |            0.569 |
+|      2 | 2012-12-28   | 2015-12-29 | EWMAC        |                 0.801 |                1.084 |            1.084 |
+|      3 | 2015-12-30   | 2018-12-31 | EWMAC        |                 0.881 |                0.388 |            0.388 |
+|      4 | 2019-01-02   | 2021-12-30 | EWMAC 32/128 |                 0.778 |                0.877 |            0.597 |
+
+**Untouched window** 2021-12-31 to 2026-08-31, the last 20% of the book's sessions. Nothing was fit or picked on it; its return was inside the one full-panel look above, so it confirms rather than discovers. Promotion rule, fixed before this run: net Sharpe above zero on the untouched window, above TrendETF's on the same window, and a positive alpha t against the ETF universe there.
+
+| rule | Sharpe gross | Sharpe net | ann. return | ann. vol | max drawdown | turnover | trades |
+|---|---|---|---|---|---|---|---|
+| EWMAC | 0.562 | 0.413 | 2.90% | 7.62% | -19.4% | 12.7x | 6196 |
+| TrendETF | 0.978 | 0.874 | 5.93% | 6.86% | -8.0% | 6.8x | 614 |
+
+EWMAC against its universe on the window: 1/N: alpha +2.79% (t 0.75), beta 0.04, benchmark Sharpe 0.98, residual Sharpe 0.37; 1/N vol-targeted: alpha +2.21% (t 0.60), beta 0.09, benchmark Sharpe 1.01, residual Sharpe 0.29. **Clears the rule: no.**
+
+## Candidate books
+
+Every book in `strategies.BOOKS` at 1/N of its sleeves, kill off, from 2005-06-09 (the first day all four are live) to the end; the same window, engine and cost model for all four. DSR uses the trial count above. OOS is the untouched window; the live book is the OOS winner only if it beats `v1` there. **OOS winner: `beta+alpha`** (live book `beta+alpha`).
+
+| variant | sharpe_gross | sharpe | dsr | annual_return | annual_vol | max_drawdown | turnover | oos_sharpe | oos_max_drawdown |
+|---|---|---|---|---|---|---|---|---|---|
+| v1 | 0.333 | 0.223 | 0.009 | 0.009 | 0.043 | -0.127 | 3.755 | 0.400 | -0.092 |
+| v1+ewmac | 0.695 | 0.536 | 0.175 | 0.030 | 0.058 | -0.135 | 9.683 | 0.457 | -0.135 |
+| ewmac-for-trend | 0.722 | 0.551 | 0.193 | 0.031 | 0.058 | -0.144 | 10.832 | 0.396 | -0.144 |
+| beta+alpha | 0.882 | 0.760 | 0.533 | 0.054 | 0.073 | -0.121 | 10.479 | 0.789 | -0.117 |
+
+ERC vs 1/N gate on `beta+alpha`'s sleeves, quarterly refits, out of sample:
+
+|               | erc        | equal      |
+|:--------------|:-----------|:-----------|
+| sharpe        | 0.8556     | 0.8709     |
+| annual_return | 0.0598     | 0.0631     |
+| annual_vol    | 0.0709     | 0.0733     |
+| max_drawdown  | -0.1072    | -0.1122    |
+| start         | 2004-07-01 | 2004-07-01 |
+| end           | 2026-08-31 | 2026-08-31 |
 
 ## Signal vs beta
 
@@ -107,21 +150,23 @@ Each sleeve's live net returns regressed on its own universe: the daily-rebalanc
 
 | sleeve | benchmark | benchmark Sharpe | sleeve Sharpe | alpha | t | beta | residual Sharpe |
 |---|---|---|---|---|---|---|---|
-| TrendETF | 1/N | 0.626 | 0.412 | +2.48% | 1.43 | 0.141 | 0.302 |
-| TrendETF | 1/N vol-targeted | 0.611 | 0.412 | +2.12% | 1.25 | 0.212 | 0.263 |
-| FXCarryETF | 1/N | 0.076 | -0.171 | -1.01% | -0.76 | -0.086 | -0.164 |
-| FXCarryETF | 1/N vol-targeted | 0.017 | -0.171 | -1.04% | -0.78 | -0.084 | -0.170 |
-| CryptoTrend | 1/N | 0.440 | 0.051 | -2.32% | -1.04 | 0.106 | -0.473 |
-| CryptoTrend | 1/N vol-targeted | 0.517 | 0.051 | -2.90% | -1.32 | 0.635 | -0.622 |
-| EWMAC | 1/N | 0.598 | 0.711 | +6.98% | 3.20 | 0.054 | 0.678 |
-| EWMAC | 1/N vol-targeted | 0.575 | 0.711 | +6.55% | 3.02 | 0.134 | 0.641 |
+| TrendETF | 1/N | 0.626 | 0.459 | +2.81% | 1.63 | 0.153 | 0.342 |
+| TrendETF | 1/N vol-targeted | 0.611 | 0.459 | +2.44% | 1.45 | 0.225 | 0.303 |
+| FXCarryETF | 1/N | 0.076 | -0.160 | -0.94% | -0.71 | -0.086 | -0.153 |
+| FXCarryETF | 1/N vol-targeted | 0.017 | -0.160 | -0.97% | -0.73 | -0.084 | -0.159 |
+| CryptoTrend | 1/N | 0.440 | 0.073 | -2.13% | -0.96 | 0.106 | -0.438 |
+| CryptoTrend | 1/N vol-targeted | 0.517 | 0.073 | -2.71% | -1.24 | 0.631 | -0.585 |
+| ETFBeta | 1/N | 0.670 | 0.662 | +0.67% | 0.76 | 0.673 | 0.163 |
+| ETFBeta | 1/N vol-targeted | 0.651 | 0.656 | +0.35% | 0.57 | 0.774 | 0.126 |
+| EWMAC | 1/N | 0.598 | 0.681 | +6.61% | 3.07 | 0.052 | 0.649 |
+| EWMAC | 1/N vol-targeted | 0.575 | 0.681 | +6.17% | 2.89 | 0.132 | 0.611 |
 
 ## Kill switch
 
-Backtests above run with `kill_dd=None`. With the live 25% kill on, the sleeves would have been flattened permanently on: TrendETF never, FXCarryETF 2011-08-08, CryptoTrend never. Live, a kill stops the sleeve until Kelvin restarts it, which no backtest can model.
+Backtests above run with `kill_dd=None`. With the live 25% kill on, the sleeves would have been flattened permanently on: TrendETF never, FXCarryETF 2010-08-31, CryptoTrend never, ETFBeta 2016-01-08, EWMAC never. Live, a kill stops the sleeve until Kelvin restarts it, which no backtest can model.
 
 ## purgedcv vs archived formula (risk #8)
 
 Best of 100 random series, 750 days: DSR purgedcv 0.6855 vs archive 0.6848; PSR 0.9970 vs 0.9970. purgedcv is pinned at 0.1.5 in requirements.txt.
 
-Tearsheet: `reports/tearsheet.html` (quantstats, SPY benchmark). 1015s.
+Tearsheet: `reports/tearsheet.html` (quantstats, SPY benchmark). 2900s.

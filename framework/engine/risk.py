@@ -1,6 +1,7 @@
 """Overlay applied to every target before it reaches execution.
 
-Order: vol target, gross and per-instrument limits, drawdown control, kill switch.
+Order: vol target, gross and per-instrument limits, drawdown control, kill
+switch, then the position buffer against what the book already holds.
 """
 from dataclasses import dataclass
 
@@ -21,6 +22,7 @@ class RiskConfig:
     dd_scale: float = 0.5
     dd_recover: float = None
     kill_dd: float = None
+    buffer: float = None
 
 
 class RiskManager:
@@ -62,10 +64,25 @@ class RiskManager:
         if c.kill_dd is not None and dd <= -c.kill_dd:
             self.killed = True
 
-    def apply(self, targets, bars, equity_history):
-        """Return scaled targets. equity_history is the book's (date, equity) list so far."""
+    def breach(self, held):
+        """True when the held weights are through the gross or per-instrument limit."""
+        c = self.cfg
+        gross = sum(abs(x) for x in held.values())
+        return ((c.max_gross is not None and gross > c.max_gross)
+                or (c.max_weight is not None and any(abs(x) > c.max_weight for x in held.values())))
+
+    def apply(self, targets, bars, equity_history, held=None):
+        """Return the weights to send. equity_history is the book's (date, equity) list so far.
+
+        With a buffer and `held` (the book's current weights), an instrument
+        whose held weight is inside target * (1 +/- buffer) is left out, so the
+        overlay can rescale every target daily without churning positions that
+        are close enough. A gross or per-instrument breach, a change in the
+        drawdown cut or a kill sends every target.
+        """
         c = self.cfg
         self.targets = dict(targets)
+        before = (self.reduced, self.killed)
         w = dict(targets)
         if c.target_vol:
             vol = self.ex_ante_vol(w, bars)
@@ -82,6 +99,8 @@ class RiskManager:
             w = {n: x * c.dd_scale for n, x in w.items()}
         if self.killed:
             w = {n: 0.0 for n in w}
+        if held is not None and c.buffer and (self.reduced, self.killed) == before and not self.breach(held):
+            w = {n: x for n, x in w.items() if abs(held.get(n, 0.0) - x) > c.buffer * abs(x)}
         return w
 
     def drift(self, held, bars, equity_history):
@@ -90,16 +109,12 @@ class RiskManager:
         Returns corrective targets when the held book has drifted through a
         gross or per-instrument limit, or when the drawdown cut or kill switch
         changed state; otherwise None. This is what lets a monthly strategy be
-        killed on a Tuesday.
+        killed on a Tuesday. The buffer does not apply to a correction.
         """
         if self.targets is None:
             return None
-        c = self.cfg
         before = (self.reduced, self.killed)
         self.update_state(equity_history)
-        gross = sum(abs(x) for x in held.values())
-        breach = ((c.max_gross is not None and gross > c.max_gross)
-                  or (c.max_weight is not None and any(abs(x) > c.max_weight for x in held.values())))
-        if breach or (self.reduced, self.killed) != before:
+        if self.breach(held) or (self.reduced, self.killed) != before:
             return self.apply(self.targets, bars, equity_history)
         return None

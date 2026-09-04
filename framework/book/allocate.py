@@ -24,11 +24,15 @@ from framework.engine import drawdown, run, sharpe
 REPORTS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "reports")
 WINDOW = 3 * 252
 MIN_LIVE = 252
+# The book the daemon runs, one of strategies.BOOKS. A candidate replaces it
+# only by beating it on the untouched window in validate.py (README, v3).
+# 2026-09-04: beta+alpha 0.79 vs v1 0.40 on 2021-12-31 to 2026-08-31.
+LIVE_BOOK = "beta+alpha"
 
 
-def run_sleeves(bars, **config_kwargs):
-    """Backtest every sleeve alone. Returns {name: Results}."""
-    return {str(s): run(s, bars, config=book_config(**config_kwargs)) for s in sleeves()}
+def run_sleeves(bars, book=LIVE_BOOK, **config_kwargs):
+    """Backtest every sleeve of `book` alone. Returns {name: Results}."""
+    return {str(s): run(s, bars, config=book_config(**config_kwargs)) for s in sleeves(book)}
 
 
 def returns_frame(results):
@@ -111,7 +115,7 @@ def allocate(bars=None, results=None, write=True):
     winner = "erc" if table.loc["sharpe", "erc"] > table.loc["sharpe", "equal"] else "equal"
     w_erc, w_eq = fit(R, R.index[-1])
     live = w_erc if winner == "erc" else w_eq
-    out = {"allocator": winner, "weights": {k: round(float(v), 4) for k, v in live.items()},
+    out = {"book": LIVE_BOOK, "allocator": winner, "weights": {k: round(float(v), 4) for k, v in live.items()},
            "erc_weights": {k: round(float(v), 4) for k, v in w_erc.items()},
            "fit_date": str(R.index[-1].date()), "window_days": WINDOW,
            "oos": {k: {m: (round(v, 4) if isinstance(v, float) else v) for m, v in table[k].items()}
