@@ -1,0 +1,6 @@
+.env
+*.log
+*.sqlite
+*.plist
+__pycache__/
+**/ledger.csv

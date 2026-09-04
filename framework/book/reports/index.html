@@ -1,0 +1,39 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Premia book</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"><style>
+:root{--bg:#05080a;--text:#e6efee;--muted:#5d7a7e;--green:hsl(190 85% 58%);--green-dark:hsl(190 75% 44%);
+--border:rgba(140,190,200,.14);--red:#ff5f56}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.55 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;padding:14px 32px 24px}
+header{display:flex;align-items:baseline;justify-content:space-between;border-bottom:1px solid var(--border);padding-bottom:8px}
+h1{font-size:13px;font-weight:500;letter-spacing:.22em;text-transform:uppercase;margin:0}
+.meta{color:var(--muted);font-size:11px;font-variant-numeric:tabular-nums}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:26px 34px;margin-top:22px}
+.wide{grid-column:1/-1}
+h2{font-size:10px;font-weight:500;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);padding-bottom:4px;margin:0 0 9px}
+.stats{display:flex;gap:34px;flex-wrap:wrap}
+.stat{font-size:26px;font-weight:400;line-height:1.1;font-variant-numeric:tabular-nums}
+.stat .q{display:block;font-size:11px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-top:4px}
+table{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric:tabular-nums}
+td,th{padding:6px 0;border-bottom:1px solid var(--border);text-align:right;font-weight:400}
+td:first-child,th:first-child{text-align:left}
+th{color:var(--muted);font-size:10px;letter-spacing:.14em;text-transform:uppercase}
+.neg{color:var(--red)}.pos{color:var(--green)}
+svg text{fill:var(--muted);font-size:10px}
+.legend{font-size:11px;color:var(--muted);margin-top:6px}.legend b{font-weight:500;color:var(--text)}
+</style></head><body>
+<header><h1>Premia book</h1><span class="meta">last run 2026-09-04 02:39:37
+ · panel dd1df31f5f4a7e47 · equal allocator</span></header>
+<div class="grid">
+<section class="wide"><h2>Book</h2><div class="stats">
+<div class="stat">99,692<span class="q">shadow equity</span></div>
+<div class="stat"><span class=meta>no keys</span><span class="q">alpaca equity</span></div>
+<div class="stat">0.00%<span class="q">shadow drawdown</span></div>
+<div class="stat">0<span class="q">days since kill-switch check</span></div>
+<div class="stat">0.26<span class="q">backtest sharpe · dsr 0.21</span></div>
+</div></section>
+<section class="wide"><h2>Equity</h2><svg viewBox="0 0 900 240" width="100%" style="max-width:900px"><polyline fill="none" style="stroke:var(--green);stroke-width:1.6" points="36.0,120.0"/><circle cx="36.0" cy="120.0" r="3" style="fill:var(--green)"/><polyline fill="none" style="stroke:var(--muted);stroke-width:1;stroke-dasharray:4 4" points="36.0,120.0"/><circle cx="36.0" cy="120.0" r="3" style="fill:var(--green)"/><text x="2" y="187.2">99,533</text><text x="2" y="52.8">99,852</text><text x="36" y="232">2026-09-03</text><text x="864" y="232" text-anchor="end">2026-09-03</text></svg>
+<div class="legend"><b>shadow</b> engine fills at the shadow cost model · <b>alpaca</b> paper account · <b>expected</b> backtest drift +1.04%/yr</div></section>
+<section><h2>Positions, weight of equity</h2><table><tr><th>instrument</th><th>shadow</th><th>target</th><th>alpaca</th></tr><tr><td>DBA</td><td>+3.82%</td><td>+3.82%</td><td><span class=meta>no keys</span></td></tr><tr><td>DBC</td><td>+2.16%</td><td>+2.16%</td><td><span class=meta>no keys</span></td></tr><tr><td>EEM</td><td>+2.09%</td><td>+2.09%</td><td><span class=meta>no keys</span></td></tr><tr><td>EFA</td><td>+3.77%</td><td>+3.77%</td><td><span class=meta>no keys</span></td></tr><tr><td>FXA</td><td>+24.90%</td><td>+24.90%</td><td><span class=meta>no keys</span></td></tr><tr><td>FXB</td><td>+38.21%</td><td>+38.21%</td><td><span class=meta>no keys</span></td></tr><tr><td>FXE</td><td>-14.98%</td><td>-14.98%</td><td><span class=meta>no keys</span></td></tr><tr><td>FXF</td><td>-24.92%</td><td>-24.92%</td><td><span class=meta>no keys</span></td></tr><tr><td>FXY</td><td>-34.53%</td><td>-34.53%</td><td><span class=meta>no keys</span></td></tr><tr><td>GLD</td><td>+1.74%</td><td>+1.74%</td><td><span class=meta>no keys</span></td></tr><tr><td>IEF</td><td>+24.15%</td><td>+24.15%</td><td><span class=meta>no keys</span></td></tr><tr><td>QQQ</td><td>+2.70%</td><td>+2.70%</td><td><span class=meta>no keys</span></td></tr><tr><td>SLV</td><td>+0.92%</td><td>+0.92%</td><td><span class=meta>no keys</span></td></tr><tr><td>SPY</td><td>+4.59%</td><td>+4.59%</td><td><span class=meta>no keys</span></td></tr><tr><td>TLT</td><td>-12.01%</td><td>-12.01%</td><td><span class=meta>no keys</span></td></tr><tr><td>USO</td><td>+0.91%</td><td>+0.91%</td><td><span class=meta>no keys</span></td></tr></table></section>
+<section><h2>Last orders</h2><table><tr><th>run</th><th>instrument</th><th>qty</th><th>fill / notional</th></tr><tr><td>2026-09-03 shadow</td><td>FXY</td><td>1.7639</td><td>57.7316</td></tr><tr><td>2026-09-03 shadow</td><td>FXB</td><td>-0.7848</td><td>129.6937</td></tr><tr><td>2026-09-03 shadow</td><td>FXA</td><td>-1.4346</td><td>70.9555</td></tr><tr><td>2026-09-03 shadow</td><td>FXF</td><td>0.9397</td><td>108.362</td></tr></table></section>
+<section class="wide"><h2>Allocator</h2><p class="meta">{&quot;TrendETF&quot;: 0.3333, &quot;FXCarryETF&quot;: 0.3333, &quot;CryptoTrend&quot;: 0.3333} · ERC vs 1/N out of sample:
+Sharpe 0.2275 vs 0.2327 · full report in validation.md</p></section>
+</div></body></html>

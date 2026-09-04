@@ -1,0 +1,157 @@
+{
+  "headline": {
+    "sharpe": 0.26200719098474057,
+    "annual_return": 0.01039119351850526,
+    "annual_vol": 0.042984901287509585,
+    "max_drawdown": -0.13504010427487956,
+    "start": "2004-07-01",
+    "end": "2026-08-31",
+    "n_obs": 5577,
+    "psr": 0.8900614023751098,
+    "dsr": 0.20662490176460224,
+    "dsr_with_placebo": 0.11267665118041814,
+    "n_trials": 16,
+    "n_runs_logged": 45,
+    "min_btl_years": 47.22127982106128,
+    "backtest_years": 22.13095238095238,
+    "min_trl_years": 39.785714285714285
+  },
+  "allocator": {
+    "allocator": "equal",
+    "weights": {
+      "TrendETF": 0.3333,
+      "FXCarryETF": 0.3333,
+      "CryptoTrend": 0.3333
+    },
+    "erc_weights": {
+      "TrendETF": 0.3184,
+      "FXCarryETF": 0.4203,
+      "CryptoTrend": 0.2613
+    },
+    "fit_date": "2026-08-31",
+    "window_days": 756,
+    "oos": {
+      "erc": {
+        "sharpe": 0.2275,
+        "annual_return": 0.0113,
+        "annual_vol": 0.0565,
+        "max_drawdown": -0.1495,
+        "start": "2005-07-01",
+        "end": "2026-08-31"
+      },
+      "equal": {
+        "sharpe": 0.2327,
+        "annual_return": 0.0118,
+        "annual_vol": 0.0574,
+        "max_drawdown": -0.148,
+        "start": "2005-07-01",
+        "end": "2026-08-31"
+      }
+    },
+    "panel_hash": "aa436bbc6c2e4712"
+  },
+  "walk_forward": {
+    "selected_oos_sharpe": 0.440533754495374,
+    "v1_oos_sharpe": 0.30953349706237204
+  },
+  "falsification": {
+    "placebo": {
+      "trend_sharpe": 0.4121889916340971,
+      "draws": 20,
+      "mean": -0.016469679651410267,
+      "p95": 0.4125642626645703,
+      "beaten": 19
+    },
+    "vol_scaling_only": {
+      "trend_signal": {
+        "sharpe": 0.4121889916340971,
+        "annual_return": 0.031362723125569536,
+        "annual_vol": 0.08335745756121515,
+        "max_drawdown": -0.19781693161677671,
+        "start": "2004-07-01",
+        "end": "2026-08-31",
+        "n_obs": 5577
+      },
+      "long_only_vol_scaled": {
+        "sharpe": 0.5896587586910655,
+        "annual_return": 0.04617025221341442,
+        "annual_vol": 0.08230900910767344,
+        "max_drawdown": -0.2340030013694403,
+        "start": "2004-07-01",
+        "end": "2026-08-31",
+        "n_obs": 5577
+      }
+    },
+    "cost_stress": {
+      "1x": {
+        "sharpe": 0.26200719098474057,
+        "annual_return": 0.01039119351850526,
+        "annual_vol": 0.042984901287509585,
+        "max_drawdown": -0.13504010427487956,
+        "start": "2004-07-01",
+        "end": "2026-08-31",
+        "n_obs": 5577
+      },
+      "2x": {
+        "sharpe": 0.12997348964133806,
+        "annual_return": 0.004411320984215594,
+        "annual_vol": 0.04003559969613903,
+        "max_drawdown": -0.1539536167925537,
+        "start": "2004-07-01",
+        "end": "2026-08-31",
+        "n_obs": 5577
+      },
+      "4x": {
+        "sharpe": -0.08964804191113897,
+        "annual_return": -0.004032883923621222,
+        "annual_vol": 0.03730897252171775,
+        "max_drawdown": -0.23809959426916738,
+        "start": "2004-07-01",
+        "end": "2026-08-31",
+        "n_obs": 5577
+      }
+    },
+    "signal_delay": {
+      "+1": {
+        "sharpe": 0.13292567633148947,
+        "annual_return": 0.004462197117394151,
+        "annual_vol": 0.03931187568422318,
+        "max_drawdown": -0.14557603840811273,
+        "start": "2004-07-02",
+        "end": "2026-08-31",
+        "n_obs": 5576
+      },
+      "+2": {
+        "sharpe": 0.21430005690824983,
+        "annual_return": 0.008402250790082721,
+        "annual_vol": 0.04345549843800406,
+        "max_drawdown": -0.12188239715239568,
+        "start": "2004-07-06",
+        "end": "2026-08-31",
+        "n_obs": 5575
+      },
+      "+5": {
+        "sharpe": 0.027051694480328653,
+        "annual_return": 0.00029652666762625124,
+        "annual_vol": 0.03875873367898016,
+        "max_drawdown": -0.18005319854035762,
+        "start": "2004-07-09",
+        "end": "2026-08-31",
+        "n_obs": 5572
+      }
+    }
+  },
+  "dsr_crosscheck": {
+    "purgedcv": 0.6854707295370389,
+    "archive": 0.6848206504753203,
+    "psr_archive": 0.9969869321207764,
+    "psr_purgedcv": 0.9970035994037864
+  },
+  "kill_dates": {
+    "TrendETF": "never",
+    "FXCarryETF": "2011-08-08",
+    "CryptoTrend": "never"
+  },
+  "panel_hash": "aa436bbc6c2e4712",
+  "run_at": "2026-09-04T02:06:13"
+}

@@ -1,0 +1,34 @@
+{
+  "allocator": "equal",
+  "weights": {
+    "TrendETF": 0.3333,
+    "FXCarryETF": 0.3333,
+    "CryptoTrend": 0.3333
+  },
+  "erc_weights": {
+    "TrendETF": 0.3184,
+    "FXCarryETF": 0.4203,
+    "CryptoTrend": 0.2613
+  },
+  "fit_date": "2026-08-31",
+  "window_days": 756,
+  "oos": {
+    "erc": {
+      "sharpe": 0.2275,
+      "annual_return": 0.0113,
+      "annual_vol": 0.0565,
+      "max_drawdown": -0.1495,
+      "start": "2005-07-01",
+      "end": "2026-08-31"
+    },
+    "equal": {
+      "sharpe": 0.2327,
+      "annual_return": 0.0118,
+      "annual_vol": 0.0574,
+      "max_drawdown": -0.148,
+      "start": "2005-07-01",
+      "end": "2026-08-31"
+    }
+  },
+  "panel_hash": "aa436bbc6c2e4712"
+}
