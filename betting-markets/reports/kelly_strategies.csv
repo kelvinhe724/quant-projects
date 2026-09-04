@@ -1,0 +1,7 @@
+rule,bets,turnover,roi,total,t,mean stake,log growth
+"full Kelly, best price",21258,341.28507,0.02897,9.88868,2.36633,0.01605,1.31669
+"half Kelly, best price",21258,170.64253,0.02897,4.94434,2.36633,0.00803,2.78605
+"quarter Kelly, best price",21258,85.32127,0.02897,2.47217,2.36633,0.00401,1.92981
+"full Kelly, consensus price",368,4.22373,0.03591,0.15168,0.2285,0.01148,-0.02949
+"half Kelly, consensus price",368,2.11187,0.03591,0.07584,0.2285,0.00574,0.02651
+"quarter Kelly, consensus price",368,1.05593,0.03591,0.03792,0.2285,0.00287,0.02495
