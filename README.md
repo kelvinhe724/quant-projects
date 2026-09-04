@@ -1,6 +1,6 @@
 # Quant projects
 
-Thirty projects from the OSG Global Quant Curriculum, each implemented from the
+Thirty-one projects from the OSG Global Quant Curriculum, each implemented from the
 spec rather than from a reference solution. They run on real market data:
 Yahoo Finance for equity prices, the VIX and option chains, FRED for Treasury
 yields and the T-bill rate, the UCI archive for the credit dataset, Binance's
@@ -29,6 +29,7 @@ connection.
 | `fama-french/` | CAPM, FF3, FF5 and FF5+MOM time-series regressions on the 25 size/value portfolios and ten stocks, 1963-2026, GRS joint alpha test, inverse-vol blend of the long-short factors, pre/post-2010 split | FF3 lifts mean R² from 0.73 to 0.91 and halves mean abs alpha; every model rejected by GRS (FF3 3.66, p 7e-9); blend Sharpe 0.80 vs market 0.45 full sample, 0.22 vs 0.88 post-2010; SMB, HML, RMW, CMA all lose significance after 2010 |
 | `kalman-pairs/` | Kalman-filter hedge ratios on the 35 pairs and rules from `pairs-trading/`, state noise tuned on the 2015-2019 formation window, untouched 2020+ test | Adaptive hedge scores net out-of-sample Sharpe -0.16 against 0.08 for the frozen OLS beta; nothing in the state-noise grid beats it, the top of the grid finds gross Sharpe 0.51 and spends all of it on turnover |
 | `pit-universe/` | Point-in-time S&P 500 membership from Wikipedia change rows and 39 dated list snapshots, 893 names 2003-2026, then `momentum/` and `pairs-trading/` rerun on today's list vs the point-in-time panel with the same code, dates and costs | Equal-weight level bias +4.0%/yr, 3.2 of it from holding future members before they joined; 12-1 momentum gross return overstated +2.2%/yr in-sample and +6.3%/yr on the 2021+ test, all from the long leg; pairs screen bias -0.7%/yr, inside noise; 257 of 390 deleted names have no Yahoo prices so every number is a lower bound |
+| `rates-carry/` | Carry plus rolldown on the FRED Treasury curve 1962-2026 (776 month-end Nelson-Siegel fits from `nelson-siegel/`, level always the observed CMT yield), term premium by decade, predictive regression of next month's excess return, then top-2-of-5 tenors at 7 years of duration held through SHY/IEI/IEF/TLH/TLT in the book's engine and cost model, 2002-2026 | Carry predicts: pooled slope 2.5, t 3.2, R² 0.015, holds in both halves; rolldown alone t 0.9; 10y term premium +1.7%/yr over 64 years at t 1.8, negative in the 1960s-70s and 2020s; 2022 excess return -17.8% on the 10y and -33.3% on the 30y par bond, the worst years since 1962; through the engine net Sharpe 0.53, max drawdown -21.6%, 2022 -7.4% vs -9.4% holding IEF+TLT, alpha +1.4%/yr over IEF+TLT at t 1.66 with beta 0.75; duration-neutral version Sharpe 0.10 on the curve and -0.10 net, so the edge is the term premium and the flat-when-inverted switch, not the cross-section |
 
 ### Derivatives & Volatility
 
