@@ -1,0 +1,229 @@
+
+1. DATA AUDIT
+-------------
+raw file: 53940 rows x 10 columns
+              rule  rows      pct
+         bad_price     0 0.000000
+    zero_dimension    20 0.037078
+ implausible_depth     0 0.000000
+ implausible_table     0 0.000000
+depth_inconsistent    93 0.172414
+    extreme_aspect    16 0.029663
+ extreme_dimension     3 0.005562
+     duplicate_row   289 0.535780
+
+sample flow: 53940 raw -> 53775 modelling (165 removed: impossible dimensions and exact duplicates)
+still flagged inside the modelling sample: 80
+selection 28233 | inference 9410 | test 16132
+price $326 to $18823, median $2401, skew 1.62; log price skew 0.11
+
+2. EDA AND THE CONFOUNDING CHECK
+--------------------------------
+raw mean price by grade, worst to best (the naive read):
+variable   clarity   color     cut
+grade                             
+D              NaN  3151.0     NaN
+E              NaN  3039.0     NaN
+F              NaN  3706.0     NaN
+Fair           NaN     NaN  4453.0
+G              NaN  4035.0     NaN
+Good           NaN     NaN  3923.0
+H              NaN  4464.0     NaN
+I              NaN  5129.0     NaN
+I1          3978.0     NaN     NaN
+IF          2828.0     NaN     NaN
+Ideal          NaN     NaN  3435.0
+J              NaN  5412.0     NaN
+Premium        NaN     NaN  4601.0
+SI1         3982.0     NaN     NaN
+SI2         5011.0     NaN     NaN
+VS1         3845.0     NaN     NaN
+VS2         3921.0     NaN     NaN
+VVS1        2559.0     NaN     NaN
+VVS2        3337.0     NaN     NaN
+Very Good      NaN     NaN  3977.0
+
+mean carat by grade, which is where the confounding lives:
+       cut: Fair=1.06  Good=0.85  Very Good=0.81  Premium=0.89  Ideal=0.70
+     color: J=1.18  I=1.03  H=0.91  G=0.77  F=0.73  E=0.66  D=0.66
+   clarity: I1=1.29  SI2=1.07  SI1=0.85  VS2=0.76  VS1=0.72  VVS2=0.60  VVS1=0.51  IF=0.51
+
+3. BASELINE LADDER AND AIC/BIC SELECTION
+----------------------------------------
+AIC keeps 17 terms, dropping ['carat_x_cut']
+BIC keeps 16 terms, dropping ['carat_x_cut', 'table_x_cut']
+
+                              terms      rmse       mae     medae     r2        aic        bic  adj_r2  train_rmse
+model                                                                                                             
+mean price                        0  3979.082  3025.093  2771.816 -0.000        NaN        NaN     NaN         NaN
+carat only, price in dollars      1  1550.113  1010.811   643.268  0.848        NaN        NaN     NaN         NaN
+carat only                        1  1673.163   861.429   341.722  0.823   4672.975   4689.472   0.933    1673.000
+carat + curvature                 2  1673.892   861.539   341.833  0.823   4674.975   4699.719   0.933    1672.625
+carat + quality                   5   999.367   463.698   183.663  0.937 -28404.083 -28354.593   0.979     997.999
+full 18-term                     18   924.596   423.930   176.649  0.946 -32181.643 -32024.926   0.982     920.684
+AIC selected                     17   924.452   423.896   176.653  0.946 -32183.625 -32035.157   0.982     920.706
+BIC selected                     16   923.899   423.891   176.945  0.946 -32182.182 -32041.962   0.982     920.500
+one-hot quality benchmark        25   872.782   410.573   169.147  0.952 -33780.491 -33566.037   0.983     868.388
+
+4. REGULARISATION
+-----------------
+       ridge: best {'model__alpha': np.float64(0.0001)} | one-SE choice {'model__alpha': np.float64(46.41588833612773)} | CV log-RMSE 0.13724
+       lasso: best {'model__alpha': np.float64(5.623413251903491e-05)} | one-SE choice {'model__alpha': np.float64(0.000825404185268019)} | CV log-RMSE 0.13723
+ elastic_net: best {'model__alpha': np.float64(3.1622776601683795e-05), 'model__l1_ratio': 0.95} | one-SE choice {'model__alpha': np.float64(0.001), 'model__l1_ratio': 0.1} | CV log-RMSE 0.13724
+the one-SE choice is what the stability and final-test sections use
+
+lasso terms surviving: 18 at alpha=1e-06, 0 at alpha=1.00
+       ridge: nested outer RMSE $923 (sd $60), alphas chosen [np.float64(0.215443), np.float64(1.0), np.float64(2.154435), np.float64(4.641589)]
+       lasso: nested outer RMSE $922 (sd $59), alphas chosen [np.float64(1e-06), np.float64(5.6e-05), np.float64(0.00011)]
+ elastic_net: nested outer RMSE $923 (sd $60), alphas chosen [np.float64(0.0001), np.float64(0.000316)]
+
+5. REPEATED-CV AND BOOTSTRAP STABILITY
+--------------------------------------
+             cv_rmse_mean  cv_rmse_sd  cv_rmse_p5  cv_rmse_p95   cv_mae  cv_r2    gap  min_sign_consistency
+OLS full          922.107      72.166     831.996     1032.542  423.843  0.946  1.419                  0.56
+OLS BIC           921.341      72.086     832.031     1032.473  423.814  0.946  0.824                  0.76
+ridge             924.222      68.254     834.580     1025.510  429.609  0.946  1.500                  0.88
+lasso             919.302      71.843     830.703     1025.343  429.039  0.946  0.927                  0.60
+elastic net       922.784      69.838     833.589     1027.907  427.424  0.946  1.415                  0.68
+
+bootstrap on the locked 18-term model, 500 draws, standardised coefficients:
+                   mean     sd  sign_consistency  selection_frequency  relative_dispersion  ci_low  ci_high
+log_carat         0.873  0.063             1.000                  1.0                0.072   0.745    0.983
+log_carat_sq      0.026  0.002             1.000                  1.0                0.092   0.021    0.030
+log_volume        0.190  0.062             1.000                  1.0                0.325   0.079    0.315
+aspect_xy         0.011  0.002             1.000                  1.0                0.153   0.008    0.015
+depth_c          -0.004  0.002             0.998                  1.0                0.374  -0.008   -0.001
+depth_c_sq       -0.011  0.002             1.000                  1.0                0.199  -0.016   -0.007
+table_c           0.008  0.006             0.938                  1.0                0.696  -0.002    0.020
+table_c_sq       -0.008  0.002             1.000                  1.0                0.244  -0.012   -0.005
+cut_score         0.057  0.010             1.000                  1.0                0.183   0.036    0.075
+cut_score_sq     -0.033  0.010             0.998                  1.0                0.291  -0.051   -0.014
+color_score       0.272  0.004             1.000                  1.0                0.016   0.263    0.281
+color_score_sq   -0.140  0.005             1.000                  1.0                0.032  -0.149   -0.131
+clarity_score     0.367  0.005             1.000                  1.0                0.015   0.357    0.377
+clarity_score_sq -0.164  0.005             1.000                  1.0                0.033  -0.175   -0.154
+carat_x_cut       0.000  0.004             0.526                  1.0               14.182  -0.008    0.009
+carat_x_color     0.019  0.003             1.000                  1.0                0.163   0.013    0.024
+carat_x_clarity   0.032  0.004             1.000                  1.0                0.114   0.025    0.039
+table_x_cut      -0.008  0.005             0.942                  1.0                0.703  -0.018    0.002
+
+AIC re-selection inside 100 bootstrap draws, inclusion frequency:
+log_carat           1.00
+carat_x_color       1.00
+log_volume          1.00
+aspect_xy           1.00
+depth_c             1.00
+depth_c_sq          1.00
+table_c             1.00
+table_c_sq          1.00
+cut_score           1.00
+log_carat_sq        1.00
+color_score         1.00
+color_score_sq      1.00
+clarity_score       1.00
+clarity_score_sq    1.00
+carat_x_clarity     1.00
+cut_score_sq        0.99
+table_x_cut         0.75
+carat_x_cut         0.24
+
+6. DIAGNOSTICS
+--------------
+condition number of the locked design: 1079.0
+                     vif
+log_carat         633.47
+log_carat_sq        3.86
+log_volume        612.83
+aspect_xy           1.25
+depth_c             1.69
+depth_c_sq          1.51
+table_c             1.94
+table_c_sq          1.24
+cut_score          57.01
+cut_score_sq       53.83
+color_score        25.23
+color_score_sq     26.49
+clarity_score      27.40
+clarity_score_sq   31.21
+carat_x_color      10.27
+carat_x_clarity    14.60
+
+Breusch-Pagan, log target: LM 1804, p 0.00e+00
+Breusch-Pagan, level target: LM 7123, p 0.00e+00
+RESET (power 2): F 203.8, p 4.56e-46
+residual skew -0.11, kurtosis 2.93, Jarque-Bera p 0.00e+00
+Cook's D above 4/n: 1243 rows (4.40%), max 1.5622
+largest coefficient shift after dropping high-influence rows: aspect_xy moves 1.0173 (111.9%)
+
+7. INFERENCE ON THE HELD-OUT INFERENCE SPLIT
+--------------------------------------------
+locked specification: 16 terms, 17 estimated coefficients, n = 9410
+overall F = 28556.7, p = 0.00e+00, R2 = 0.9819, adj R2 = 0.9818, residual SE = 0.1367
+HC3 vs classical SE ratio: min 1.07, median 1.78, max 7.12
+
+                  estimate  hc3_se        t       p  ci_low  ci_high  p_holm    p_bh
+log_carat           1.1929  0.1857   6.4223  0.0000  0.8289   1.5570  0.0000  0.0000
+log_carat_sq        0.0431  0.0076   5.6970  0.0000  0.0283   0.0580  0.0000  0.0000
+log_volume          0.6545  0.1861   3.5174  0.0004  0.2898   1.0193  0.0035  0.0008
+aspect_xy           0.9657  0.2973   3.2485  0.0012  0.3830   1.5483  0.0081  0.0019
+depth_c             0.0017  0.0046   0.3574  0.7208 -0.0074   0.0107  1.0000  0.7208
+depth_c_sq         -0.0014  0.0023  -0.5900  0.5552 -0.0059   0.0032  1.0000  0.6297
+table_c             0.0007  0.0013   0.5383  0.5904 -0.0018   0.0032  1.0000  0.6297
+table_c_sq         -0.0003  0.0005  -0.5848  0.5587 -0.0012   0.0006  1.0000  0.6297
+cut_score           0.0640  0.0359   1.7831  0.0746 -0.0063   0.1343  0.4474  0.1085
+cut_score_sq       -0.0057  0.0043  -1.3192  0.1871 -0.0141   0.0028  0.9355  0.2495
+color_score         0.1679  0.0044  38.1841  0.0000  0.1593   0.1765  0.0000  0.0000
+color_score_sq     -0.0101  0.0005 -19.6102  0.0000 -0.0112  -0.0091  0.0000  0.0000
+clarity_score       0.2234  0.0058  38.5022  0.0000  0.2120   0.2348  0.0000  0.0000
+clarity_score_sq   -0.0109  0.0007 -15.9887  0.0000 -0.0123  -0.0096  0.0000  0.0000
+carat_x_color       0.0077  0.0019   4.1295  0.0000  0.0041   0.0114  0.0004  0.0001
+carat_x_clarity     0.0098  0.0024   4.0466  0.0001  0.0050   0.0145  0.0005  0.0001
+
+joint tests:
+              terms          f       p
+group                                 
+carat             2    31.9035  0.0000
+size              2    18.6528  0.0000
+cut               2    26.6048  0.0000
+color             2  2705.6524  0.0000
+clarity           2  3358.1255  0.0000
+depth             2     3.1090  0.0447
+table             2     0.4451  0.6408
+interactions      2    14.6978  0.0000
+
+price elasticity to carat at the median stone: 1.16 (a 10% heavier diamond costs 11.7% more)
+                  change  log_price_effect  pct_price_effect
+term                                                        
+clarity_score  one grade              0.12             12.93
+color_score    one grade              0.07              7.67
+cut_score      one grade              0.01              1.31
+
+8. FINAL TEST, RUN ONCE
+-----------------------
+             smearing     rmse      mae    medae     r2
+model                                                  
+OLS full        1.009  849.086  416.243  173.007  0.955
+OLS BIC         1.009  849.582  416.558  173.035  0.955
+ridge           1.009  859.885  420.056  172.795  0.954
+lasso           1.009  849.537  421.391  174.653  0.955
+elastic net     1.009  857.574  419.834  172.877  0.954
+  OLS full: test RMSE $849 inside the 5-95% repeated-CV band [$832, $1033]
+  OLS BIC: test RMSE $850 inside the 5-95% repeated-CV band [$832, $1032]
+  ridge: test RMSE $860 inside the 5-95% repeated-CV band [$835, $1026]
+  lasso: test RMSE $850 inside the 5-95% repeated-CV band [$831, $1025]
+  elastic net: test RMSE $858 inside the 5-95% repeated-CV band [$834, $1028]
+
+subgroup errors for OLS BIC on the test set:
+   dimension group    n   rmse    mae  mean_error
+price decile     0 1620   70.6   57.7       -24.4
+price decile     1 1608  113.4   92.9       -20.1
+price decile     2 1616  151.7  125.6        -3.9
+price decile     3 1609  165.4  126.4       -80.6
+price decile     4 1617  275.4  193.7       -78.2
+price decile     5 1612  389.2  290.4       -97.2
+price decile     6 1611  541.4  399.9        27.6
+price decile     7 1613  770.4  540.5        24.0
+price decile     8 1612 1201.6  838.9        75.8
+price decile     9 1614 2142.7 1499.9        36.3
+
+done in 153s, tables and figures in /Users/kelvin/Documents/C.C. General Intelligence/quant-projects/diamonds/reports

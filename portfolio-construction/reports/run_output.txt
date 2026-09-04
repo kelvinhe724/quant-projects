@@ -1,0 +1,84 @@
+14 assets, 261 months, 2004-12-31 to 2026-08-31, costs 10bps one-way
+
+full-sample (in-sample, look-ahead) Sharpe: tangency 1.29, 1/N 0.68. That gap is the prize an estimator has to capture out of sample.
+
+OUT OF SAMPLE, 60-month rolling window, 2009-12-31 onward (201 months)
+----------------------------------------------------------------------
+                                1/N tangency tangency long-only min variance inverse vol     ERC shrunk tangency shrunk min variance
+excess return (gross)        +9.21%  +65.74%             +8.72%       +1.91%      +8.21%  +6.99%         +10.94%              +5.17%
+excess return (net)          +9.17%   +5.36%             +8.50%       +1.69%      +8.17%  +6.94%         +10.46%              +5.02%
+vol                          11.14%  665.90%              9.68%        4.46%       9.47%   7.92%          10.98%               6.26%
+Sharpe (gross)                 0.83     0.10               0.90         0.43        0.87    0.88            0.99                0.83
+Sharpe (net)                   0.82     0.01               0.88         0.38        0.86    0.88            0.95                0.80
+max drawdown (net)           -18.0%     ruin             -26.8%       -17.1%      -18.9%  -19.0%          -23.5%              -22.5%
+monthly turnover              0.031   50.315              0.188        0.190       0.033   0.038           0.396               0.128
+avg gross exposure             1.00    23.21               1.00         2.53        1.00    1.00            2.16                1.46
+largest |weight|               0.07   298.74               0.74         1.67        0.20    0.40            1.13                0.76
+p-value vs 1/N (net Sharpe)             0.02               0.79         0.10        0.35    0.62            0.63                0.91
+
+OUT OF SAMPLE, 120-month rolling window, 2014-12-31 onward (141 months)
+-----------------------------------------------------------------------
+                                1/N tangency tangency long-only min variance inverse vol     ERC shrunk tangency shrunk min variance
+excess return (gross)        +8.09%  +85.85%             +8.79%       +0.70%      +6.81%  +5.48%          +9.06%              +2.44%
+excess return (net)          +8.05%  +65.52%             +8.64%       +0.56%      +6.77%  +5.44%          +8.78%              +2.33%
+vol                          11.54%  112.27%             10.81%        4.12%      10.14%   8.59%          10.15%               5.97%
+Sharpe (gross)                 0.70     0.72               0.81         0.17        0.67    0.64            0.89                0.41
+Sharpe (net)                   0.70     0.58               0.80         0.14        0.67    0.63            0.86                0.39
+max drawdown (net)           -18.0%   -90.3%             -23.4%       -15.0%      -18.9%  -18.8%          -23.9%              -21.0%
+monthly turnover              0.034   16.947              0.127        0.118       0.033   0.035           0.236               0.086
+avg gross exposure             1.00    19.84               1.00         2.39        1.00    1.00            2.19                1.45
+largest |weight|               0.07    55.04               0.71         1.59        0.18    0.31            0.75                0.88
+p-value vs 1/N (net Sharpe)             0.78               0.65         0.07        0.49    0.57            0.54                0.14
+
+NET SHARPE BY ONE-WAY COST, 60-month window
+-------------------------------------------
+                     0bps  10bps  25bps  50bps
+1/N                  0.83   0.82   0.82   0.81
+tangency             0.10   0.01  -0.11  -0.23
+tangency long-only   0.90   0.88   0.84   0.78
+min variance         0.43   0.38   0.30   0.17
+inverse vol          0.87   0.86   0.86   0.85
+ERC                  0.88   0.88   0.87   0.85
+shrunk tangency      0.99   0.95   0.89   0.79
+shrunk min variance  0.83   0.80   0.76   0.70
+
+EMPIRICAL BREAK-EVEN: net OOS Sharpe by estimation window, each row on its own OOS period
+-----------------------------------------------------------------------------------------
+        months   1/N  tangency  tangency long-only  min variance  shrunk tangency
+window                                                                           
+24         237  0.64     -0.25                0.62          0.16            -0.35
+36         225  0.62     -0.25                0.66          0.21             0.24
+48         213  0.86     -0.40                0.86          0.32            -0.12
+60         201  0.82      0.01                0.88          0.38             0.95
+84         177  0.83     -0.31                0.83          0.35             0.95
+120        141  0.70      0.58                0.80          0.14             0.86
+150        111  0.69      0.85                0.67          0.02             0.80
+180         81  0.67      0.90                0.71         -0.01             0.76
+240         21  1.09      1.08                1.34          0.36             1.13
+
+SIMULATED BREAK-EVEN: true Sharpe of plug-in tangency, moments fixed at full-sample values (N=14, 2000 draws per window)
+------------------------------------------------------------------------------------------------------------------------
+        expected_sharpe  median_sharpe  share_beating_1/N    1/N
+window                                                          
+24                0.224          0.296              0.134  0.678
+36                0.327          0.471              0.272  0.678
+48                0.432          0.609              0.406  0.678
+60                0.531          0.699              0.530  0.678
+72                0.601          0.765              0.628  0.678
+84                0.646          0.804              0.686  0.678
+90                0.689          0.836              0.753  0.678
+96                0.729          0.854              0.783  0.678
+108               0.764          0.886              0.825  0.678
+120               0.811          0.920              0.868  0.678
+180               0.949          1.016              0.958  0.678
+240               1.031          1.066              0.986  0.678
+360               1.117          1.129              0.998  0.678
+480               1.158          1.165              1.000  0.678
+720               1.198          1.202              1.000  0.678
+1200              1.232          1.235              1.000  0.678
+2400              1.258          1.260              1.000  0.678
+6000              1.275          1.276              1.000  0.678
+
+break-even window (expected Sharpe of sample tangency first exceeds 1/N): 90 months, i.e. 7.5 years of monthly data
+
+charts and tables written to /Users/kelvin/Documents/C.C. General Intelligence/quant-projects/portfolio-construction/reports

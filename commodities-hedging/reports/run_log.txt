@@ -1,0 +1,365 @@
+
+1. CONTRACT SPECIFICATION AUDIT
+-------------------------------
+                name       venue         quote    lot quote_conversion multiplier    tick tick_value
+CL=F       WTI crude       NYMEX    USD/barrel   1000              1.0     1000.0    0.01       10.0
+BZ=F     Brent crude  ICE Europe    USD/barrel   1000              1.0     1000.0    0.01       10.0
+NG=F   Henry Hub gas       NYMEX     USD/MMBtu  10000              1.0    10000.0   0.001       10.0
+HO=F  NY Harbor ULSD       NYMEX    USD/gallon  42000              1.0    42000.0  0.0001        4.2
+RB=F   RBOB gasoline       NYMEX    USD/gallon  42000              1.0    42000.0  0.0001        4.2
+GC=F            Gold       COMEX   USD/troy oz    100              1.0      100.0     0.1       10.0
+SI=F          Silver       COMEX   USD/troy oz   5000              1.0     5000.0   0.005       25.0
+HG=F          Copper       COMEX     USD/pound  25000              1.0    25000.0  0.0005       12.5
+PL=F        Platinum       NYMEX   USD/troy oz     50              1.0       50.0     0.1        5.0
+KC=F        Coffee C      ICE US   cents/pound  37500             0.01      375.0    0.05      18.75
+ZC=F            Corn        CBOT  cents/bushel   5000             0.01       50.0    0.25       12.5
+ZW=F       SRW wheat        CBOT  cents/bushel   5000             0.01       50.0    0.25       12.5
+ZS=F        Soybeans        CBOT  cents/bushel   5000             0.01       50.0    0.25       12.5
+
+2. DATA COVERAGE
+----------------
+            contract       first        last   obs  missing  stale_flagged  median_volume
+CL=F       WTI crude  2015-01-02  2026-08-31  2932        1              0       390195.5
+BZ=F     Brent crude  2015-01-02  2026-08-31  2933        0              0        30425.0
+NG=F   Henry Hub gas  2015-01-02  2026-08-31  2933        0              0       144076.0
+HO=F  NY Harbor ULSD  2015-01-02  2026-08-31  2933        0              0        48157.0
+RB=F   RBOB gasoline  2015-01-02  2026-08-31  2933        0              0        51971.0
+GC=F            Gold  2015-01-02  2026-08-31  2931        2              0          214.0
+SI=F          Silver  2015-01-02  2026-08-31  2931        2              0           48.0
+HG=F          Copper  2015-01-02  2026-08-31  2932        1              0          540.0
+PL=F        Platinum  2015-01-02  2026-08-31  2930        3              0            2.0
+KC=F        Coffee C  2015-01-02  2026-08-31  2933        0              0        13091.0
+ZC=F            Corn  2015-01-02  2026-08-31  2929        4              0       143556.0
+ZW=F       SRW wheat  2015-01-02  2026-08-31  2931        2              0        52389.0
+ZS=F        Soybeans  2015-01-02  2026-08-31  2931        2              0        88269.0
+
+common window 2015-01-02 to 2026-08-31, 2926 trading days
+train 2015-01-05 to 2023-12-29 (2256 days)
+test  2024-01-02 to 2026-08-31 (669 days)
+
+3. RETURN AND CONTRACT-P&L SUMMARY
+----------------------------------
+                ann_vol_%  skew  kurtosis  min_%  max_%  notional_$  daily_sd_$  tick_$
+WTI crude           48.66 -0.27     34.79 -45.21  37.66    85760.00     1761.26   10.00
+Brent crude         41.38 -0.72     14.08 -31.16  21.02    90490.00     1788.47   10.00
+Henry Hub gas       66.13  0.34     15.32 -47.48  46.48    29350.00     1756.39   10.00
+NY Harbor ULSD      40.65 -0.66      8.80 -23.99  13.15   188802.59     2878.39    4.20
+RBOB gasoline       45.19 -0.58     19.60 -31.98  25.10   144354.00     2287.07    4.20
+Gold                16.65 -0.55      8.02 -11.37   6.08   443110.01     3007.97   10.00
+Silver              33.46 -1.22     20.74 -31.35  14.03   331105.00     5617.42   25.00
+Copper              24.23 -0.89     18.45 -22.25  13.25   164837.50     1566.10   12.50
+Platinum            30.85 -0.52      7.40 -19.04  11.82    89420.00     1362.71    5.00
+Coffee C            34.32  0.28      1.74  -8.89  15.30   128962.50     1746.14   18.75
+Corn                25.09 -0.92     12.45 -17.39   8.02    25750.00      406.09   12.50
+SRW wheat           31.28  0.75      6.58 -10.68  21.78    37825.00      682.05   12.50
+Soybeans            20.05 -0.38      4.67 -10.50   6.64    63762.50      772.80   12.50
+
+4. THE SPURIOUS-REGRESSION TRAP
+-------------------------------
+Regressing price LEVELS on price levels, all 78 pairs, training window:
+
+                       price levels  daily returns
+mean R2                       0.452          0.091
+median R2                     0.500          0.023
+max R2                        0.984          0.786
+pairs with R2 > 0.5          39.000          5.000
+mean Durbin-Watson            0.020          2.048
+pairs with |t| > 1.96        75.000         72.000
+
+Highest level R2 among pairs whose return R2 is under 0.05:
+  Copper           vs Corn             levels R2 0.704 (DW 0.02)   returns R2 0.0198
+  RBOB gasoline    vs Corn             levels R2 0.649 (DW 0.03)   returns R2 0.0220
+  Coffee C         vs Soybeans         levels R2 0.643 (DW 0.02)   returns R2 0.0328
+  WTI crude        vs Corn             levels R2 0.626 (DW 0.02)   returns R2 0.0309
+  RBOB gasoline    vs Soybeans         levels R2 0.619 (DW 0.02)   returns R2 0.0233
+  NY Harbor ULSD   vs Corn             levels R2 0.615 (DW 0.02)   returns R2 0.0273
+
+Control: 200 pairs of independent simulated random walks put through the same code.
+  levels     mean R2 0.239, mean Durbin-Watson 0.008, |t| > 1.96 in 87% of pairs
+  differences mean R2 0.00047, |t| > 1.96 in 4% of pairs
+
+Every regression from here on uses returns or per-contract dollar P&L.
+  wrote /Users/kelvin/Documents/C.C. General Intelligence/quant-projects/commodities-hedging/reports/spurious_regression.png
+
+5. PAIRWISE SCREEN ON RETURNS, TRAINING WINDOW
+----------------------------------------------
+78 unordered pairs, 2256 common observations each
+
+Top 15 by R-squared:
+        target          hedge   corr     r2
+     WTI crude    Brent crude 0.8866 0.7860
+   Brent crude NY Harbor ULSD 0.7954 0.6326
+          Gold         Silver 0.7809 0.6098
+     WTI crude NY Harbor ULSD 0.7245 0.5249
+   Brent crude  RBOB gasoline 0.7200 0.5185
+     WTI crude  RBOB gasoline 0.6962 0.4846
+NY Harbor ULSD  RBOB gasoline 0.6654 0.4428
+        Silver       Platinum 0.6468 0.4183
+          Gold       Platinum 0.5737 0.3291
+          Corn       Soybeans 0.5392 0.2907
+          Corn      SRW wheat 0.5367 0.2880
+        Copper       Platinum 0.3945 0.1557
+     SRW wheat       Soybeans 0.3451 0.1191
+        Silver         Copper 0.3330 0.1109
+   Brent crude         Copper 0.2865 0.0821
+
+Bottom 5:
+       target     hedge   corr     r2
+Henry Hub gas  Soybeans 0.0377 0.0014
+Henry Hub gas      Corn 0.0343 0.0012
+Henry Hub gas SRW wheat 0.0220 0.0005
+Henry Hub gas    Silver 0.0192 0.0004
+Henry Hub gas      Gold 0.0032 0.0000
+  wrote /Users/kelvin/Documents/C.C. General Intelligence/quant-projects/commodities-hedging/reports/heatmaps.png
+
+6. UNIT-AWARE HEDGE RATIOS
+--------------------------
+Reference date for notionals: 2023-12-29
+
+The two routes to a contract ratio, both directions of the ten tightest pairs:
+   target_name     hedge_name     r2   beta  beta_hac_se  h_from_beta  h_from_pnl  h_gap_%
+     WTI crude    Brent crude 0.7860 1.0717       0.0499       0.9967      0.9195   8.4030
+   Brent crude      WTI crude 0.7860 0.7334       0.0623       0.7886      0.9359 -15.7385
+   Brent crude NY Harbor ULSD 0.6326 0.8247       0.0436       0.5925      0.4339  36.5658
+NY Harbor ULSD    Brent crude 0.6326 0.7671       0.0321       1.0677      1.1229  -4.9190
+          Gold         Silver 0.6098 0.4039       0.0136       0.6985      0.6106  14.3824
+        Silver           Gold 0.6098 1.5097       0.0445       0.8731      0.9852 -11.3798
+NY Harbor ULSD      WTI crude 0.5249 0.5780       0.0623       0.8651      1.0882 -20.5055
+     WTI crude NY Harbor ULSD 0.5249 0.9081       0.0660       0.6068      0.4131  46.8919
+   Brent crude  RBOB gasoline 0.5185 0.6363       0.0572       0.5551      0.5694  -2.5224
+ RBOB gasoline    Brent crude 0.5185 0.8149       0.0269       0.9341      1.0432 -10.4590
+ RBOB gasoline      WTI crude 0.4846 0.6517       0.0486       0.8033      1.0419 -22.9008
+     WTI crude  RBOB gasoline 0.4846 0.7436       0.0855       0.6033      0.5587   7.9803
+NY Harbor ULSD  RBOB gasoline 0.4428 0.5671       0.0514       0.6886      0.7553  -8.8322
+ RBOB gasoline NY Harbor ULSD 0.4428 0.7809       0.0472       0.6431      0.5346  20.2839
+        Silver       Platinum 0.4183 0.6725       0.0262       1.6122      1.4390  12.0307
+      Platinum         Silver 0.4183 0.6221       0.0235       0.2595      0.2731  -4.9657
+      Platinum           Gold 0.3291 1.0667       0.0425       0.2573      0.3173 -18.8941
+          Gold       Platinum 0.3291 0.3085       0.0125       1.2790      1.0364  23.4057
+          Corn       Soybeans 0.2907 0.6829       0.0379       0.2488      0.2780 -10.4966
+      Soybeans           Corn 0.2907 0.4257       0.0343       1.1686      0.9720  20.2197
+
+Worked example, one long WTI contract hedged with Brent:
+  WTI notional         71,650  (71.65 USD/bbl x 1,000 bbl)
+  Brent notional       77,040  (77.04 USD/bbl x 1,000 bbl)
+  return beta          1.0717  (HAC se 0.0499)
+  contract ratio via notionals 0.9967 Brent per WTI
+  contract ratio via dollar P&L regression 0.9195
+  training-window variance reduction 86.1%
+
+7. TOP THREE HEDGE CANDIDATES PER TARGET
+----------------------------------------
+
+WTI crude (energy), one long contract, daily P&L sd $1,624
+  1. Brent crude      R2 0.786  corr +0.887  h +0.919 (short 0.92 contracts)  train +86.1%  test +83.4%
+  2. RBOB gasoline    R2 0.485  corr +0.696  h +0.559 (short 0.56 contracts)  train +58.2%  test +59.3%
+  3. NY Harbor ULSD   R2 0.525  corr +0.725  h +0.413 (short 0.41 contracts)  train +45.0%  test +63.0%
+
+Brent crude (energy), one long contract, daily P&L sd $1,639
+  1. WTI crude        R2 0.786  corr +0.887  h +0.936 (short 0.94 contracts)  train +86.1%  test +83.5%
+  2. RBOB gasoline    R2 0.518  corr +0.720  h +0.569 (short 0.57 contracts)  train +59.4%  test +61.7%
+  3. NY Harbor ULSD   R2 0.633  corr +0.795  h +0.434 (short 0.43 contracts)  train +48.7%  test +60.3%
+
+Henry Hub gas (energy), one long contract, daily P&L sd $1,631
+  1. NY Harbor ULSD   R2 0.015  corr +0.124  h +0.066 (short 0.07 contracts)  train +1.1%  test +2.5%
+  2. WTI crude        R2 0.010  corr +0.097  h +0.105 (short 0.10 contracts)  train +1.1%  test +0.1%
+  3. RBOB gasoline    R2 0.009  corr +0.097  h +0.071 (short 0.07 contracts)  train +0.9%  test +0.3%
+
+NY Harbor ULSD (energy), one long contract, daily P&L sd $2,636
+  1. Brent crude      R2 0.633  corr +0.795  h +1.123 (short 1.12 contracts)  train +48.7%  test +60.3%
+  2. WTI crude        R2 0.525  corr +0.725  h +1.088 (short 1.09 contracts)  train +45.0%  test +62.3%
+  3. RBOB gasoline    R2 0.443  corr +0.665  h +0.755 (short 0.76 contracts)  train +40.4%  test +50.8%
+
+RBOB gasoline (energy), one long contract, daily P&L sd $2,218
+  1. Brent crude      R2 0.518  corr +0.720  h +1.043 (short 1.04 contracts)  train +59.4%  test +62.6%
+  2. WTI crude        R2 0.485  corr +0.696  h +1.042 (short 1.04 contracts)  train +58.2%  test +59.7%
+  3. NY Harbor ULSD   R2 0.443  corr +0.665  h +0.535 (short 0.53 contracts)  train +40.4%  test +55.4%
+
+Gold (metals), one long contract, daily P&L sd $1,469
+  1. Silver           R2 0.610  corr +0.781  h +0.611 (short 0.61 contracts)  train +60.2%  test +39.2%
+  2. Platinum         R2 0.329  corr +0.574  h +1.036 (short 1.04 contracts)  train +32.9%  test +39.3%
+  3. Copper           R2 0.040  corr +0.201  h +0.296 (short 0.30 contracts)  train +5.5%  test +8.8%
+
+Silver (metals), one long contract, daily P&L sd $1,865
+  1. Gold             R2 0.610  corr +0.781  h +0.985 (short 0.99 contracts)  train +60.2%  test +51.5%
+  2. Platinum         R2 0.418  corr +0.647  h +1.439 (short 1.44 contracts)  train +39.3%  test +39.9%
+  3. Copper           R2 0.111  corr +0.333  h +0.535 (short 0.53 contracts)  train +11.0%  test +9.0%
+
+Copper (metals), one long contract, daily P&L sd $1,158
+  1. Platinum         R2 0.156  corr +0.395  h +0.573 (short 0.57 contracts)  train +16.2%  test +20.9%
+  2. Silver           R2 0.111  corr +0.333  h +0.206 (short 0.21 contracts)  train +11.0%  test -4.6%
+  3. WTI crude        R2 0.077  corr +0.278  h +0.227 (short 0.23 contracts)  train +10.1%  test -5.4%
+
+Platinum (metals), one long contract, daily P&L sd $813
+  1. Silver           R2 0.418  corr +0.647  h +0.273 (short 0.27 contracts)  train +39.3%  test +41.9%
+  2. Gold             R2 0.329  corr +0.574  h +0.317 (short 0.32 contracts)  train +32.9%  test +43.7%
+  3. Copper           R2 0.156  corr +0.395  h +0.282 (short 0.28 contracts)  train +16.2%  test +18.6%
+
+Coffee C (agriculture), one long contract, daily P&L sd $1,184
+  1. Copper           R2 0.027  corr +0.164  h +0.185 (short 0.19 contracts)  train +3.3%  test +2.2%
+  2. Platinum         R2 0.027  corr +0.164  h +0.247 (short 0.25 contracts)  train +2.9%  test -1.9%
+  3. WTI crude        R2 0.022  corr +0.149  h +0.122 (short 0.12 contracts)  train +2.8%  test -1.7%
+
+Corn (agriculture), one long contract, daily P&L sd $436
+  1. Soybeans         R2 0.291  corr +0.539  h +0.278 (short 0.28 contracts)  train +27.0%  test +33.7%
+  2. SRW wheat        R2 0.288  corr +0.537  h +0.282 (short 0.28 contracts)  train +22.3%  test +32.5%
+  3. WTI crude        R2 0.031  corr +0.176  h +0.052 (short 0.05 contracts)  train +3.7%  test -6.8%
+
+SRW wheat (agriculture), one long contract, daily P&L sd $729
+  1. Corn             R2 0.288  corr +0.537  h +0.789 (short 0.79 contracts)  train +22.3%  test +31.6%
+  2. Soybeans         R2 0.119  corr +0.345  h +0.261 (short 0.26 contracts)  train +8.6%  test +15.8%
+  3. WTI crude        R2 0.013  corr +0.113  h +0.086 (short 0.09 contracts)  train +3.6%  test -0.9%
+
+Soybeans (agriculture), one long contract, daily P&L sd $815
+  1. Corn             R2 0.291  corr +0.539  h +0.972 (short 0.97 contracts)  train +27.0%  test +32.1%
+  2. SRW wheat        R2 0.119  corr +0.345  h +0.327 (short 0.33 contracts)  train +8.6%  test +14.5%
+  3. Copper           R2 0.057  corr +0.238  h +0.173 (short 0.17 contracts)  train +6.0%  test -38.3%
+
+8. INTEGER CONTRACTS
+--------------------
+WTI crude hedged with Brent crude, continuous ratio 0.9195
+
+ target_contracts  continuous  whole_contracts  eff_continuous  eff_integer  residual_notional_$  cost_of_rounding
+                1      0.9195                0          0.8339       0.0000          -70836.0217            0.8339
+                1      0.9195                1          0.8339       0.8218            6203.9792            0.0120
+                2      1.8389                1          0.8339       0.6750          -64632.0425            0.1589
+                2      1.8389                2          0.8339       0.8218           12407.9585            0.0120
+                5      4.5974                4          0.8339       0.8265          -46020.1048            0.0074
+                5      4.5974                5          0.8339       0.8218           31019.8961            0.0120
+               10      9.1947                9          0.8339       0.8347          -15000.2086           -0.0009
+               10      9.1947               10          0.8339       0.8218           62039.7923            0.0120
+               25     22.9868               22          0.8339       0.8348          -76020.5220           -0.0009
+               25     22.9868               23          0.8339       0.8338            1019.4789            0.0000
+               50     45.9735               45          0.8339       0.8347          -75001.0431           -0.0009
+               50     45.9735               46          0.8339       0.8338            2038.9578            0.0000
+              100     91.9471               91          0.8339       0.8344          -72962.0854           -0.0005
+              100     91.9471               92          0.8339       0.8338            4077.9156            0.0000
+
+The integer is chosen from the training ratio, not by searching the test window.
+
+9. STABILITY
+------------
+60-day rolling stability, the ten pairs with the highest training effectiveness:
+
+   target_name     hedge_name  h_full  h_median  h_iqr  h_cv  sign_flips_%  r2_median  r2_iqr  r2_p05  windows_r2_above_25%
+     WTI crude    Brent crude   0.919     0.933  0.127 0.095         0.000      0.889   0.144   0.698               100.000
+   Brent crude      WTI crude   0.936     0.930  0.088 0.067         0.000      0.889   0.144   0.698               100.000
+   Brent crude NY Harbor ULSD   0.434     0.704  0.320 0.315         0.000      0.732   0.210   0.261                95.604
+NY Harbor ULSD    Brent crude   1.123     1.061  0.202 0.191         0.000      0.732   0.210   0.261                95.604
+          Gold         Silver   0.611     0.672  0.182 0.222         0.000      0.633   0.142   0.428                98.883
+        Silver           Gold   0.985     0.922  0.310 0.326         0.000      0.633   0.142   0.428                98.883
+   Brent crude  RBOB gasoline   0.569     0.592  0.243 0.311         0.000      0.639   0.267   0.222                94.208
+ RBOB gasoline    Brent crude   1.043     1.029  0.204 0.150         0.000      0.639   0.267   0.222                94.208
+     WTI crude  RBOB gasoline   0.559     0.582  0.262 0.309         0.000      0.614   0.266   0.235                94.662
+ RBOB gasoline      WTI crude   1.042     1.006  0.205 0.151         0.000      0.614   0.266   0.235                94.662
+
+Subperiod re-estimation, three equal blocks, both directions of the four leading pairs:
+
+WTI crude on Brent crude:
+                  period   n      h     r2  effectiveness
+2015-01-05 to 2018-11-20 975 0.8401 0.7649         0.7649
+2018-11-21 to 2022-10-11 975 0.9376 0.8812         0.8812
+2022-10-12 to 2026-08-31 975 0.9052 0.8534         0.8534
+
+Brent crude on WTI crude:
+                  period   n      h     r2  effectiveness
+2015-01-05 to 2018-11-20 975 0.9105 0.7649         0.7649
+2018-11-21 to 2022-10-11 975 0.9399 0.8812         0.8812
+2022-10-12 to 2026-08-31 975 0.9428 0.8534         0.8534
+
+Silver on Gold:
+                  period   n      h     r2  effectiveness
+2015-01-05 to 2018-11-20 975 0.9121 0.6146         0.6146
+2018-11-21 to 2022-10-11 975 1.0275 0.6006         0.6006
+2022-10-12 to 2026-08-31 975 1.4947 0.5845         0.5845
+
+Gold on Silver:
+                  period   n      h     r2  effectiveness
+2015-01-05 to 2018-11-20 975 0.6737 0.6146         0.6146
+2018-11-21 to 2022-10-11 975 0.5845 0.6006         0.6006
+2022-10-12 to 2026-08-31 975 0.3910 0.5845         0.5845
+
+RBOB gasoline on Brent crude:
+                  period   n      h     r2  effectiveness
+2015-01-05 to 2018-11-20 975 0.9526 0.4472         0.4472
+2018-11-21 to 2022-10-11 975 1.0802 0.6983         0.6983
+2022-10-12 to 2026-08-31 975 0.9297 0.5872         0.5872
+
+Brent crude on RBOB gasoline:
+                  period   n      h     r2  effectiveness
+2015-01-05 to 2018-11-20 975 0.4694 0.4472         0.4472
+2018-11-21 to 2022-10-11 975 0.6464 0.6983         0.6983
+2022-10-12 to 2026-08-31 975 0.6316 0.5872         0.5872
+
+RBOB gasoline on WTI crude:
+                  period   n      h     r2  effectiveness
+2015-01-05 to 2018-11-20 975 1.0038 0.4581         0.4581
+2018-11-21 to 2022-10-11 975 1.0636 0.6754         0.6754
+2022-10-12 to 2026-08-31 975 0.9278 0.5615         0.5615
+
+WTI crude on RBOB gasoline:
+                  period   n      h     r2  effectiveness
+2015-01-05 to 2018-11-20 975 0.4564 0.4581         0.4581
+2018-11-21 to 2022-10-11 975 0.6350 0.6754         0.6754
+2022-10-12 to 2026-08-31 975 0.6052 0.5615         0.5615
+
+Block bootstrap, 10-day blocks, 1000 replications, training window:
+       target       hedge  h_2.5%  h_50%  h_97.5%  r2_2.5%  r2_50%  r2_97.5%
+    WTI crude Brent crude  0.8867 0.9210   0.9499   0.8233  0.8615    0.8915
+       Silver        Gold  0.8986 0.9872   1.0720   0.5560  0.6043    0.6455
+RBOB gasoline Brent crude  0.9894 1.0453   1.1038   0.5161  0.5957    0.6639
+RBOB gasoline   WTI crude  0.9873 1.0430   1.0960   0.4974  0.5832    0.6619
+  wrote /Users/kelvin/Documents/C.C. General Intelligence/quant-projects/commodities-hedging/reports/rolling_ratios.png
+
+10. OUT-OF-SAMPLE HEDGE VALIDATION
+----------------------------------
+Ratios estimated on 2015-01-05 to 2023-12-29, frozen, applied to 2024-01-02 to 2026-08-31.
+
+   target_name     hedge_name     r2  h_from_pnl  eff_train  eff_test
+     WTI crude    Brent crude 0.7860      0.9195     0.8605    0.8339
+   Brent crude      WTI crude 0.7860      0.9359     0.8605    0.8348
+        Silver           Gold 0.6098      0.9852     0.6016    0.5153
+          Gold         Silver 0.6098      0.6106     0.6016    0.3921
+ RBOB gasoline    Brent crude 0.5185      1.0432     0.5940    0.6265
+   Brent crude  RBOB gasoline 0.5185      0.5694     0.5940    0.6166
+ RBOB gasoline      WTI crude 0.4846      1.0419     0.5821    0.5966
+     WTI crude  RBOB gasoline 0.4846      0.5587     0.5821    0.5926
+   Brent crude NY Harbor ULSD 0.6326      0.4339     0.4872    0.6035
+NY Harbor ULSD    Brent crude 0.6326      1.1229     0.4872    0.6033
+     WTI crude NY Harbor ULSD 0.5249      0.4131     0.4495    0.6296
+NY Harbor ULSD      WTI crude 0.5249      1.0882     0.4495    0.6228
+ RBOB gasoline NY Harbor ULSD 0.4428      0.5346     0.4038    0.5540
+NY Harbor ULSD  RBOB gasoline 0.4428      0.7553     0.4038    0.5081
+        Silver       Platinum 0.4183      1.4390     0.3929    0.3993
+
+mean train effectiveness 0.5567, mean test 0.5953, mean decay -0.0386
+pairs whose test effectiveness is negative: 80 of 156 ordered pairs
+
+Risk report, one long WTI crude contract hedged with 0.919 Brent crude, test window, dollars per day:
+
+                continuous  whole (1 contract)
+effectiveness       0.8339              0.8218
+vol_reduction       0.5924              0.5779
+sd_unhedged      2162.0455           2162.0455
+sd_hedged         881.2457            912.6088
+var95_unhedged  -2830.0018          -2830.0018
+var95_hedged     -810.9439           -860.0037
+es95_unhedged   -5287.7142          -5287.7142
+es95_hedged     -1751.4968          -1783.5293
+worst_unhedged -18539.9933         -18539.9933
+worst_hedged    -6621.4514          -7069.9997
+hit_rate            0.8939              0.8864
+
+Walk-forward on the test window, 60-day trailing estimate re-fitted daily (609 days scored):
+  effectiveness 0.8053 against 0.8320 for the frozen ratio on the same days
+  mean daily change in the ratio 0.0064 contracts
+  wrote /Users/kelvin/Documents/C.C. General Intelligence/quant-projects/commodities-hedging/reports/out_of_sample.png
+  wrote /Users/kelvin/Documents/C.C. General Intelligence/quant-projects/commodities-hedging/reports/effectiveness_scatter.png
+
+SUMMARY
+-------
+instruments      13 continuous front-month futures
+window           2015-01-02 to 2026-08-31 (2926 days)
+pairs            78 unordered, 156 ordered target-hedge directions
+best in training WTI crude on Brent crude, 86.1% train, 83.4% test
+spurious trap    mean level R2 0.452 vs mean return R2 0.091

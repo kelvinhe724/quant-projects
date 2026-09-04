@@ -1,0 +1,9 @@
+,rule,rows,pct
+0,bad_price,0,0.0
+1,zero_dimension,20,0.03707823507601038
+2,implausible_depth,0,0.0
+3,implausible_table,0,0.0
+4,depth_inconsistent,93,0.1724137931034483
+5,extreme_aspect,16,0.029662588060808306
+6,extreme_dimension,3,0.0055617352614015575
+7,duplicate_row,289,0.5357804968483499

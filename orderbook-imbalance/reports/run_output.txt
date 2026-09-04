@@ -1,0 +1,111 @@
+exchange OKX BTC-USDT, 2983 snapshots over 50.0 minutes (2026-09-03 19:40 to 20:30 UTC)
+snapshot interval: median 1.00s, max gap 1.2s, gaps over 3s: 0
+trades: 17082 (58.4% buyer-initiated)
+mid: 81582.9 -> 81541.9, range 81386.6 to 81796.1
+half-spread: median 0.006 bps, mean 0.006 bps, tick = 0.012 bps
+mid changes between consecutive snapshots 33.2% of the time
+imbalance depth 1: mean +0.196, std 0.620, |x|>0.5 in 53.9% of snapshots, lag-1 autocorr 0.56
+imbalance depth 5: mean +0.252, std 0.548, |x|>0.5 in 51.0% of snapshots, lag-1 autocorr 0.60
+imbalance depth 20: mean +0.233, std 0.370, |x|>0.5 in 29.8% of snapshots, lag-1 autocorr 0.67
+
+formation: first 1493 snapshots, evaluation: last 1490
+
+Forward mid move (bps) on imbalance, full window
+------------------------------------------------
+    depth  horizon_s  slope_bps  t_stat      r2  hit_rate     n
+0       1          1      0.325   12.70  0.0628     0.732  2982
+1       1          2      0.473   11.16  0.0617     0.681  2981
+2       1          5      0.596    6.64  0.0365     0.617  2978
+3       1         10      0.700    4.69  0.0248     0.574  2973
+4       1         30      1.069    2.93  0.0181     0.530  2953
+5       5          1      0.346   11.80  0.0555     0.709  2982
+6       5          2      0.488    9.59  0.0513     0.664  2981
+7       5          5      0.611    5.55  0.0300     0.610  2978
+8       5         10      0.757    4.17  0.0226     0.559  2973
+9       5         30      1.142    2.64  0.0162     0.513  2953
+10     20          1      0.382    7.96  0.0309     0.655  2982
+11     20          2      0.564    6.60  0.0313     0.620  2981
+12     20          5      0.680    3.73  0.0169     0.571  2978
+13     20         10      0.971    3.18  0.0170     0.553  2973
+14     20         30      1.669    2.07  0.0158     0.508  2953
+
+Depth-5 imbalance, formation half vs evaluation half
+----------------------------------------------------
+           slope_bps               t_stat                   r2          
+window    evaluation formation evaluation formation evaluation formation
+horizon_s                                                               
+1             0.3059    0.3936     9.8057    8.1236     0.0646    0.0538
+2             0.4456    0.5428     8.3658    6.4793     0.0632    0.0477
+5             0.5804    0.6590     4.6184    3.8076     0.0429    0.0253
+10            0.7146    0.8270     2.9566    3.1568     0.0319    0.0196
+30            0.9854    1.4063     1.5068    2.7276     0.0173    0.0185
+
+Robustness, depth 5: target = last trade price; and imbalance alongside 5s trade flow
+-------------------------------------------------------------------------------------
+   horizon_s  slope_vs_trade_px  t_vs_trade_px  slope_imb_with_flow  t_imb_with_flow  slope_flow  t_flow  r2_both
+0          1             0.4193        12.9953               0.3465          11.8297     -0.0034 -0.1883   0.0555
+1          5             0.7879         6.8501               0.5926           5.8509      0.0791  1.1074   0.0311
+2         10             0.9338         5.1107               0.7512           4.3224      0.0253  0.2213   0.0227
+
+Binned conditional expectation, depth 5, 5s horizon
+---------------------------------------------------
+     imbalance  move_bps  se_bps    n
+bin                                  
+0      -0.7738   -0.7605  0.1549  298
+1      -0.4055   -0.2462  0.1097  298
+2      -0.1355   -0.2476  0.1034  298
+3       0.0574   -0.0203  0.1217  297
+4       0.2171   -0.0580  0.1065  298
+5       0.3842    0.0751  0.1032  298
+6       0.5660    0.1670  0.0984  297
+7       0.7321    0.0177  0.1066  298
+8       0.8935    0.5182  0.1025  298
+9       0.9783    0.5148  0.0804  298
+
+Strategy: trade when |imbalance| > threshold at t, fill at t+1 crossing the spread, unwind after the horizon
+
+Formation-half grid (per-trade bps)
+-----------------------------------
+    depth  threshold  horizon_s  n_trades  gross_bps  net_half_bps  net_full_bps  hit_rate  t_stat
+0       1        0.3          1       600      0.098         0.092       -19.914     0.614   2.530
+1       1        0.3          5       226      0.222         0.216       -19.791     0.574   1.445
+2       1        0.3         10       129      0.415         0.409       -19.598     0.597   1.342
+3       1        0.5          1       488      0.123         0.117       -19.889     0.639   2.775
+4       1        0.5          5       206      0.126         0.120       -19.886     0.544   0.809
+5       1        0.5         10       124      0.460         0.453       -19.553     0.579   1.746
+6       1        0.7          1       375      0.150         0.144       -19.862     0.634   3.173
+7       1        0.7          5       175      0.237         0.231       -19.776     0.591   1.487
+8       1        0.7         10       113      0.388         0.382       -19.624     0.523   1.162
+9       5        0.3          1       575      0.092         0.085       -19.921     0.591   2.280
+10      5        0.3          5       227      0.123         0.117       -19.889     0.566   0.832
+11      5        0.3         10       128      0.207         0.201       -19.806     0.568   0.750
+12      5        0.5          1       438      0.133         0.127       -19.879     0.611   2.826
+13      5        0.5          5       196     -0.020        -0.026       -20.032     0.541  -0.119
+14      5        0.5         10       117      0.473         0.467       -19.540     0.571   1.442
+15      5        0.7          1       296      0.136         0.130       -19.876     0.643   2.531
+16      5        0.7          5       152      0.256         0.250       -19.756     0.537   1.453
+17      5        0.7         10       101      0.417         0.410       -19.596     0.521   1.261
+18     20        0.3          1       447      0.116         0.110       -19.896     0.594   2.678
+19     20        0.3          5       193      0.119         0.112       -19.894     0.509   0.723
+20     20        0.3         10       115      0.350         0.344       -19.662     0.518   1.261
+21     20        0.5          1       209      0.234         0.227       -19.779     0.670   3.306
+22     20        0.5          5       116      0.123         0.116       -19.891     0.490   0.597
+23     20        0.5         10        81      0.575         0.569       -19.437     0.494   1.438
+24     20        0.7          1        81      0.214         0.207       -19.799     0.722   2.291
+25     20        0.7          5        50      0.104         0.097       -19.909     0.512   0.359
+26     20        0.7         10        40      0.425         0.417       -19.589     0.436   0.928
+
+chosen on formation by total net-of-half-spread P&L: {'depth': 1, 'threshold': 0.5, 'horizon_s': 1}
+fixed in advance: {'depth': 5, 'threshold': 0.5, 'horizon_s': 5}
+
+Strategy results (per-trade bps; net_full includes the 10 bps OKX taker fee each way)
+-------------------------------------------------------------------------------------
+                   n_trades  gross_bps  net_half_bps  net_full_bps  hit_rate  flat_share  t_stat  total_net_half_bps  total_net_full_bps
+fixed  formation      196.0     -0.020        -0.026       -20.032     0.541       0.133  -0.119              -5.119           -3926.320
+       evaluation     197.0      0.169         0.163       -19.843     0.599       0.305   1.460              32.111           -3909.097
+chosen formation      488.0      0.123         0.117       -19.889     0.639       0.580   2.775              57.214           -9705.874
+       evaluation     461.0      0.115         0.109       -19.897     0.730       0.751   4.290              50.258           -9172.570
+
+evaluation half: mean half-spread 0.006 bps, expected gross move per trade +0.115 bps, ratio +18.77x
+
+charts and tables in /Users/kelvin/Documents/C.C. General Intelligence/quant-projects/orderbook-imbalance/reports
