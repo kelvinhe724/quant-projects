@@ -1,0 +1,11 @@
+,"static, formation","static, out-of-sample","Kalman q=0, formation","Kalman q=0, out-of-sample"
+annual return (gross),+6.60%,+0.72%,+4.58%,-0.19%
+annual return (net),+6.11%,+0.25%,+4.07%,-0.67%
+annual vol,1.98%,3.86%,2.47%,3.81%
+Sharpe (gross),3.24,0.21,1.83,-0.03
+Sharpe (net),3.01,0.08,1.63,-0.16
+max drawdown,-1.26%,-7.19%,-1.81%,-9.01%
+trades,809,1127,847,1138
+hit rate,77.4%,62.9%,72.1%,62.0%
+avg hold (days),30,34,29,33
+annual turnover,9.1x,9.5x,9.9x,9.7x

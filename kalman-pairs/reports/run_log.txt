@@ -1,0 +1,60 @@
+35 pairs from ../pairs-trading, 70 names, 2015-01-02 to 2026-08-28
+formation 2015-01-01 to 2019-12-31  |  out-of-sample 2020-01-01 to 2026-08-31
+rules fixed from the pairs project; 10bps round trip
+
+state-noise ratio chosen on formation Sharpe: 0
+
+Performance, same 35 pairs, same rules, same windows
+----------------------------------------------------
+                      static, formation static, out-of-sample Kalman q=0, formation Kalman q=0, out-of-sample
+annual return (gross)            +6.60%                +0.72%                +4.58%                    -0.19%
+annual return (net)              +6.11%                +0.25%                +4.07%                    -0.67%
+annual vol                        1.98%                 3.86%                 2.47%                     3.81%
+Sharpe (gross)                     3.24                  0.21                  1.83                     -0.03
+Sharpe (net)                       3.01                  0.08                  1.63                     -0.16
+max drawdown                     -1.26%                -7.19%                -1.81%                    -9.01%
+trades                              809                  1127                   847                      1138
+hit rate                          77.4%                 62.9%                 72.1%                     62.0%
+avg hold (days)                      30                    34                    29                        33
+annual turnover                    9.1x                  9.5x                  9.9x                      9.7x
+
+State-noise sensitivity (q chosen on the formation column only)
+---------------------------------------------------------------
+             formation Sharpe  oos Sharpe (net)  oos Sharpe (gross)  oos net return/yr  oos turnover/yr  oos trades
+noise_ratio                                                                                                        
+0                       1.629            -0.156              -0.030             -0.007            9.656      1138.0
+1e-07                   1.610            -0.187              -0.059             -0.008            9.572      1127.0
+1e-06                   1.428             0.021               0.155              0.000            9.835      1157.0
+1e-05                   1.197            -0.008               0.136             -0.001           10.385      1221.0
+0.0001                  0.799            -0.105               0.069             -0.004           12.463      1458.0
+0.001                   0.411            -0.104               0.186             -0.004           18.899      2194.0
+0.01                    0.086            -0.035               0.512             -0.001           30.204      3502.0
+static                  3.013             0.083               0.206              0.002            9.511      1127.0
+
+Out-of-sample by year
+---------------------
+         static            Kalman       
+     net return Sharpe net return Sharpe
+Date                                    
+2020     -0.16%   0.01     -1.00%  -0.12
+2021     -2.73%  -0.97     -3.06%  -1.17
+2022     +0.40%   0.13     -1.55%  -0.41
+2023     +4.20%   1.53     +3.24%   1.16
+2024     -0.70%  -0.25     +0.74%   0.30
+2025     +2.47%   0.83     -1.65%  -0.51
+2026     -1.68%  -0.65     -1.03%  -0.38
+
+Sensitivity to the transaction cost assumption
+----------------------------------------------
+                static oos Sharpe  Kalman oos Sharpe
+round trip bps                                      
+0                            0.21              -0.03
+5                            0.14              -0.09
+10                           0.08              -0.16
+20                          -0.04              -0.28
+30                          -0.16              -0.41
+
+out-of-sample per-pair net Sharpe: static median 0.03 (19 of 35 positive), Kalman median -0.04 (16 positive); Kalman beats static on 18 pairs
+median |beta change| over the out-of-sample window: 0.27; largest NOC/UPS at +1.40
+
+charts and tables written to /Users/kelvin/Documents/C.C. General Intelligence/quant-projects/kalman-pairs/reports/

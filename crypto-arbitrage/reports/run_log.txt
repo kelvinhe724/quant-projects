@@ -1,0 +1,174 @@
+window: 2026-09-04 03:33:55Z to 04:28:54Z (55.0 min), 1099 ticks, 8792 quotes
+venues: ['binance_us', 'coinbase', 'kraken', 'okx']  (binance.com HTTP 451 and bybit 403 from the US)
+
+quotes received per venue (expected 2198) and request latency
+-------------------------------------------------------------
+            quotes  latency_med_ms  latency_p95_ms  missing
+exchange                                                   
+binance_us    2198           230.0          468.15        0
+coinbase      2198            36.0          114.00        0
+kraken        2198           136.0          240.15        0
+okx           2198           183.0          262.00        0
+within-tick timestamp skew across venues: median 187ms, p95 215ms, max 261ms
+USDT/USD used for OKX conversion: 0.99992 to 0.99996
+
+==== BTC: 1100 aligned samples, 4 venues
+
+BTC mid-to-mid spread by pair, bps
+----------------------------------
+                     mean  median_abs  p95_abs  share_abs>5  share_abs>10
+binance_us-coinbase  0.41        0.76     3.25          0.0           0.0
+binance_us-kraken    0.51        0.75     2.83          0.0           0.0
+binance_us-okx       1.29        1.37     3.59          0.0           0.0
+coinbase-kraken      0.10        0.56     1.86          0.0           0.0
+coinbase-okx         0.88        0.90     1.84          0.0           0.0
+kraken-okx           0.79        0.77     2.55          0.0           0.0
+
+BTC best executable gap per sample (sell bid / buy ask), bps
+------------------------------------------------------------
+                         value
+median                   1.664
+p95                      3.737
+p99                      4.940
+max                      5.780
+share>0                  1.000
+share>pro_rt(20)         0.000
+share>retail_rt(min 50)  0.000
+
+BTC which pair carries the best gap
+-----------------------------------
+pair
+sell@binance_us/buy@okx         427
+sell@coinbase/buy@okx           205
+sell@kraken/buy@okx             157
+sell@coinbase/buy@kraken        130
+sell@coinbase/buy@binance_us     72
+sell@binance_us/buy@kraken       35
+
+BTC persistence of the best executable gap
+------------------------------------------
+   threshold_bps  share_of_samples  episodes  median_s   p90_s   max_s
+0            0.0             1.000         1    3300.0  3300.0  3300.0
+1            2.0             0.342        60      12.0    36.6   186.0
+2            5.0             0.003         2       4.5     5.7     6.0
+3           10.0             0.000         0       0.0     0.0     0.0
+4           20.0             0.000         0       0.0     0.0     0.0
+5           50.0             0.000         0       0.0     0.0     0.0
+
+BTC share of samples where the best gap beats a flat per-leg fee
+----------------------------------------------------------------
+    fee_per_leg_bps  share_of_samples_profitable
+0               0.0                       1.0000
+1               0.5                       0.7882
+2               1.0                       0.3418
+3               1.5                       0.1109
+4               2.0                       0.0373
+5               2.5                       0.0027
+6               5.0                       0.0000
+8              10.0                       0.0000
+12             20.0                       0.0000
+20             40.0                       0.0000
+28             60.0                       0.0000
+
+BTC formation half: min_edge grid at pro fees (10bps/leg), prepositioned
+------------------------------------------------------------------------
+   min_edge_bps  signals  trades  blocked  unresolved  gross_bps_mean  net_usd_total  net_bps_mean  win_rate
+0           0.0        0       0        0           0             NaN            0.0           NaN       NaN
+1           1.0        0       0        0           0             NaN            0.0           NaN       NaN
+2           2.0        0       0        0           0             NaN            0.0           NaN       NaN
+3           5.0        0       0        0           0             NaN            0.0           NaN       NaN
+BTC chosen min_edge = 0.0 bps (best formation net); now applied once to the second half
+
+==== ETH: 1100 aligned samples, 4 venues
+
+ETH mid-to-mid spread by pair, bps
+----------------------------------
+                     mean  median_abs  p95_abs  share_abs>5  share_abs>10
+binance_us-coinbase  0.79        0.80     2.05          0.0           0.0
+binance_us-kraken    0.57        0.72     1.97          0.0           0.0
+binance_us-okx       0.55        0.69     2.08          0.0           0.0
+coinbase-kraken     -0.22        0.36     1.75          0.0           0.0
+coinbase-okx        -0.24        0.41     1.31          0.0           0.0
+kraken-okx          -0.02        0.39     1.61          0.0           0.0
+
+ETH best executable gap per sample (sell bid / buy ask), bps
+------------------------------------------------------------
+                         value
+median                   0.968
+p95                      2.314
+p99                      2.984
+max                      7.899
+share>0                  0.994
+share>pro_rt(20)         0.000
+share>retail_rt(min 50)  0.000
+
+ETH which pair carries the best gap
+-----------------------------------
+pair
+sell@binance_us/buy@coinbase    226
+sell@binance_us/buy@kraken      191
+sell@binance_us/buy@okx         170
+sell@okx/buy@coinbase           129
+sell@okx/buy@kraken             100
+sell@kraken/buy@coinbase         91
+
+ETH persistence of the best executable gap
+------------------------------------------
+   threshold_bps  share_of_samples  episodes  median_s  p90_s  max_s
+0            0.0             0.994         7     576.0  825.6  885.0
+1            2.0             0.095        52       3.0   11.7   30.0
+2            5.0             0.003         3       3.0    3.0    3.0
+3           10.0             0.000         0       0.0    0.0    0.0
+4           20.0             0.000         0       0.0    0.0    0.0
+5           50.0             0.000         0       0.0    0.0    0.0
+
+ETH share of samples where the best gap beats a flat per-leg fee
+----------------------------------------------------------------
+    fee_per_leg_bps  share_of_samples_profitable
+0               0.0                       0.9936
+1               0.5                       0.4764
+2               1.0                       0.0945
+3               1.5                       0.0100
+4               2.0                       0.0036
+5               2.5                       0.0027
+6               5.0                       0.0000
+8              10.0                       0.0000
+12             20.0                       0.0000
+20             40.0                       0.0000
+28             60.0                       0.0000
+
+ETH formation half: min_edge grid at pro fees (10bps/leg), prepositioned
+------------------------------------------------------------------------
+   min_edge_bps  signals  trades  blocked  unresolved  gross_bps_mean  net_usd_total  net_bps_mean  win_rate
+0           0.0        0       0        0           0             NaN            0.0           NaN       NaN
+1           1.0        0       0        0           0             NaN            0.0           NaN       NaN
+2           2.0        0       0        0           0             NaN            0.0           NaN       NaN
+3           5.0        0       0        0           0             NaN            0.0           NaN       NaN
+ETH chosen min_edge = 0.0 bps (best formation net); now applied once to the second half
+
+simulation summary ($10k lots, 5 lots per side, signal t / fill t+1)
+--------------------------------------------------------------------
+                                             mode  signals  trades  blocked  unresolved  gross_bps_mean  net_usd_total  net_bps_mean  win_rate  samples
+symbol scenario                                                                                                                                        
+BTC    eval_pro_prepositioned       prepositioned        0       0        0           0             NaN          0.000           NaN       NaN      550
+       eval_retail_prepositioned    prepositioned        0       0        0           0             NaN          0.000           NaN       NaN      550
+       eval_pro_transfer                 transfer        0       0        0           0             NaN          0.000           NaN       NaN      550
+       full_zero_fee_prepositioned  prepositioned     1099      96     1003           0           1.114        106.911         1.114     0.865     1100
+       full_pro_prepositioned       prepositioned        0       0        0           0             NaN          0.000           NaN       NaN     1100
+       full_retail_prepositioned    prepositioned        0       0        0           0             NaN          0.000           NaN       NaN     1100
+ETH    eval_pro_prepositioned       prepositioned        0       0        0           0             NaN          0.000           NaN       NaN      550
+       eval_retail_prepositioned    prepositioned        0       0        0           0             NaN          0.000           NaN       NaN      550
+       eval_pro_transfer                 transfer        0       0        0           0             NaN          0.000           NaN       NaN      550
+       full_zero_fee_prepositioned  prepositioned     1092     240      852           0           0.545        130.907         0.545     0.725     1100
+       full_pro_prepositioned       prepositioned        0       0        0           0             NaN          0.000           NaN       NaN     1100
+       full_retail_prepositioned    prepositioned        0       0        0           0             NaN          0.000           NaN       NaN     1100
+
+==== long horizon: Coinbase minus Kraken close, bps
+
+candle-close gap statistics (closes are not synchronous across venues, see README)
+----------------------------------------------------------------------------------
+     freq symbol    n       start         end   mean  median_abs  p95_abs  max_abs  share_abs_gt20    ar1  half_life_periods
+0  hourly    BTC  720  2026-08-05  2026-09-04 -0.112       0.901    3.160    6.391             0.0  0.103              0.305
+1  hourly    ETH  720  2026-08-05  2026-09-04  0.343       0.973    3.888    8.987             0.0  0.041              0.217
+2   daily    BTC  720  2024-09-15  2026-09-04  0.157       1.497    6.045   10.681             0.0  0.053              0.236
+3   daily    ETH  720  2024-09-15  2026-09-04  0.293       1.538    6.372   16.357             0.0  0.047              0.227
