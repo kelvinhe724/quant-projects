@@ -1,0 +1,3 @@
+prices,intercept,slope on log odds,se,t,p
+at quoted odds,0.030109,-0.054646,0.015935,-3.429232,0.000605
+at Shin fair odds,0.023668,-0.024226,0.017791,-1.361737,0.173281

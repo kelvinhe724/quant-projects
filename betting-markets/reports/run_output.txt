@@ -1,0 +1,221 @@
+37,725 matches, 464,832 quotes, 2010-08-06 to 2026-05-24
+
+Bookmaker coverage (matches quoted)
+-----------------------------------
+phase  close   open first season last season
+book                                        
+Avg    16321  37723         1011        2526
+Max    16306  37720         1011        2526
+B365   16322  37715         1011        2526
+BW     15405  36811         1011        2526
+WH     13495  34883         1011        2425
+VC     11715  33094         1011        2324
+IW     10556  31939         1011        2324
+PS     31821  31797         1213        2526
+LB      1729  20752         1011        2526
+SJ         0   9756         1011        1415
+BS         0   7122         1011        1213
+GB         0   7119         1011        1213
+SB         0   4731         1011        1112
+
+Mean overround by bookmaker (%)
+-------------------------------
+phase  close  open  matches
+book                       
+PS      2.49  2.69    31835
+VC      5.55  4.38    33098
+B365    5.66  5.23    37719
+WH      6.20  6.15    34889
+BW      5.57  6.17    36828
+LB      6.49  6.69    20897
+IW      5.53  7.57    31953
+
+Mean opening overround by season (%)
+------------------------------------
+book    B365    BW     IW    LB    PS    VC    WH
+season                                           
+1011    6.37  8.72  11.00  7.91   NaN  4.09  6.66
+1112    6.29  6.85  10.95  7.59   NaN  3.40  6.63
+1213    5.65  6.79   8.88  7.11  2.25  3.07  6.52
+1314    4.98  6.94   8.81  6.47  2.19  2.98  6.40
+1415    4.41  6.70   8.81  5.82  2.20  2.84  6.23
+1516    4.21  6.58   8.79  6.29  2.19  3.09  6.11
+1617    4.24  5.77   7.46  6.19  2.21  3.54  5.04
+1718    4.33  5.57   6.58  6.30  2.34  3.52  5.93
+1819    4.30  5.27   5.97   NaN  2.69  3.56  5.41
+1920    5.37  5.31   5.57   NaN  3.19  5.13  5.32
+2021    5.56  5.10   5.71   NaN  2.66  5.82  5.58
+2122    5.40  5.68   5.15   NaN  2.64  6.19  6.31
+2223    5.37  5.87   5.66   NaN  2.68  7.58  6.44
+2324    5.39  5.80   5.41   NaN  3.34  6.59  7.92
+2425    5.74  5.68    NaN   NaN  3.86   NaN  5.67
+2526    6.07  5.83    NaN  6.49  3.82   NaN   NaN
+
+Mean overround by league (%)
+----------------------------
+book      PS  B365  all named books
+league                             
+D1      2.53  5.63             5.15
+E0      2.47  4.71             4.83
+E1      2.79  5.07             5.58
+F1      2.59  5.65             5.40
+I1      2.53  5.66             5.27
+SP1     2.51  5.64             5.16
+
+Aggregate lines: consensus and best-of-books overround (%)
+----------------------------------------------------------
+phase  close  open
+book              
+Avg     4.89  5.49
+Max    -0.13  0.42
+
+De-vigging PS closing lines, three methods (31,821 matches)
+-----------------------------------------------------------
+              mean favourite prob  mean longshot prob  favourite vs proportional (pp)  longshot vs proportional (pp)
+proportional               0.5174              0.2170                          0.0000                         0.0000
+power                      0.5224              0.2144                          0.4955                        -0.2643
+shin                       0.5209              0.2149                          0.3510                        -0.2194
+
+Shin insider share z: median 0.0117, mean 0.0125, 95th pct 0.0173
+
+Calibration regression: slope above 1 means longshots are overpriced
+--------------------------------------------------------------------
+                           matches   slope      se  t vs 1       p  intercept   brier
+line         de-vig                                                                  
+PS closing   proportional  31821.0  1.0516  0.0140  3.6879  0.0002     0.0332  0.5836
+             power         31821.0  1.0148  0.0136  1.0883  0.2765     0.0095  0.5835
+             shin          31821.0  1.0256  0.0137  1.8666  0.0620     0.0164  0.5835
+B365 closing proportional  16322.0  1.0524  0.0198  2.6468  0.0081     0.0338  0.5880
+             power         16322.0  0.9759  0.0186 -1.2959  0.1950    -0.0155  0.5880
+             shin          16322.0  0.9994  0.0189 -0.0325  0.9740    -0.0004  0.5879
+Avg closing  proportional  16321.0  1.0593  0.0200  2.9569  0.0031     0.0383  0.5879
+             power         16321.0  0.9945  0.0190 -0.2886  0.7729    -0.0035  0.5878
+             shin          16321.0  1.0140  0.0193  0.7265  0.4675     0.0090  0.5878
+
+Calibration of Shin-de-vigged PS closing odds, by probability bin
+-----------------------------------------------------------------
+          bin      n  mean_p  realised      lo      hi       z     roi    bias
+0   0.00-0.05    752  0.0369    0.0372  0.0259  0.0533  0.0447 -0.1677  0.0003
+1   0.05-0.10   2843  0.0786    0.0760  0.0668  0.0863 -0.5115 -0.1263 -0.0026
+2   0.10-0.15   5090  0.1272    0.1228  0.1141  0.1321 -0.9403 -0.0910 -0.0044
+3   0.15-0.20   7756  0.1768    0.1770  0.1687  0.1857  0.0501 -0.0366  0.0002
+4   0.20-0.25  12098  0.2276    0.2195  0.2123  0.2270 -2.1222 -0.0695 -0.0081
+5   0.25-0.30  23602  0.2766    0.2782  0.2726  0.2840  0.5561 -0.0215  0.0016
+6   0.30-0.40  17479  0.3396    0.3371  0.3301  0.3441 -0.6934 -0.0304 -0.0025
+7   0.40-0.50  10918  0.4469    0.4493  0.4400  0.4587  0.5189 -0.0134  0.0025
+8   0.50-0.60   6963  0.5479    0.5490  0.5373  0.5607  0.1901 -0.0150  0.0011
+9   0.60-0.70   4224  0.6453    0.6555  0.6411  0.6697  1.3893 -0.0003  0.0102
+10  0.70-0.80   2477  0.7440    0.7638  0.7467  0.7801  2.2619  0.0114  0.0198
+11  0.80-1.00   1261  0.8487    0.8517  0.8310  0.8703  0.2961 -0.0108  0.0030
+
+Return to backing every outcome in an odds bucket at PS closing
+---------------------------------------------------------------
+                 bets  mean_odds  hit_rate  model_prob     roi  roi_no_vig       t
+bucket                                                                            
+(1.0, 1.5]       5391     1.3280    0.7592      0.7474  0.0007      0.0163  0.0858
+(1.5, 2.0]      10501     1.7599    0.5651      0.5622 -0.0125      0.0049 -1.4668
+(2.0, 2.75]     15701     2.3619    0.4185      0.4184 -0.0208     -0.0007 -2.2437
+(2.75, 4.0]     37861     3.4043    0.2886      0.2884 -0.0258      0.0006 -3.2658
+(4.0, 6.0]      16199     4.7533    0.1998      0.2055 -0.0629     -0.0274 -4.2348
+(6.0, 10.0]      6855     7.4959    0.1287      0.1288 -0.0591     -0.0040 -1.9746
+(10.0, 20.0]     2448    13.3149    0.0650      0.0708 -0.1730     -0.0817 -2.6768
+(20.0, 1000.0]    507    26.9590    0.0355      0.0323 -0.1368      0.0387 -0.6757
+
+Favourite-longshot bias without a de-vig model: profit against log odds
+-----------------------------------------------------------------------
+                   intercept  slope on log odds       se        t        p
+prices                                                                    
+at quoted odds       0.03011           -0.05465  0.01594 -3.42923  0.00061
+at Shin fair odds    0.02367           -0.02423  0.01779 -1.36174  0.17328
+
+Closing versus opening lines (lower Brier and log loss are better)
+------------------------------------------------------------------
+      matches  brier open  brier close  brier gain  brier t  brier p  logloss open  logloss close  logloss gain  logloss p
+book                                                                                                                      
+PS      31783     0.58517      0.58363     0.00154 -5.88809  0.00000       0.98215        0.97985       0.00230    0.00000
+B365    16318     0.58936      0.58787     0.00149 -3.79039  0.00015       0.98872        0.98632       0.00240    0.00006
+Avg     16319     0.58923      0.58780     0.00143 -4.00643  0.00006       0.98821        0.98607       0.00214    0.00005
+
+PS Brier by season, opening versus closing
+------------------------------------------
+           open    close     gain
+season                           
+1213    0.59417  0.59254  0.00164
+1314    0.57418  0.57173  0.00245
+1415    0.59220  0.59143  0.00077
+1516    0.59676  0.59472  0.00204
+1617    0.56245  0.56120  0.00125
+1718    0.57489  0.57296  0.00192
+1819    0.58144  0.57986  0.00157
+1920    0.59293  0.59118  0.00175
+2021    0.59247  0.59034  0.00213
+2122    0.59030  0.58966  0.00064
+2223    0.59471  0.59359  0.00112
+2324    0.57638  0.57422  0.00216
+2425    0.58364  0.58176  0.00188
+2526    0.58673  0.58767 -0.00094
+
+PS closing Brier 0.58685 vs B365 closing 0.58701 on 15,178 shared matches (diff +0.00016, p=0.289)
+
+Flat betting rules, one unit per match
+--------------------------------------
+                                  bets  turnover     roi    total       t  roi no vig  mean odds  hit rate
+rule                                                                                                      
+back the favourite (PS close)    31821   31821.0 -0.0149  -474.40 -2.6769      0.0035     1.9922    0.5238
+back the longshot (PS close)     31821   31821.0 -0.0505 -1608.01 -4.3861     -0.0101     5.5575    0.2134
+back the draw (PS close)         31821   31821.0 -0.0345 -1098.98 -3.5883     -0.0031     4.0605    0.2550
+back the home (PS close)         31821   31821.0 -0.0295  -939.35 -3.9886     -0.0062     2.7891    0.4418
+back the favourite (B365 close)  16322   16322.0 -0.0376  -613.41 -4.9683      0.0034     1.9326    0.5238
+back the longshot (B365 close)   16322   16322.0 -0.0864 -1409.73 -5.7253     -0.0014     5.0209    0.2151
+back the draw (B365 close)       16322   16322.0 -0.0513  -837.30 -3.9086      0.0192     3.9341    0.2544
+back the home (B365 close)       16322   16322.0 -0.0747 -1219.36 -7.5303     -0.0243     2.6984    0.4305
+back the favourite (Max close)   16306   16306.0  0.0118   192.78  1.4792      0.0090     2.0397    0.5229
+back the longshot (Max close)    16306   16306.0 -0.0069  -113.05 -0.4093     -0.0063     5.6205    0.2150
+back the draw (Max close)        16306   16306.0 -0.0022   -36.63 -0.1616     -0.0024     4.1623    0.2545
+back the home (Max close)        16306   16306.0 -0.0128  -208.78 -1.1703     -0.0148     2.9238    0.4305
+
+Shopping for the outlier price
+------------------------------
+                                                   bets  turnover     roi    total       t  mean edge
+rule                                                                                                 
+best price beats consensus by >0%                 25473   25473.0  0.0039    98.43  0.3091     0.0357
+best price beats consensus by >2%                 13658   13658.0 -0.0039   -52.73 -0.1984     0.0591
+best price beats consensus by >5%                  5995    5995.0  0.0347   208.20  0.9880     0.0929
+best price beats consensus by >10%                 1719    1719.0  0.0531    91.31  0.6239     0.1521
+best price beats de-vigged PS                     22608   22608.0  0.0127   288.19  1.0101        NaN
+consensus price beats de-vigged PS                  488     488.0 -0.0177    -8.65 -0.1915        NaN
+best-price selections, filled at consensus price  22608   22608.0 -0.0606 -1370.04 -5.3258        NaN
+
+Kelly staking, sizing off the sharp book and betting the best price
+-------------------------------------------------------------------
+                                 bets  turnover     roi   total       t  mean stake  log growth
+rule                                                                                           
+full Kelly, best price          21258  341.2851  0.0290  9.8887  2.3663      0.0161      1.3167
+half Kelly, best price          21258  170.6425  0.0290  4.9443  2.3663      0.0080      2.7860
+quarter Kelly, best price       21258   85.3213  0.0290  2.4722  2.3663      0.0040      1.9298
+full Kelly, consensus price       368    4.2237  0.0359  0.1517  0.2285      0.0115     -0.0295
+half Kelly, consensus price       368    2.1119  0.0359  0.0758  0.2285      0.0057      0.0265
+quarter Kelly, consensus price    368    1.0559  0.0359  0.0379  0.2285      0.0029      0.0249
+
+Cross-book arbitrage on closing lines
+-------------------------------------
+                                        matches  arb rate  mean return when arbed  max return  median book sum
+source                                                                                                        
+Max column (all books the site tracks)    16306   0.52705                 0.01379     0.10769          0.99902
+best of 7 named books, 4+ quoting         14333   0.05916                 0.01170     0.15994          1.02021
+
+Arbitrage frequency by season, closing lines
+--------------------------------------------
+        Max matches  Max arb rate  Max mean return  named books matches  named books arb rate  named books mean return
+season                                                                                                                
+1920           2276       0.63972          0.01312                 2277               0.11419                  0.01421
+2021           2373       0.71091          0.01295                 2378               0.05803                  0.00803
+2122           2376       0.79125          0.01802                 2378               0.11144                  0.01146
+2223           2377       0.63399          0.01244                 2378               0.04373                  0.01153
+2324           2301       0.54237          0.01298                 2304               0.01302                  0.00865
+2425           2303       0.32653          0.01010                 1452               0.00344                  0.01924
+2526           2300       0.02783          0.01733                 1166               0.03945                  0.01152
+
+books quoting per match (named books, closing): median 6, mean 5.55
+
+charts and tables written to /Users/kelvin/Documents/C.C. General Intelligence/quant-projects/betting-markets/reports/
