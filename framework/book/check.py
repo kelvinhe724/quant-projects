@@ -9,8 +9,10 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-from framework.book.strategies import CryptoTrend, FXCarryETF, TrendETF, carry_weights, month_ends
-from framework.engine import Bars, Config, CostModel, run, synthetic
+from framework.book.strategies import (BOOKS, CryptoTrend, ETFBeta, FXCarryETF, TrendETF, carry_weights,
+                                       month_ends)
+from framework.book.strategies import sleeves as book_sleeves
+from framework.engine import Bars, Config, CostModel, RiskConfig, run, synthetic
 
 checks = []
 
@@ -96,8 +98,7 @@ check("carry_weights: fewer than 2 * n_leg quoted rates gives a flat book",
       (carry_weights(pd.Series({"EUR": 1.0, "JPY": np.nan, "USD": 2.0, "GBP": 3.0})) == 0).all())
 
 print("\nEWMAC\n")
-from framework.book.strategies import (EWMAC, FORECAST_CAP, buffered, combined_forecast, ewmac,
-                                       forecast_scalar, robust_vol)
+from framework.book.strategies import EWMAC, FORECAST_CAP, combined_forecast, ewmac, forecast_scalar, robust_vol
 from framework.book.validate import attribution
 
 trending = synthetic(n_days=252 * 6, instruments=("UP", "DOWN", "FLAT"), drift=(0.6, -0.6, 0.0), vol=0.15, seed=5)
@@ -116,23 +117,32 @@ check("forecast scalar: scaling a raw forecast by 3 divides the scalar by 3 and 
 check("forecast scalar: fewer than 500 days gives NaN", np.isnan(forecast_scalar(raw.iloc[:400])))
 check("forecast cap: every combined forecast is within +/-20 and the cap binds somewhere on a planted trend",
       fc.abs().max().max() <= FORECAST_CAP and (fc.abs() == FORECAST_CAP).any().any())
-check("buffer: inside 10% of the target no trade, outside it moves to the band edge",
-      buffered(1.0, 0.95) is None and buffered(1.0, 0.5) == 0.9 and buffered(1.0, 1.5) == 1.1
-      and buffered(-1.0, 0.0) == -0.9)
 ew = EWMAC(classes={"UP": "a", "DOWN": "b", "FLAT": "c"})
-res_ew = run(ew, trending, config=COSTS)
+BUFFERED = Config(costs=COSTS.costs, risk=RiskConfig(buffer=0.10))
+res_ew = run(ew, trending, config=BUFFERED)
 w_last = res_ew.weights.iloc[-1]
 check("EWMAC through the engine: long the uptrend, short the downtrend at the end of the sample",
       w_last["UP"] > 0 and w_last["DOWN"] < 0, f"{w_last.round(3).to_dict()}")
+live_days = int(combined_forecast(trending.close).notna().any(axis=1).sum())
+check("EWMAC sends a target every live day and the engine's buffer trades under a third of those instrument-days",
+      ew.on_bar(trending.asof, trending) is not None and len(res_ew.trades) < live_days,
+      f"{len(res_ew.trades)} trades on {live_days * 3} instrument-days")
 later = np.where(np.asarray(trending.calendar > cut)[:, None], 1.1, 1.0)
 mut_ew = run(EWMAC(classes={"UP": "a", "DOWN": "b", "FLAT": "c"}),
              Bars({f: trending.field(f) * (later if f != "volume" else 1.0)
-                   for f in ("open", "high", "low", "close", "volume")}), config=COSTS)
+                   for f in ("open", "high", "low", "close", "volume")}), config=BUFFERED)
 t0, t1 = res_ew.trades[res_ew.trades.date <= cut], mut_ew.trades[mut_ew.trades.date <= cut]
 a0, a1 = res_ew.trades[res_ew.trades.date > cut].quantity.head(30), mut_ew.trades[mut_ew.trades.date > cut].quantity.head(30)
 check("EWMAC mutation test: rewriting prices after the cut leaves every trade up to the cut identical and changes later ones",
       len(t0) == len(t1) and np.allclose(t0.quantity, t1.quantity) and (len(a0) != len(a1) or not np.allclose(a0, a1)),
       f"{len(t0)} trades compared")
+
+beta = ETFBeta(instruments=["UP", "DOWN", "FLAT", "NONE"]).on_bar(trending.asof, trending)
+check("ETFBeta: 1/N of the instruments with a price, nothing for one without",
+      beta == {"UP": 1 / 3, "DOWN": 1 / 3, "FLAT": 1 / 3})
+check("every candidate book builds distinct sleeves",
+      all(len({str(s) for s in book_sleeves(b)}) == len(BOOKS[b]) for b in BOOKS)
+      and [str(s) for s in book_sleeves()] == ["TrendETF", "FXCarryETF", "CryptoTrend"])
 
 bench = synthetic(n_days=252 * 8, instruments=("X",), vol=0.15, seed=7)
 x = bench.close["X"].pct_change().fillna(0.0)
@@ -210,8 +220,10 @@ me = month_ends(cal)[-4]
 shadow = ShadowBroker([TrendETF(classes=CLASSES)], {"TrendETF": 1.0}, month_ends(cal)[-8])
 shadow.run(bars.upto(me))
 pend = shadow.results.books["TrendETF"]["pending"]
-check("shadow targets on a month end are the sleeve's fresh targets",
-      pend and shadow.targets() == {k: v for k, v in pend.items() if abs(v) > 1e-9})
+held = shadow.results.books["TrendETF"]["weights"].iloc[-1].to_dict()
+check("shadow targets on a month end are the sleeve's fresh targets over what the buffer left alone",
+      pend and len(pend) < len(held) and shadow.targets() == {k: v for k, v in {**held, **pend}.items() if abs(v) > 1e-9},
+      f"{len(pend)} sent, {len(held)} held")
 shadow.run(bars.upto(cal[cal.get_loc(me) + 3]))
 check("shadow targets on a quiet day are what the book holds",
       shadow.results.books["TrendETF"]["pending"] is None and shadow.targets() == shadow.positions())

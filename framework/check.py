@@ -208,7 +208,7 @@ class MonthlyLS(Strategy):
 
 
 loose = run(MonthlyLS(), bars, config=NO_COST)
-tight = run(MonthlyLS(), bars, config=Config(risk=RiskConfig(max_gross=2.0)))
+tight = run(MonthlyLS(), bars, config=Config(risk=RiskConfig(max_gross=2.0, buffer=0.10)))
 over = tight.weights.abs().sum(axis=1)
 over = over[over > 2.0].index
 nxt = pd.DatetimeIndex([cal[cal.get_loc(d) + 1] for d in over if cal.get_loc(d) + 1 < len(cal)])
@@ -252,6 +252,57 @@ check("a monthly strategy is killed the bar after the drawdown breach, not at mo
       not crash.is_month_end(kill_day) and flatten.date == cal[cal.get_loc(kill_day) + 1]
       and flatten.quantity < 0 and (killed_m.returns.loc[kill_day:].iloc[2:] == 0).all(),
       f"killed {kill_day.date()}, flat {flatten.date.date()}")
+
+print("\nBUFFER\n")
+calm = synthetic(n_days=400, instruments=("A", "B"), vol=0.02, seed=11)
+BUF = Config(risk=RiskConfig(buffer=0.10))
+
+
+class Wobble(Strategy):
+    """Base weights that wobble 3% a day, stepped up 15% from `jump` on."""
+
+    def __init__(self, base, jump=None):
+        self.base, self.jump, self.i = base, jump, 0
+
+    def on_bar(self, asof, bars):
+        self.i += 1
+        up = 1.15 if self.jump is not None and asof >= self.jump else 1.0
+        return {n: w * up * (1 + 0.03 * (-1) ** self.i) for n, w in self.base.items()}
+
+
+wob = run(Wobble({"A": 0.4, "B": -0.4}), calm, config=BUF)
+check("buffer: targets that wobble 3% a day trade once per instrument, on the entry bar, and never again",
+      len(wob.trades) == 2 and set(wob.trades.date) == {calm.calendar[1]}, f"{len(wob.trades)} trades")
+jump = run(Wobble({"A": 0.4, "B": -0.4}, jump=calm.calendar[200]), calm, config=BUF)
+later = jump.trades[jump.trades.date > calm.calendar[1]]
+check("buffer: a 15% step in the target trades every instrument on the next bar, back to the target, and nothing else",
+      len(later) == 2 and set(later.date) == {calm.calendar[201]}
+      and np.allclose(jump.weights.loc[calm.calendar[201]], [0.4 * 1.15 * 0.97, -0.4 * 1.15 * 0.97], atol=0.005),
+      f"{jump.weights.loc[calm.calendar[201]].round(4).to_dict()}")
+core = run(Daily({"A": 0.5, "B": 0.5}), calm, config=Config(risk=RiskConfig(target_vol=0.10, buffer=0.10)))
+loose = run(Daily({"A": 0.5, "B": 0.5}), calm, config=Config(risk=RiskConfig(target_vol=0.10)))
+rel = core.weights.diff().abs() / core.weights.abs()
+moves = pd.Series([rel.loc[t.date, t.instrument] for t in core.trades.itertuples()])
+check("buffer: a constant target under the vol overlay trades only when the overlay has moved it more than 10%",
+      loose.trades.date.nunique() > 0.95 * len(calm.calendar)
+      and core.trades.date.nunique() < 0.2 * loose.trades.date.nunique() and (moves > 0.09).all(),
+      f"{core.trades.date.nunique()} trade days vs {loose.trades.date.nunique()} unbuffered, "
+      f"smallest move {moves.min():.1%}")
+ls = run(Daily({"A": 1.0, "B": -1.0}), bars, config=Config(risk=RiskConfig(max_gross=2.0, buffer=0.10)))
+gross = ls.weights.abs().sum(axis=1)
+over = gross[gross > 2.0].index
+over = over[over < cal[-1]]
+traded = ls.trades.groupby("date").instrument.agg(set)
+check("buffer: a gross breach still sends every instrument on the next bar, in band or not",
+      len(over) > 0 and all(traded.get(cal[cal.get_loc(d) + 1], set()) == {"A", "B"} for d in over)
+      and ls.trades.date.nunique() < 0.5 * len(cal),
+      f"{len(over)} breaches, {ls.trades.date.nunique()} trade days of {len(cal)}")
+mild = run(Daily({"X": 1.0}), crash, config=Config(risk=RiskConfig(dd_threshold=0.10, dd_scale=0.92, buffer=0.10)))
+dd_day = mild.equity.index[(mild.equity / mild.equity.cummax() - 1 <= -0.10).argmax()]
+nxt = crash.calendar[crash.calendar.get_loc(dd_day) + 1]
+check("buffer: a drawdown cut inside the band still trades the bar after the breach, and the recovery trades back",
+      nxt in set(mild.trades.date) and abs(mild.weights.loc[nxt, "X"] - 0.92) < 0.01
+      and mild.weights["X"].iloc[-1] > 0.99, f"cut {dd_day.date()}, held {mild.weights.loc[nxt, 'X']:.3f} next bar")
 
 print("\nHONESTY (purgedcv)\n")
 noise = synthetic(n_days=750, vol=0.20, seed=21)

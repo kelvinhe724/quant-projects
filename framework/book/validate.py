@@ -6,7 +6,7 @@ falsification battery follows the shape of
 https://github.com/engineerinvestor/systematic-trend-following-with-managed-futures/blob/main/src/tf/eval/falsification.py
 (MIT): placebo signs, higher costs, later signals, vol scaling without a signal.
 
-Run: ../../.venv/bin/python3 -m framework.book.validate   (about five minutes)
+Run: ../../.venv/bin/python3 -m framework.book.validate   (about 25 minutes, seven daily EWMAC runs)
 """
 import importlib.util
 import itertools
@@ -21,8 +21,8 @@ from purgedcv import (WalkForwardSplit, deflated_sharpe_ratio, min_track_record_
 from scipy.stats import kurtosis, skew
 
 from framework.book import allocate, universe
-from framework.book.strategies import EWMAC, SPEEDS, TrendETF, book_config, ex_ante_vol, sleeves
-from framework.engine import Strategy, run, sharpe
+from framework.book.strategies import BOOKS, EWMAC, SPEEDS, TrendETF, book_config, ex_ante_vol, sleeves
+from framework.engine import Strategy, drawdown, run, sharpe
 
 REPORTS = allocate.REPORTS
 TRIALS = os.path.join(REPORTS, "trials.csv")
@@ -30,6 +30,14 @@ ARCHIVE = os.path.join(universe.ROOT, "archive", "framework-metrics-honesty.py")
 GRID = {"lookback": (3, 6, 9, 12), "target": (0.2, 0.4)}
 V1 = {"lookback": 12, "target": 0.4}
 PLACEBO_DRAWS = 20
+# Last fifth of the panel's sessions is the untouched window, the retired
+# WalkForward(holdout=0.2) convention. Nothing is fit or picked on it.
+HOLDOUT = 0.2
+# Engine settings that change every configuration's return stream; logged
+# with each trial so a rerun after an engine change counts as a new look.
+ENGINE = {"buffer": book_config().risk.buffer}
+PROMOTION = ("net Sharpe above zero on the untouched window, above TrendETF's on the same window, "
+             "and a positive alpha t against the ETF universe there")
 
 
 class Wrap(Strategy):
@@ -53,7 +61,7 @@ def log_trial(name, params, returns):
     """Append one variant to trials.csv; return the number of distinct variants ever logged."""
     r = returns[returns != 0]
     row = pd.DataFrame([{"run_at": pd.Timestamp.now().isoformat(timespec="seconds"), "name": name,
-                         "params": json.dumps(params, sort_keys=True), "sharpe_daily": r.mean() / r.std(),
+                         "params": json.dumps({**params, **ENGINE}, sort_keys=True), "sharpe_daily": r.mean() / r.std(),
                          "n_obs": len(r)}])
     row.to_csv(TRIALS, mode="a", header=not os.path.exists(TRIALS), index=False)
 
@@ -76,13 +84,13 @@ def stats(r):
     return s
 
 
-def walk_forward(grid_returns, v1_key):
+def walk_forward(grid_returns, v1_key, n_splits=5):
     """Pick the best train-window variant per fold; stitch its test returns. Returns (table, oos)."""
     R = grid_returns
     R = R.loc[R.index >= R[v1_key].ne(0).idxmax()]
     X = np.zeros((len(R), 1))
     rows, picked = [], []
-    for k, (tr, te) in enumerate(WalkForwardSplit(n_splits=5, test_size=756, prediction_times=R.index,
+    for k, (tr, te) in enumerate(WalkForwardSplit(n_splits=n_splits, test_size=756, prediction_times=R.index,
                                                   evaluation_times=R.index).split(X)):
         train, test = R.iloc[tr], R.iloc[te]
         best = train.apply(sharpe).idxmax()
@@ -111,8 +119,9 @@ def dsr_crosscheck(seed=3, n=100, length=750):
 
 
 def falsify(bars, alloc):
-    """Placebo, cost stress, signal delay and vol-scaling-only, all on the frozen v1 rules."""
+    """Placebo and vol-scaling-only on the frozen trend rule; cost stress and signal delay on the live book."""
     live = {k: v for k, v in alloc["weights"].items() if v > 0}
+    book = allocate.LIVE_BOOK
     rng = np.random.default_rng(0)
     names = list(universe.ETFS)
     placebo = []
@@ -129,15 +138,15 @@ def falsify(bars, alloc):
     log_trial("TrendETF", {"v": 1, "signs": "long_only"}, long_only)
     costs = {}
     for m in (1.0, 2.0, 4.0):
-        r = run(sleeves(), bars, config=book_config(kill=False, cost_scale=m, allocations=live)).returns
+        r = run(sleeves(book), bars, config=book_config(kill=False, cost_scale=m, allocations=live)).returns
         costs[f"{m:g}x"] = stats(r)
-        log_trial("book", {"alloc": alloc["allocator"], "cost_scale": m}, r)
+        log_trial("book", {"book": book, "alloc": alloc["allocator"], "cost_scale": m}, r)
     delays = {}
     for d in (1, 2, 5):
-        r = run([Wrap(s, delay=d) for s in sleeves()], bars,
+        r = run([Wrap(s, delay=d) for s in sleeves(book)], bars,
                 config=book_config(kill=False, allocations=live)).returns
         delays[f"+{d}"] = stats(r)
-        log_trial("book", {"alloc": alloc["allocator"], "delay": d}, r)
+        log_trial("book", {"book": book, "alloc": alloc["allocator"], "delay": d}, r)
     p = np.array(placebo)
     return {
         "placebo": {"trend_sharpe": sharpe(trend[trend != 0]), "draws": len(p), "mean": float(p.mean()),
@@ -174,28 +183,57 @@ def attribution(returns, bars, instruments, target_vol=0.10):
     return out
 
 
+def gross_returns(res):
+    """Net returns with each day's trade costs and borrow added back: the same path at zero cost.
+
+    A separate zero-cost run would take a different path, because the buffer
+    trades off the held weights and those depend on what costs have done to
+    equity.
+    """
+    cost = res.trades.groupby("date")[["commission", "slippage"]].sum().sum(axis=1)
+    charges = cost.reindex(res.equity.index).fillna(0.0) - res.carry.clip(upper=0.0)
+    return (res.returns + charges / res.equity.shift(1)).fillna(0.0)
+
+
+def window_stats(res, start):
+    """stats() of a run from `start` on, with same-path gross Sharpe, turnover a year and trades."""
+    r = res.returns.loc[start:]
+    s = stats(r)
+    g = gross_returns(res).loc[start:]
+    s["sharpe_gross"] = sharpe(g[r != 0])
+    s["turnover"] = float(res.turnover.loc[start:].sum() / (len(r) / 252))
+    s["trades"] = int((res.trades["date"] >= start).sum())
+    return s
+
+
 def v2_candidates(bars, trend):
-    """EWMAC at each speed and combined, gross and net, next to TrendETF over the window both are live."""
+    """EWMAC at each speed and combined next to TrendETF over the window both are live. Returns (table, runs)."""
     runs = {"TrendETF": trend, "EWMAC": run(EWMAC(), bars, config=book_config(kill=False))}
     for f, s in SPEEDS:
         runs[f"EWMAC {f}/{s}"] = run(EWMAC(speeds=[(f, s)]), bars, config=book_config(kill=False))
     log_trial("EWMAC", {"v": 2, "speeds": "combined"}, runs["EWMAC"].returns)
     for f, s in SPEEDS:
         log_trial("EWMAC", {"v": 2, "speeds": f"{f}/{s}"}, runs[f"EWMAC {f}/{s}"].returns)
-    gross = {"TrendETF": run(TrendETF(), bars, config=book_config(kill=False, cost_scale=0.0)),
-             "EWMAC": run(EWMAC(), bars, config=book_config(kill=False, cost_scale=0.0))}
-    log_trial("TrendETF", {"v": 1, "cost_scale": 0.0}, gross["TrendETF"].returns)
-    log_trial("EWMAC", {"v": 2, "speeds": "combined", "cost_scale": 0.0}, gross["EWMAC"].returns)
     start = max(r.returns.ne(0).idxmax() for r in runs.values())
+    return {k: window_stats(res, start) for k, res in runs.items()}, runs
+
+
+def candidate_books(bars, hold):
+    """Every book in BOOKS at 1/N, kill off, from the first day all of them are live; in sample and from `hold` on."""
+    res = {}
+    for name in BOOKS:
+        s = sleeves(name)
+        res[name] = run(s, bars, config=book_config(kill=False, allocations={str(x): 1 / len(s) for x in s}))
+        log_trial("book", {"book": name, "alloc": "equal"}, res[name].returns)
+    start = max(r.returns.ne(0).idxmax() for r in res.values())
     table = {}
-    for k, res in runs.items():
-        r = res.returns.loc[start:]
-        s = stats(r)
-        s["sharpe_gross"] = sharpe(gross[k].returns.loc[start:]) if k in gross else np.nan
-        s["turnover"] = float(res.turnover.loc[start:].sum() / (len(r) / 252))
-        s["trades"] = int((res.trades["date"] >= start).sum())
-        table[k] = s
-    return table, {k: res.returns for k, res in runs.items()}
+    for name, r in res.items():
+        row = window_stats(r, start)
+        oos = r.returns.loc[hold:]
+        row["oos_sharpe"] = sharpe(oos[oos != 0])
+        row["oos_max_drawdown"] = drawdown(oos)[1]["max_drawdown"]
+        table[name] = row
+    return table, res, start
 
 
 def md_table(d, cols=("sharpe", "annual_return", "annual_vol", "max_drawdown")):
@@ -210,8 +248,11 @@ def main():
     os.makedirs(REPORTS, exist_ok=True)
     bars = universe.load_bars()
     results = allocate.run_sleeves(bars, kill=False)
-    for k, r in results.items():
-        log_trial(k, {"v": 1}, r.returns)
+    # The v1 sleeves stay in the attribution and kill tables whatever book is live.
+    v1 = allocate.run_sleeves(bars, "v1", kill=False) if allocate.LIVE_BOOK != "v1" else {}
+    every = {**v1, **results}
+    for k, r in every.items():
+        log_trial(k, {"alone": True}, r.returns)
     alloc, erc_table, erc_years, oos_alloc, R = allocate.allocate(bars, results)
     live = {k: v for k, v in alloc["weights"].items() if v > 0}
 
@@ -223,24 +264,45 @@ def main():
         log_trial("TrendETF", {"lookback": lb, "target": tv}, r.returns)
     wf_table, wf = walk_forward(pd.DataFrame(grid), f"TrendETF lookback={V1['lookback']} target={V1['target']}")
 
-    book = run(sleeves(), bars, config=book_config(kill=False, allocations=live))
+    book = run(sleeves(allocate.LIVE_BOOK), bars, config=book_config(kill=False, allocations=live))
     r = book.returns[book.returns != 0]
     head = stats(r)
+    hold = bars.index[len(bars.index) - int(round(len(bars.index) * HOLDOUT))]
     for k in ("erc", "equal"):
-        log_trial("book", {"alloc": k, "oos": "quarterly refit"}, oos_alloc[k])
+        log_trial("book", {"book": allocate.LIVE_BOOK, "alloc": k, "oos": "quarterly refit"}, oos_alloc[k])
 
     kill_dates = {}
-    for k, res in allocate.run_sleeves(bars, kill=True).items():
+    killed = allocate.run_sleeves(bars, kill=True)
+    if v1:
+        killed = {**allocate.run_sleeves(bars, "v1", kill=True), **killed}
+    for k, res in killed.items():
         eq = res.equity
         dd = eq / eq.cummax() - 1
         kill_dates[k] = str(dd.index[(dd <= -0.25).argmax()].date()) if (dd <= -0.25).any() else "never"
-        log_trial(k, {"v": 1, "kill": True}, res.returns)
+        log_trial(k, {"alone": True, "kill": True}, res.returns)
 
     fals = falsify(bars, alloc)
     xcheck = dsr_crosscheck()
-    v2_table, v2_returns = v2_candidates(bars, results["TrendETF"])
-    attr = {k: attribution(res.returns, bars, universe.SLEEVES[k]) for k, res in results.items()}
-    attr["EWMAC"] = attribution(v2_returns["EWMAC"], bars, universe.SLEEVES["TrendETF"])
+    trend = every["TrendETF"]
+    v2_table, v2_runs = v2_candidates(bars, trend)
+    attr = {k: attribution(res.returns, bars, universe.SLEEVES[k]) for k, res in every.items()}
+    attr["EWMAC"] = attribution(v2_runs["EWMAC"].returns, bars, universe.SLEEVES["TrendETF"])
+
+    ew_R = pd.DataFrame({k: v.returns for k, v in v2_runs.items() if k != "TrendETF"})
+    ew_wf_table, ew_wf = walk_forward(ew_R.loc[ew_R.index < hold], "EWMAC", n_splits=4)
+    ew_hold = v2_runs["EWMAC"].returns.loc[hold:]
+    log_trial("EWMAC", {"v": 2, "speeds": "combined", "window": "untouched"}, ew_hold)
+    untouched = {"start": str(hold.date()), "end": str(ew_hold.index[-1].date()),
+                 "EWMAC": window_stats(v2_runs["EWMAC"], hold), "TrendETF": window_stats(trend, hold),
+                 "attribution": attribution(ew_hold, bars, universe.SLEEVES["TrendETF"]), "rule": PROMOTION}
+    untouched["clears"] = bool(untouched["EWMAC"]["sharpe"] > 0
+                               and untouched["EWMAC"]["sharpe"] > untouched["TrendETF"]["sharpe"]
+                               and untouched["attribution"]["1/N"]["t_alpha"] > 0)
+
+    books_table, books_res, books_start = candidate_books(bars, hold)
+    oos_winner = max(books_table, key=lambda k: books_table[k]["oos_sharpe"])
+    gate_oos, _ = allocate.walk(books_res[oos_winner].returns_by_strategy)
+    gate_table, _ = allocate.compare(gate_oos)
 
     # Every configuration above is now in trials.csv; count after, not before.
     tr = trials()
@@ -251,6 +313,9 @@ def main():
     head["dsr_with_placebo"] = float(deflated_sharpe_ratio(r.to_numpy(), n_trials + fals["placebo"]["draws"],
                                                            var_sharpe))
     head["n_trials"] = n_trials
+    for name, row in books_table.items():
+        br = books_res[name].returns.loc[books_start:]
+        row["dsr"] = float(deflated_sharpe_ratio(br[br != 0].to_numpy(), n_trials, var_sharpe))
     head["n_runs_logged"] = int(len(pd.read_csv(TRIALS)))
     head["min_btl_years"] = float(minimum_backtest_length(n_trials, head["sharpe"]))
     head["backtest_years"] = len(r) / 252
@@ -264,9 +329,13 @@ def main():
                     title="Premia book (shadow config, net of costs)")
 
     with open(os.path.join(REPORTS, "validation.json"), "w") as fh:
-        json.dump({"headline": head, "allocator": alloc, "walk_forward": wf, "falsification": fals,
-                   "v2_candidates": v2_table, "attribution": attr,
-                   "dsr_crosscheck": xcheck, "kill_dates": kill_dates, "panel_hash": universe.panel_hash(bars),
+        json.dump({"headline": head, "live_book": allocate.LIVE_BOOK, "allocator": alloc, "walk_forward": wf,
+                   "falsification": fals, "v2_candidates": v2_table, "ewmac_walk_forward": ew_wf,
+                   "untouched": untouched, "books": books_table, "books_start": str(books_start.date()),
+                   "oos_winner": oos_winner,
+                   "winner_erc_gate": {k: {m: v for m, v in gate_table[k].items()} for k in gate_table},
+                   "attribution": attr, "dsr_crosscheck": xcheck, "kill_dates": kill_dates,
+                   "panel_hash": universe.panel_hash(bars),
                    "run_at": pd.Timestamp.now().isoformat(timespec="seconds")}, fh, indent=2, default=str)
 
     lines = [
@@ -280,10 +349,12 @@ def main():
         f"| {head['sharpe']:.3f} | {head['annual_return']:.2%} | {head['annual_vol']:.2%} | "
         f"{head['max_drawdown']:.1%} | {head['psr']:.3f} | {head['dsr']:.3f} | {n_trials} | "
         f"{head['min_btl_years']:.1f} y (have {head['backtest_years']:.1f}) | {head['min_trl_years']:.1f} y |", "",
-        f"DSR uses n_trials = {n_trials}: every configuration this file runs on the real panel (sleeves, the "
-        f"trend grid, allocators, cost and delay variants, kill on) is appended to `trials.csv` "
-        f"({head['n_runs_logged']} rows so far) and identical return streams count once; the variance of their "
-        f"daily Sharpes is {var_sharpe:.2e}. The per-asset vol target is undone by the sleeve-level 10% target, so "
+        f"Live book `{allocate.LIVE_BOOK}`. DSR uses n_trials = {n_trials}: every configuration this file runs on "
+        "the real panel (sleeves, the trend grid, allocators, cost and delay variants, kill on, the EWMAC "
+        f"variants, the candidate books) is appended to `trials.csv` ({head['n_runs_logged']} rows so far) and "
+        f"identical return streams count once; the variance of their daily Sharpes is {var_sharpe:.2e}. Trials "
+        f"are tagged with the engine settings ({ENGINE}), so the runs before the buffer moved into the engine "
+        "still count: they were looked at. The per-asset vol target is undone by the sleeve-level 10% target, so "
         f"the trend grid is really four lookbacks. The {fals['placebo']['draws']} placebo draws are a null, not "
         f"candidates; counting them too gives DSR {head['dsr_with_placebo']:.3f}. PSR is the probability the true "
         "Sharpe is above zero; DSR the same after deflating for selection. MinTRL is the track length needed to "
@@ -312,14 +383,42 @@ def main():
         f"EWMAC at {', '.join(f'{f}/{s}' for f, s in SPEEDS)} and the three combined with a forecast "
         "diversification multiplier, forecast scalars estimated on trailing data only (expanding, NaN for the "
         "first 500 days), cap 20, forecast / 10 x TrendETF's 40% per-asset target (35-day vol where TrendETF "
-        "uses 60-day) and class balance, daily, same universe, cost model and overlay. The 10% buffer sits on "
-        "the raw targets; on any day one instrument leaves its band the whole sleeve is re-sent and the overlay "
-        f"re-scales it, so it cuts trades less than the same buffer on final positions would. Window "
-        f"{v2_table['EWMAC']['start']} to {v2_table['EWMAC']['end']}, where both rules are live. Gross is the "
-        "same run with every cost coefficient at zero, run for the combined rule only. Turnover is traded "
-        "notional over equity per year. The combined rule gross and net and each speed net are logged trials.", "",
+        "uses 60-day) and class balance, sent daily, same universe, cost model and overlay. The engine's 10% "
+        "buffer sits on the final weights after the overlay, per instrument: an instrument trades only when its "
+        f"held weight is outside target x (1 +/- 0.1). Window {v2_table['EWMAC']['start']} to "
+        f"{v2_table['EWMAC']['end']}, where both rules are live. Gross is the same path with each day's trade "
+        "costs and borrow added back. Turnover is traded notional over equity per year. Each variant is a "
+        "logged trial.", "",
         md_table(v2_table, ("sharpe_gross", "sharpe", "annual_return", "annual_vol", "max_drawdown", "turnover",
                             "trades")), "",
+        "## EWMAC: walk-forward and the untouched window", "",
+        f"Walk-forward over the four EWMAC variants on the sessions before the untouched window, {len(ew_wf_table)} "
+        "folds of 3 years, best training Sharpe held in the test window. Selected-in-sample OOS Sharpe "
+        f"**{ew_wf['selected_oos_sharpe']:.3f}** vs the frozen combined rule **{ew_wf['v1_oos_sharpe']:.3f}** "
+        "over the same test windows.", "",
+        ew_wf_table.round(3).to_markdown(), "",
+        f"**Untouched window** {untouched['start']} to {untouched['end']}, the last {HOLDOUT:.0%} of the panel's "
+        "sessions. Nothing was fit or picked on it; its return was inside the one full-panel look above, so it "
+        "confirms rather than discovers. Promotion rule, fixed before this run: " + PROMOTION + ".", "",
+        "| rule | Sharpe gross | Sharpe net | ann. return | ann. vol | max drawdown | turnover | trades |",
+        "|---|---|---|---|---|---|---|---|",
+        *[f"| {k} | {s['sharpe_gross']:.3f} | {s['sharpe']:.3f} | {s['annual_return']:.2%} | {s['annual_vol']:.2%} | "
+          f"{s['max_drawdown']:.1%} | {s['turnover']:.1f}x | {s['trades']} |"
+          for k, s in ((k, untouched[k]) for k in ("EWMAC", "TrendETF"))], "",
+        "EWMAC against its universe on the window: "
+        + "; ".join(f"{b}: alpha {s['alpha']:+.2%} (t {s['t_alpha']:.2f}), beta {s['beta']:.2f}, benchmark Sharpe "
+                    f"{s['benchmark_sharpe']:.2f}, residual Sharpe {s['residual_sharpe']:.2f}"
+                    for b, s in untouched["attribution"].items())
+        + f". **Clears the rule: {'yes' if untouched['clears'] else 'no'}.**", "",
+        "## Candidate books", "",
+        f"Every book in `strategies.BOOKS` at 1/N of its sleeves, kill off, from {books_start.date()} (the first "
+        "day all four are live) to the end; the same window, engine and cost model for all four. DSR uses the "
+        "trial count above. OOS is the untouched window; the live book is the OOS winner only if it beats `v1` "
+        f"there. **OOS winner: `{oos_winner}`** (live book `{allocate.LIVE_BOOK}`).", "",
+        md_table(books_table, ("sharpe_gross", "sharpe", "dsr", "annual_return", "annual_vol", "max_drawdown",
+                               "turnover", "oos_sharpe", "oos_max_drawdown")), "",
+        f"ERC vs 1/N gate on `{oos_winner}`'s sleeves, quarterly refits, out of sample:", "",
+        gate_table.to_markdown(), "",
         "## Signal vs beta", "",
         "Each sleeve's live net returns regressed on its own universe: the daily-rebalanced 1/N return of its "
         "instruments, and that return scaled to the sleeves' 10% vol target (60-day EWMA vol, one-day lag, 3x "

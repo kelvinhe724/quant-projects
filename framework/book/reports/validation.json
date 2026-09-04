@@ -1,82 +1,82 @@
 {
   "headline": {
-    "sharpe": 0.26200719098474057,
-    "annual_return": 0.01039119351850526,
-    "annual_vol": 0.042984901287509585,
-    "max_drawdown": -0.13504010427487956,
-    "start": "2004-07-01",
+    "sharpe": 0.8098048919930609,
+    "annual_return": 0.057082933208933984,
+    "annual_vol": 0.07174117474860664,
+    "max_drawdown": -0.1205079561288871,
+    "start": "2003-06-03",
     "end": "2026-08-31",
-    "n_obs": 5577,
-    "psr": 0.8900614023751098,
-    "dsr": 0.05846168630946776,
-    "dsr_with_placebo": 0.02552563228629146,
-    "n_trials": 22,
-    "n_runs_logged": 80,
-    "min_btl_years": 54.95729581228454,
-    "backtest_years": 22.13095238095238,
-    "min_trl_years": 39.785714285714285
+    "n_obs": 5849,
+    "psr": 0.9999377983773028,
+    "dsr": 0.6266146802240673,
+    "dsr_with_placebo": 0.5602307576948705,
+    "n_trials": 56,
+    "n_runs_logged": 148,
+    "min_btl_years": 8.203385870756724,
+    "backtest_years": 23.21031746031746,
+    "min_trl_years": 4.26984126984127
   },
+  "live_book": "beta+alpha",
   "allocator": {
+    "book": "beta+alpha",
     "allocator": "equal",
     "weights": {
-      "TrendETF": 0.3333,
-      "FXCarryETF": 0.3333,
-      "CryptoTrend": 0.3333
+      "ETFBeta": 0.5,
+      "EWMAC": 0.5
     },
     "erc_weights": {
-      "TrendETF": 0.3184,
-      "FXCarryETF": 0.4203,
-      "CryptoTrend": 0.2613
+      "ETFBeta": 0.3516,
+      "EWMAC": 0.6484
     },
     "fit_date": "2026-08-31",
     "window_days": 756,
     "oos": {
       "erc": {
-        "sharpe": 0.2275,
-        "annual_return": 0.0113,
-        "annual_vol": 0.0565,
-        "max_drawdown": -0.1495,
-        "start": "2005-07-01",
+        "sharpe": 0.8553,
+        "annual_return": 0.0598,
+        "annual_vol": 0.0709,
+        "max_drawdown": -0.1072,
+        "start": "2004-07-01",
         "end": "2026-08-31"
       },
       "equal": {
-        "sharpe": 0.2327,
-        "annual_return": 0.0118,
-        "annual_vol": 0.0574,
-        "max_drawdown": -0.148,
-        "start": "2005-07-01",
+        "sharpe": 0.8705,
+        "annual_return": 0.063,
+        "annual_vol": 0.0733,
+        "max_drawdown": -0.1122,
+        "start": "2004-07-01",
         "end": "2026-08-31"
       }
     },
     "panel_hash": "aa436bbc6c2e4712"
   },
   "walk_forward": {
-    "selected_oos_sharpe": 0.440533754495374,
-    "v1_oos_sharpe": 0.30953349706237204
+    "selected_oos_sharpe": 0.45268661409269656,
+    "v1_oos_sharpe": 0.37825810754374894
   },
   "falsification": {
     "placebo": {
-      "trend_sharpe": 0.4121889916340971,
+      "trend_sharpe": 0.45851833693709926,
       "draws": 20,
-      "mean": -0.016469679651410267,
-      "p95": 0.4125642626645703,
-      "beaten": 19
+      "mean": -0.008699626689641856,
+      "p95": 0.381878151229752,
+      "beaten": 20
     },
     "vol_scaling_only": {
       "trend_signal": {
-        "sharpe": 0.4121889916340971,
-        "annual_return": 0.031362723125569536,
-        "annual_vol": 0.08335745756121515,
-        "max_drawdown": -0.19781693161677671,
+        "sharpe": 0.45851833693709926,
+        "annual_return": 0.03555815900384918,
+        "annual_vol": 0.08388523596041496,
+        "max_drawdown": -0.20318597019893248,
         "start": "2004-07-01",
         "end": "2026-08-31",
         "n_obs": 5577
       },
       "long_only_vol_scaled": {
-        "sharpe": 0.5896587586910655,
-        "annual_return": 0.04617025221341442,
-        "annual_vol": 0.08230900910767344,
-        "max_drawdown": -0.2340030013694403,
+        "sharpe": 0.6178332290505816,
+        "annual_return": 0.04700084520881265,
+        "annual_vol": 0.0794723398484077,
+        "max_drawdown": -0.23364427054744086,
         "start": "2004-07-01",
         "end": "2026-08-31",
         "n_obs": 5577
@@ -84,203 +84,359 @@
     },
     "cost_stress": {
       "1x": {
-        "sharpe": 0.26200719098474057,
-        "annual_return": 0.01039119351850526,
-        "annual_vol": 0.042984901287509585,
-        "max_drawdown": -0.13504010427487956,
-        "start": "2004-07-01",
+        "sharpe": 0.8098048919930609,
+        "annual_return": 0.057082933208933984,
+        "annual_vol": 0.07174117474860664,
+        "max_drawdown": -0.1205079561288871,
+        "start": "2003-06-03",
         "end": "2026-08-31",
-        "n_obs": 5577
+        "n_obs": 5849
       },
       "2x": {
-        "sharpe": 0.12997348964133806,
-        "annual_return": 0.004411320984215594,
-        "annual_vol": 0.04003559969613903,
-        "max_drawdown": -0.1539536167925537,
-        "start": "2004-07-01",
+        "sharpe": 0.7263282996997531,
+        "annual_return": 0.05003580669252816,
+        "annual_vol": 0.07067026761607469,
+        "max_drawdown": -0.12522695233047942,
+        "start": "2003-06-03",
         "end": "2026-08-31",
-        "n_obs": 5577
+        "n_obs": 5849
       },
       "4x": {
-        "sharpe": -0.08964804191113897,
-        "annual_return": -0.004032883923621222,
-        "annual_vol": 0.03730897252171775,
-        "max_drawdown": -0.23809959426916738,
-        "start": "2004-07-01",
+        "sharpe": 0.5498817841479643,
+        "annual_return": 0.034295567220870016,
+        "annual_vol": 0.06519833024738211,
+        "max_drawdown": -0.19389798959874327,
+        "start": "2003-06-03",
         "end": "2026-08-31",
-        "n_obs": 5577
+        "n_obs": 5849
       }
     },
     "signal_delay": {
       "+1": {
-        "sharpe": 0.13292567633148947,
-        "annual_return": 0.004462197117394151,
-        "annual_vol": 0.03931187568422318,
-        "max_drawdown": -0.14557603840811273,
-        "start": "2004-07-02",
+        "sharpe": 0.8151503952023327,
+        "annual_return": 0.05784543270601361,
+        "annual_vol": 0.07219555020990942,
+        "max_drawdown": -0.12277369754434786,
+        "start": "2003-06-04",
         "end": "2026-08-31",
-        "n_obs": 5576
+        "n_obs": 5848
       },
       "+2": {
-        "sharpe": 0.21430005690824983,
-        "annual_return": 0.008402250790082721,
-        "annual_vol": 0.04345549843800406,
-        "max_drawdown": -0.12188239715239568,
-        "start": "2004-07-06",
+        "sharpe": 0.8270785115299236,
+        "annual_return": 0.0592279102504516,
+        "annual_vol": 0.07278552249174856,
+        "max_drawdown": -0.12602554028395208,
+        "start": "2003-06-05",
         "end": "2026-08-31",
-        "n_obs": 5575
+        "n_obs": 5847
       },
       "+5": {
-        "sharpe": 0.027051694480328653,
-        "annual_return": 0.00029652666762625124,
-        "annual_vol": 0.03875873367898016,
-        "max_drawdown": -0.18005319854035762,
-        "start": "2004-07-09",
+        "sharpe": 0.7614438174068165,
+        "annual_return": 0.05397530540075435,
+        "annual_vol": 0.07250352848870846,
+        "max_drawdown": -0.13630566156274881,
+        "start": "2003-06-10",
         "end": "2026-08-31",
-        "n_obs": 5572
+        "n_obs": 5844
       }
     }
   },
   "v2_candidates": {
     "TrendETF": {
-      "sharpe": 0.3821185682520151,
-      "annual_return": 0.028404777037733808,
-      "annual_vol": 0.08213559062726085,
-      "max_drawdown": -0.19781693161677527,
+      "sharpe": 0.43225084808101727,
+      "annual_return": 0.032841033064115344,
+      "annual_vol": 0.0826698238821194,
+      "max_drawdown": -0.2031859701989337,
       "start": "2005-06-09",
       "end": "2026-08-31",
       "n_obs": 5340,
-      "sharpe_gross": 0.40156401424958105,
-      "turnover": 6.783405536194066,
-      "trades": 3900
+      "sharpe_gross": 0.5201338327506393,
+      "turnover": 6.505962582703479,
+      "trades": 2506
     },
     "EWMAC": {
-      "sharpe": 0.7113718596835499,
-      "annual_return": 0.0703804766450229,
-      "annual_vol": 0.10310005308628566,
-      "max_drawdown": -0.20124228259285226,
+      "sharpe": 0.6814365640270211,
+      "annual_return": 0.0663762201260405,
+      "annual_vol": 0.10195646735095691,
+      "max_drawdown": -0.1942251237980146,
       "start": "2005-06-09",
       "end": "2026-08-31",
       "n_obs": 5340,
-      "sharpe_gross": 0.8420327157225829,
-      "turnover": 19.287524287963016,
-      "trades": 72860
+      "sharpe_gross": 0.8372549480644494,
+      "turnover": 18.536933185956805,
+      "trades": 27050
     },
     "EWMAC 16/64": {
-      "sharpe": 0.5378656245050929,
-      "annual_return": 0.04923365623744136,
-      "annual_vol": 0.09836228484169987,
-      "max_drawdown": -0.1767061059632702,
+      "sharpe": 0.5269962875322374,
+      "annual_return": 0.04772880141891389,
+      "annual_vol": 0.09750860557309568,
+      "max_drawdown": -0.17727531026857157,
       "start": "2005-06-09",
       "end": "2026-08-31",
       "n_obs": 5340,
-      "sharpe_gross": NaN,
-      "turnover": 26.727814232288125,
-      "trades": 72867
+      "sharpe_gross": 0.7460874269933785,
+      "turnover": 26.09760406949768,
+      "trades": 34220
     },
     "EWMAC 32/128": {
-      "sharpe": 0.7031472667762761,
-      "annual_return": 0.07150218200789449,
-      "annual_vol": 0.10626921075790714,
-      "max_drawdown": -0.1667878105011914,
+      "sharpe": 0.711944408712078,
+      "annual_return": 0.07186120417640862,
+      "annual_vol": 0.10527884121216355,
+      "max_drawdown": -0.16540653838650132,
       "start": "2005-06-09",
       "end": "2026-08-31",
       "n_obs": 5340,
-      "sharpe_gross": NaN,
-      "turnover": 18.843946251096845,
-      "trades": 72867
+      "sharpe_gross": 0.8608901278684353,
+      "turnover": 18.028109143907376,
+      "trades": 25871
     },
     "EWMAC 64/256": {
-      "sharpe": 0.5682822496696054,
-      "annual_return": 0.05429506607023349,
-      "annual_vol": 0.10226730872832662,
-      "max_drawdown": -0.1952568511790016,
+      "sharpe": 0.6576787920780202,
+      "annual_return": 0.0645881590359525,
+      "annual_vol": 0.10330242451698403,
+      "max_drawdown": -0.19586134086925822,
       "start": "2005-06-09",
       "end": "2026-08-31",
       "n_obs": 5340,
-      "sharpe_gross": NaN,
-      "turnover": 13.94289399737182,
-      "trades": 72810
+      "sharpe_gross": 0.7736910904727509,
+      "turnover": 13.253758204403857,
+      "trades": 20373
+    }
+  },
+  "ewmac_walk_forward": {
+    "selected_oos_sharpe": 0.7224302953577753,
+    "v1_oos_sharpe": 0.6586332749272272
+  },
+  "untouched": {
+    "start": "2021-12-31",
+    "end": "2026-08-31",
+    "EWMAC": {
+      "sharpe": 0.41337410293374377,
+      "annual_return": 0.029006951805974346,
+      "annual_vol": 0.076204818018816,
+      "max_drawdown": -0.1942251237980137,
+      "start": "2021-12-31",
+      "end": "2026-08-31",
+      "n_obs": 1170,
+      "sharpe_gross": 0.5615663707186286,
+      "turnover": 12.663968439163765,
+      "trades": 6196
+    },
+    "TrendETF": {
+      "sharpe": 0.8744608438551772,
+      "annual_return": 0.05930986395945692,
+      "annual_vol": 0.06858824209794603,
+      "max_drawdown": -0.08048498645569502,
+      "start": "2021-12-31",
+      "end": "2026-08-31",
+      "n_obs": 1170,
+      "sharpe_gross": 0.9784666781240128,
+      "turnover": 6.780595678811604,
+      "trades": 614
+    },
+    "attribution": {
+      "1/N": {
+        "alpha": 0.027895504258988447,
+        "t_alpha": 0.750675344671664,
+        "beta": 0.03559999732317145,
+        "benchmark_sharpe": 0.9789132340491358,
+        "residual_sharpe": 0.3664879229869679,
+        "sleeve_sharpe": 0.41337410293374377,
+        "n_obs": 1170
+      },
+      "1/N vol-targeted": {
+        "alpha": 0.022134956445022638,
+        "t_alpha": 0.598008799064955,
+        "beta": 0.08996345484123537,
+        "benchmark_sharpe": 1.006012482742783,
+        "residual_sharpe": 0.2926589848949224,
+        "sleeve_sharpe": 0.41337410293374377,
+        "n_obs": 1170
+      }
+    },
+    "rule": "net Sharpe above zero on the untouched window, above TrendETF's on the same window, and a positive alpha t against the ETF universe there",
+    "clears": false
+  },
+  "books": {
+    "v1": {
+      "sharpe": 0.22332667919212892,
+      "annual_return": 0.00877525935154777,
+      "annual_vol": 0.04333046373206063,
+      "max_drawdown": -0.12665504028133712,
+      "start": "2005-06-09",
+      "end": "2026-08-31",
+      "n_obs": 5340,
+      "sharpe_gross": 0.33282290057553876,
+      "turnover": 3.755402134047834,
+      "trades": 2993,
+      "oos_sharpe": 0.4002533178017276,
+      "oos_max_drawdown": -0.09179026287472658,
+      "dsr": 0.008786927864268735
+    },
+    "v1+ewmac": {
+      "sharpe": 0.5363925005869071,
+      "annual_return": 0.02984482297998281,
+      "annual_vol": 0.0579640100288224,
+      "max_drawdown": -0.13461733682065002,
+      "start": "2005-06-09",
+      "end": "2026-08-31",
+      "n_obs": 5340,
+      "sharpe_gross": 0.6953835228539941,
+      "turnover": 9.682922209595235,
+      "trades": 30043,
+      "oos_sharpe": 0.457188406233717,
+      "oos_max_drawdown": -0.1346173368206509,
+      "dsr": 0.1746722358484883
+    },
+    "ewmac-for-trend": {
+      "sharpe": 0.5514024045684437,
+      "annual_return": 0.030855939943358335,
+      "annual_vol": 0.058190614142197304,
+      "max_drawdown": -0.14388425958566542,
+      "start": "2005-06-09",
+      "end": "2026-08-31",
+      "n_obs": 5340,
+      "sharpe_gross": 0.7221111163083272,
+      "turnover": 10.832212214381666,
+      "trades": 27540,
+      "oos_sharpe": 0.39570156794511174,
+      "oos_max_drawdown": -0.14388425958566564,
+      "dsr": 0.19328627233644452
+    },
+    "beta+alpha": {
+      "sharpe": 0.7599623699703192,
+      "annual_return": 0.05431553173522663,
+      "annual_vol": 0.07312893081103948,
+      "max_drawdown": -0.12050795612888476,
+      "start": "2005-06-09",
+      "end": "2026-08-31",
+      "n_obs": 5340,
+      "sharpe_gross": 0.8820238192858809,
+      "turnover": 10.478614377574644,
+      "trades": 30700,
+      "oos_sharpe": 0.7889259935390908,
+      "oos_max_drawdown": -0.11654007496296148,
+      "dsr": 0.5330579171410098
+    }
+  },
+  "books_start": "2005-06-09",
+  "oos_winner": "beta+alpha",
+  "winner_erc_gate": {
+    "erc": {
+      "sharpe": 0.8556,
+      "annual_return": 0.0598,
+      "annual_vol": 0.0709,
+      "max_drawdown": -0.1072,
+      "start": "2004-07-01",
+      "end": "2026-08-31"
+    },
+    "equal": {
+      "sharpe": 0.8709,
+      "annual_return": 0.0631,
+      "annual_vol": 0.0733,
+      "max_drawdown": -0.1122,
+      "start": "2004-07-01",
+      "end": "2026-08-31"
     }
   },
   "attribution": {
     "TrendETF": {
       "1/N": {
-        "alpha": 0.02478424365471257,
-        "t_alpha": 1.4303694487675702,
-        "beta": 0.1410447471585801,
+        "alpha": 0.02809533164719878,
+        "t_alpha": 1.625753555846447,
+        "beta": 0.1527234364604581,
         "benchmark_sharpe": 0.6257959350897219,
-        "residual_sharpe": 0.30246352951499156,
-        "sleeve_sharpe": 0.4121889916340971,
+        "residual_sharpe": 0.3416552035888975,
+        "sleeve_sharpe": 0.45851833693709926,
         "n_obs": 5577
       },
       "1/N vol-targeted": {
-        "alpha": 0.021165114021590107,
-        "t_alpha": 1.2459095557041617,
-        "beta": 0.21190857171355082,
+        "alpha": 0.02444822623263165,
+        "t_alpha": 1.4457002037050675,
+        "beta": 0.22509119532815763,
         "benchmark_sharpe": 0.6108509177345899,
-        "residual_sharpe": 0.2628864184542729,
-        "sleeve_sharpe": 0.4121889916340971,
+        "residual_sharpe": 0.30300164393692863,
+        "sleeve_sharpe": 0.45851833693709926,
         "n_obs": 5577
       }
     },
     "FXCarryETF": {
       "1/N": {
-        "alpha": -0.01009323935893205,
-        "t_alpha": -0.7575824131687225,
-        "beta": -0.08572186088459405,
+        "alpha": -0.009362351164171391,
+        "t_alpha": -0.705937279765399,
+        "beta": -0.08599129014999837,
         "benchmark_sharpe": 0.07588405266295296,
-        "residual_sharpe": -0.1641619051520546,
-        "sleeve_sharpe": -0.17086300313987934,
+        "residual_sharpe": -0.15281515118284275,
+        "sleeve_sharpe": -0.15961172417654962,
         "n_obs": 5072
       },
       "1/N vol-targeted": {
-        "alpha": -0.010413590030021016,
-        "t_alpha": -0.7841011134973378,
-        "beta": -0.08356983937476553,
+        "alpha": -0.009684076920305703,
+        "t_alpha": -0.7326215209536708,
+        "beta": -0.08361797125757249,
         "benchmark_sharpe": 0.016984083287927703,
-        "residual_sharpe": -0.17013832574501644,
-        "sleeve_sharpe": -0.17086300313987934,
+        "residual_sharpe": -0.15878324171152036,
+        "sleeve_sharpe": -0.15961172417654962,
         "n_obs": 5072
       }
     },
     "CryptoTrend": {
       "1/N": {
-        "alpha": -0.023205240380054427,
-        "t_alpha": -1.0411360817294808,
-        "beta": 0.10629795151944549,
+        "alpha": -0.02133599181342442,
+        "t_alpha": -0.9617249022847129,
+        "beta": 0.10558672214639829,
         "benchmark_sharpe": 0.4396491677438922,
-        "residual_sharpe": -0.47349900013685714,
-        "sleeve_sharpe": 0.051146129620790556,
+        "residual_sharpe": -0.43783516049654353,
+        "sleeve_sharpe": 0.07295667479896019,
         "n_obs": 1149
       },
       "1/N vol-targeted": {
-        "alpha": -0.028966727229672248,
-        "t_alpha": -1.3169695847558405,
-        "beta": 0.6347620733411884,
+        "alpha": -0.027068276514916872,
+        "t_alpha": -1.2381989623976541,
+        "beta": 0.6306946986340652,
         "benchmark_sharpe": 0.5170689949545407,
-        "residual_sharpe": -0.6222090374138732,
-        "sleeve_sharpe": 0.051146129620790556,
+        "residual_sharpe": -0.5849867231898018,
+        "sleeve_sharpe": 0.07295667479896019,
         "n_obs": 1149
+      }
+    },
+    "ETFBeta": {
+      "1/N": {
+        "alpha": 0.006742844719526984,
+        "t_alpha": 0.7596368857970709,
+        "beta": 0.6734081686791111,
+        "benchmark_sharpe": 0.6696001478367344,
+        "residual_sharpe": 0.16252702004545902,
+        "sleeve_sharpe": 0.6623893172283537,
+        "n_obs": 5849
+      },
+      "1/N vol-targeted": {
+        "alpha": 0.003500892316568269,
+        "t_alpha": 0.5723894607663796,
+        "beta": 0.774145526376258,
+        "benchmark_sharpe": 0.6508166725939829,
+        "residual_sharpe": 0.1262114422237674,
+        "sleeve_sharpe": 0.6558593841749643,
+        "n_obs": 5789
       }
     },
     "EWMAC": {
       "1/N": {
-        "alpha": 0.06980815199524981,
-        "t_alpha": 3.200273549063583,
-        "beta": 0.05394775708692985,
+        "alpha": 0.06605882577632094,
+        "t_alpha": 3.070185971771861,
+        "beta": 0.052172781082873716,
         "benchmark_sharpe": 0.5978916593555571,
-        "residual_sharpe": 0.6782070094798737,
-        "sleeve_sharpe": 0.7113718596835499,
+        "residual_sharpe": 0.6489329882078058,
+        "sleeve_sharpe": 0.6814365640270211,
         "n_obs": 5340
       },
       "1/N vol-targeted": {
-        "alpha": 0.06547012260311968,
-        "t_alpha": 3.0175119036382196,
-        "beta": 0.13375329678229744,
+        "alpha": 0.06170203775962557,
+        "t_alpha": 2.8874613370065636,
+        "beta": 0.13209629056884983,
         "benchmark_sharpe": 0.5748430717982237,
-        "residual_sharpe": 0.6406927011054857,
-        "sleeve_sharpe": 0.7113718596835499,
+        "residual_sharpe": 0.6105764074982467,
+        "sleeve_sharpe": 0.6814365640270211,
         "n_obs": 5340
       }
     }
@@ -293,9 +449,11 @@
   },
   "kill_dates": {
     "TrendETF": "never",
-    "FXCarryETF": "2011-08-08",
-    "CryptoTrend": "never"
+    "FXCarryETF": "2010-08-31",
+    "CryptoTrend": "never",
+    "ETFBeta": "2016-01-08",
+    "EWMAC": "never"
   },
   "panel_hash": "aa436bbc6c2e4712",
-  "run_at": "2026-09-04T02:54:45"
+  "run_at": "2026-09-04T04:54:10"
 }

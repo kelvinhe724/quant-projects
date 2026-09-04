@@ -15,7 +15,7 @@ import sys
 import pandas as pd
 
 from framework.book import dashboard, universe
-from framework.book.allocate import REPORTS, load_allocations
+from framework.book.allocate import LIVE_BOOK, REPORTS, load_allocations
 from framework.book.broker import AlpacaBroker, ShadowBroker
 from framework.book.strategies import sleeves
 from framework.book.universe import sessions
@@ -80,7 +80,7 @@ def run_once(dry_run=False, session=None, now=None):
 
     alloc = load_allocations()
     live = {k: v for k, v in alloc["weights"].items() if v > 0}
-    shadow = ShadowBroker([s for s in sleeves() if str(s) in live], live, LIVE_START)
+    shadow = ShadowBroker([s for s in sleeves(LIVE_BOOK) if str(s) in live], live, LIVE_START)
     shadow.run(bars)
     targets = shadow.targets()
     prices = bars.close.iloc[-1].to_dict()

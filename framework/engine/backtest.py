@@ -151,13 +151,14 @@ def run(strategies, bars, start=None, end=None, config=None):
                 pending = residual or None
             book.accrue(day, float(rate.loc[day]) if rate is not None else None)
             book.mark(day, view.close.loc[day])
-            weights_path[day] = book.weights()
+            held = book.weights()
+            weights_path[day] = held
             targets = strat.on_bar(day, view)
             if targets is not None:
                 targets = {n: float(w) for n, w in targets.items() if n in view.instruments}
-                pending = risk.apply(targets, view, book.equity_history)
+                pending = risk.apply(targets, view, book.equity_history, held)
             else:
-                fix = risk.drift(book.weights(), view, book.equity_history)
+                fix = risk.drift(held, view, book.equity_history)
                 if fix is not None:
                     pending = fix
         equity, pnl, carry = book.frames()

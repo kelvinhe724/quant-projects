@@ -1,32 +1,31 @@
 {
+  "book": "beta+alpha",
   "allocator": "equal",
   "weights": {
-    "TrendETF": 0.3333,
-    "FXCarryETF": 0.3333,
-    "CryptoTrend": 0.3333
+    "ETFBeta": 0.5,
+    "EWMAC": 0.5
   },
   "erc_weights": {
-    "TrendETF": 0.3184,
-    "FXCarryETF": 0.4203,
-    "CryptoTrend": 0.2613
+    "ETFBeta": 0.3516,
+    "EWMAC": 0.6484
   },
   "fit_date": "2026-08-31",
   "window_days": 756,
   "oos": {
     "erc": {
-      "sharpe": 0.2275,
-      "annual_return": 0.0113,
-      "annual_vol": 0.0565,
-      "max_drawdown": -0.1495,
-      "start": "2005-07-01",
+      "sharpe": 0.8553,
+      "annual_return": 0.0598,
+      "annual_vol": 0.0709,
+      "max_drawdown": -0.1072,
+      "start": "2004-07-01",
       "end": "2026-08-31"
     },
     "equal": {
-      "sharpe": 0.2327,
-      "annual_return": 0.0118,
-      "annual_vol": 0.0574,
-      "max_drawdown": -0.148,
-      "start": "2005-07-01",
+      "sharpe": 0.8705,
+      "annual_return": 0.063,
+      "annual_vol": 0.0733,
+      "max_drawdown": -0.1122,
+      "start": "2004-07-01",
       "end": "2026-08-31"
     }
   },

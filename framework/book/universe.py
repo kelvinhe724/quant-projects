@@ -49,7 +49,8 @@ CRYPTO = ["BTC/USD", "ETH/USD"]
 BENCHMARK = "SPY"
 
 CLASSES = pd.Series({**ETFS, **{t: "fx" for t in FX_ETFS}, **{c: "crypto" for c in CRYPTO}})
-SLEEVES = {"TrendETF": list(ETFS), "FXCarryETF": list(FX_ETFS), "CryptoTrend": list(CRYPTO)}
+SLEEVES = {"TrendETF": list(ETFS), "FXCarryETF": list(FX_ETFS), "CryptoTrend": list(CRYPTO),
+           "EWMAC": list(ETFS), "ETFBeta": list(ETFS)}
 TICKERS = sorted(set(ETFS) | set(FX_ETFS) | {BENCHMARK})
 CALENDAR_AHEAD = 60
 
