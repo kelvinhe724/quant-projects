@@ -15,3 +15,6 @@ DEFENSE.md
 !pairs-trading/reports/cost_sensitivity.csv
 momentum/reports/prices.csv
 momentum/reports/volumes.csv
+options-collector/reports/launchd.log
+# machine-specific launchd job (absolute paths), kept local
+*.plist
