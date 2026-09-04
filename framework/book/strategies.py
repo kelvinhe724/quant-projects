@@ -1,9 +1,10 @@
-"""The three v1 sleeves as engine strategies.
+"""The three v1 sleeves and the v2 EWMAC candidate as engine strategies.
 
 TrendETF and CryptoTrend port trend-following/trend.py, FXCarryETF ports
 fx-carry/carry.py::carry_weights. Each on_bar returns target weights only at
 month end, built from data through that day; the engine fills them at the
-next open, so no function here shifts anything.
+next open, so no function here shifts anything. EWMAC runs daily and is not
+in sleeves() until it earns its place in validate.py.
 """
 import numpy as np
 import pandas as pd
@@ -128,6 +129,92 @@ class FXCarryETF(Strategy):
         rates = pd.Series({c: bars.series(c).iloc[-1] for c in [*codes.values(), "USD"]})
         w = carry_weights(rates, self.n_leg)
         return {t: float(w[c]) for t, c in codes.items()}
+
+
+# v2 trend rule, re-implemented from the equations in pysystemtrade (GPL-3.0),
+# no code copied:
+#   https://github.com/pst-group/pysystemtrade/blob/develop/systems/provided/rules/ewmac.py
+#   https://github.com/pst-group/pysystemtrade/blob/develop/sysquant/estimators/forecast_scalar.py
+#   https://github.com/pst-group/pysystemtrade/blob/develop/sysquant/estimators/vol.py
+SPEEDS = ((16, 64), (32, 128), (64, 256))
+FORECAST_TARGET = 10.0
+FORECAST_CAP = 20.0
+SCALAR_MIN_PERIODS = 500
+VOL_DAYS = 35
+VOL_FLOOR_DAYS = 500
+BUFFER = 0.10
+
+
+def robust_vol(x, days=VOL_DAYS, floor_days=VOL_FLOOR_DAYS):
+    """EWMA standard deviation of x, floored at its trailing 5th percentile once 100 values exist."""
+    vol = x.ewm(span=days, min_periods=10).std()
+    return vol.clip(lower=vol.rolling(floor_days, min_periods=100).quantile(0.05))
+
+
+def ewmac(price, vol, fast, slow):
+    """Fast minus slow EWMA of price, in units of daily price vol. Unscaled, uncapped."""
+    return (price.ewm(span=fast, min_periods=1).mean() - price.ewm(span=slow, min_periods=1).mean()) / vol
+
+
+def forecast_scalar(raw, target=FORECAST_TARGET, min_periods=SCALAR_MIN_PERIODS):
+    """Scalar that takes the cross-instrument median |raw forecast| to `target`; NaN before min_periods days."""
+    avg = raw.abs().median(axis=1).dropna()
+    return target / avg.mean() if len(avg) >= min_periods else np.nan
+
+
+def diversification_multiplier(forecasts, min_periods=SCALAR_MIN_PERIODS):
+    """1 / sqrt(w'Cw) for equal rule weights, C the correlation of the forecasts pooled across instruments.
+
+    At least 1, NaN before min_periods pooled observations.
+    """
+    pooled = pd.concat([f.stack() for f in forecasts], axis=1).dropna()
+    if len(pooled) < min_periods:
+        return np.nan
+    w = np.full(len(forecasts), 1 / len(forecasts))
+    return max(1.0, float(1 / np.sqrt(w @ pooled.corr().to_numpy() @ w)))
+
+
+def combined_forecast(close, speeds=SPEEDS, cap=FORECAST_CAP):
+    """Capped, scaled, equal-weighted EWMAC forecast per instrument, one row per day of `close`."""
+    vol = robust_vol(close.diff())
+    scaled = []
+    for fast, slow in speeds:
+        raw = ewmac(close, vol, fast, slow)
+        scaled.append((raw * forecast_scalar(raw)).clip(-cap, cap))
+    combined = sum(scaled) / len(scaled) * diversification_multiplier(scaled)
+    return combined.clip(-cap, cap)
+
+
+def buffered(target, held, buffer=BUFFER):
+    """Move `held` to the edge of a band of +/- buffer * |target| around `target`; None if inside it."""
+    band = buffer * abs(target)
+    if abs(held - target) <= band:
+        return None
+    return target - band if held < target else target + band
+
+
+class EWMAC(Strategy):
+    """Continuous EWMAC forecasts, forecast / 10 x vol-target sizing, class-balanced, daily with a 10% buffer."""
+
+    def __init__(self, classes=None, speeds=SPEEDS, target=TARGET_VOL, scheme="class", buffer=BUFFER):
+        self.classes = pd.Series(universe.ETFS if classes is None else classes)
+        self.speeds, self.target, self.scheme, self.buffer = tuple(speeds), target, scheme, buffer
+        self.last = {}
+
+    def on_bar(self, asof, bars):
+        names = [n for n in self.classes.index if n in bars.instruments]
+        px = bars.close[names]
+        fc = combined_forecast(px, self.speeds).iloc[-1]
+        if fc.isna().all():
+            return None
+        vol = robust_vol(px.pct_change()).iloc[-1] * np.sqrt(TRADING_DAYS)
+        pos = (fc / FORECAST_TARGET * self.target / vol).to_frame().T
+        want = portfolio_weights(pos, self.classes[names], self.scheme).iloc[0]
+        moves = {n: buffered(want[n], self.last.get(n, 0.0), self.buffer) for n in names}
+        if all(m is None for m in moves.values()):
+            return None
+        self.last = {n: self.last.get(n, 0.0) if m is None else m for n, m in moves.items()}
+        return dict(self.last)
 
 
 CAPITAL = 100_000.0
