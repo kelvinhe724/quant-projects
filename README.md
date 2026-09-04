@@ -45,6 +45,12 @@ connection.
 |---|---|---|
 | `betting-markets/` | Bookmaker efficiency on 37,725 football matches, six leagues, 2010-2026, up to eleven books: margin, favourite-longshot bias, open vs close, betting rules | Margin 2.7% Pinnacle, 4.4-7.6% retail; closing beats opening by 0.00154 Brier, t = -5.89; longshot gradient t = -3.43 at quoted odds, -1.36 de-vigged; the only positive rule is +1.27% taking the best price across books and -6.06% at consensus price |
 | `prediction-markets/` | Calibration and favourite-longshot bias on settled Kalshi binaries, out-of-sample fade of the fitted curve with quoted spreads | Below-50c mid overstates YES by 2.8c pooled (t = 7.7), 0.8c (t = 1.9) in books 5c wide or tighter; fade at mid +2.2c/$ (t = 2.70), tight books only -0.3c, at quoted spread -1.4c (t = -1.45) |
+| `diamonds/` | 18-term multiple regression on diamond prices, OLS vs ridge/lasso/elastic net, BIC-selected showcase model | No regulariser beats plain OLS out of sample; the apparent quality-grade price inversion is carat confounding |
+| `commodities-hedging/` | Cross-hedge screen over 78 commodity futures pairs, integer contract hedge ratios, out-of-sample variance reduction | WTI/Brent hedge cuts 83% of out-of-sample variance; levels regression shows R² 0.45 vs 0.09 on returns, the spurious-regression trap |
+| `fx-carry/` | G10 carry: borrow the three lowest yielders, lend the three highest, monthly roll, UIP test | Net Sharpe 0.35 with a −31.7% drawdown in 2007–09; UIP slope 0.05, rejected |
+| `portfolio-construction/` | Mean-variance, min-variance, shrinkage and constrained optimisers against 1/N, out of sample | Nothing beats 1/N at p<0.10; unconstrained tangency runs 18–32× gross leverage |
+| `trend-following/` | Time-series momentum across asset classes, 12-1 signal, class-balanced volatility targeting | 2008 +28.5% vs SPY −36.8% and 2022 +30.5% vs −18.2%, but 2020 −2.3% on whipsaw; post-2010 Sharpe ≈ 0.3 |
+| `orderbook-imbalance/` | Limit-order-book imbalance vs next-seconds mid move on BTC-USDT, by depth and horizon | Depth-1 imbalance predicts the 1s mid move with t = 12.7 and a 73% hit rate, on a 50-minute sample |
 
 ## Setup
 

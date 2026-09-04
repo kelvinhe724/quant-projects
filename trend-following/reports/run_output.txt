@@ -1,0 +1,177 @@
+universe: 15 assets in 4 classes, 2003-06-02 to 2026-08-31
+scored from 2005-01-31  |  in-sample to 2015-12-31  |  final test from 2016-01-01
+signal 12-1, 40% per-asset vol target, class-balanced, 5bps one-way on traded notional
+asset-months held with a missing return: 0
+
+Lookback comparison (in-sample 2005-01-31 to 2015-12-31, test 2016-01-01 on)
+----------------------------------------------------------------------------
+                   Sharpe gross Sharpe net return net max dd turnover
+lookback window                                                      
+1-0      in-sample        -0.11      -0.25      -5.0%   -49%      43x
+         test               0.1      -0.03      -2.0%   -47%      45x
+3-0      in-sample          0.7       0.64     +10.1%   -30%      21x
+         test              0.42       0.35      +4.8%   -28%      24x
+6-0      in-sample         0.44       0.39      +5.3%   -33%      16x
+         test              0.33       0.28      +3.3%   -44%      17x
+12-0     in-sample         0.53       0.49      +6.8%   -34%      11x
+         test              0.34        0.3      +3.8%   -30%      14x
+12-1     in-sample         0.53        0.5      +7.0%   -33%      11x
+         test              0.28       0.24      +2.7%   -30%      14x
+
+Headline 12-1 strategy, full sample 2005-01-31 to 2026-08-31
+------------------------------------------------------------
+                      class-balanced equal-weight assets 12-0 (no skip)
+annual return (gross)         +5.54%              +6.65%         +5.99%
+annual return (net)           +4.87%              +6.04%         +5.34%
+annual vol                    16.65%              16.04%         17.01%
+Sharpe (gross)                  0.41                0.48           0.43
+Sharpe (net)                    0.37                0.45           0.39
+max drawdown (net)           -33.40%             -27.82%        -34.37%
+drawdown trough              2011-09             2012-10        2012-03
+hit rate (monthly)             51.5%               53.5%          54.6%
+annual turnover                12.8x               11.5x          12.5x
+avg gross leverage             3.48x               3.15x          3.48x
+months                           260                 260            260
+
+vs SPY over the full sample: beta +0.02, annualised alpha +5.88%; SPY itself +10.90%/yr, Sharpe 0.78, max drawdown -50.8%
+
+==============================================================================
+CRISIS ALPHA
+==============================================================================
+
+Crisis periods: strategy net vs SPY, with the gross contribution of each class
+------------------------------------------------------------------------------
+                               trend net     SPY   bonds commodities equities      fx
+2008 full year                    +28.5%  -36.8%   +9.7%       +0.2%    +6.8%  +10.0%
+Lehman, Sep 2008 to Feb 2009      +19.0%  -41.8%   +0.5%       -0.8%   +14.4%   +4.5%
+2020 Feb to Mar (the crash)        +1.9%  -19.4%  +10.5%       +3.6%   -12.1%   +0.7%
+2020 Apr to Dec (the reversal)     -8.0%  +46.9%   -2.4%       -3.5%    +1.0%   -2.7%
+2020 full year                     -2.3%  +18.3%  +13.7%       -0.7%   -12.5%   -1.1%
+2022 full year                    +30.5%  -18.2%  +14.7%       +2.3%    -1.5%  +15.4%
+
+2020 month by month (class columns are gross contributions)
+-----------------------------------------------------------
+         bonds commodities equities     fx  gross    net     SPY
+2020-01  +5.4%       -0.6%    -1.4%  +0.9%  +4.2%  +4.2%   -0.0%
+2020-02  +5.2%       -0.9%    -5.2%  -0.5%  -1.3%  -1.3%   -7.9%
+2020-03  +5.1%       +4.4%    -7.3%  +1.2%  +3.4%  +3.3%  -12.5%
+2020-04  +0.4%       -1.3%    +0.7%  +0.0%  -0.1%  -0.2%  +12.7%
+2020-05  -0.2%       -1.2%    -1.1%  -0.1%  -2.6%  -2.6%   +4.8%
+2020-06  -0.2%       -1.1%    -0.2%  -0.7%  -2.1%  -2.1%   +1.8%
+2020-07  +1.5%       +0.9%    +0.2%  -4.3%  -1.7%  -1.8%   +5.9%
+2020-08  -1.9%       -1.9%    +0.8%  +1.1%  -1.9%  -2.0%   +7.0%
+2020-09  +0.0%       -1.0%    -1.1%  -1.8%  -3.9%  -3.9%   -3.7%
+2020-10  -2.2%       +0.6%    -0.7%  +0.2%  -2.2%  -2.2%   -2.5%
+2020-11  +0.9%       -0.4%    +1.4%  +0.5%  +2.3%  +2.3%  +10.9%
+2020-12  -0.7%       +1.8%    +1.0%  +2.5%  +4.6%  +4.5%   +3.7%
+
+months SPY fell more than 5%: 24; strategy net in those months averaged +0.75% vs SPY -7.89%; strategy positive in 50% of them
+beta to SPY, 2008 full year: -0.45
+beta to SPY, 2020 full year: -0.02
+
+==============================================================================
+DECAY
+==============================================================================
+
+Sub-periods, headline strategy
+------------------------------
+          Sharpe gross Sharpe net return net max dd hit rate SPY Sharpe months
+2005-2009         0.65       0.61      +8.3%   -20%      47%       0.11     60
+2010-2014         0.28       0.25      +2.8%   -25%      57%       1.17     60
+2015-2019          0.3       0.26      +3.1%   -27%      47%       0.98     60
+2020-2026         0.43       0.39      +5.2%   -30%      55%       0.94     80
+post-2010         0.35       0.31      +3.9%   -30%      53%        1.0    200
+
+mean monthly net return 2005-2009 +0.76% vs 2010 on +0.44%; difference +0.32%/month, t-stat 0.48
+
+Attribution by asset (gross, full sample)
+-----------------------------------------
+            class annual contribution  stand-alone Sharpe
+NQ=F     equities              +1.47%                0.65
+ES=F     equities              +1.34%                0.62
+6J=F           fx              +1.21%                0.37
+GC=F  commodities              +1.19%                0.60
+EEM      equities              +0.79%                0.36
+EFA      equities              +0.77%                0.34
+HG=F  commodities              +0.58%                0.30
+ZN=F        bonds              +0.36%                0.11
+NG=F  commodities              +0.30%                0.16
+TLT         bonds              +0.13%                0.04
+CL=F  commodities              +0.08%                0.04
+ZC=F  commodities              +0.06%                0.03
+ZB=F        bonds              +0.01%                0.00
+6B=F           fx              -0.19%               -0.06
+6E=F           fx              -0.89%               -0.27
+
+Attribution by class
+--------------------
+            annual contribution  stand-alone Sharpe
+class                                              
+bonds                    +0.49%                0.06
+commodities              +2.20%                0.42
+equities                 +4.37%                0.63
+fx                       +0.14%                0.02
+
+Cost sensitivity (one-way bps on traded notional)
+-------------------------------------------------
+      full-sample Sharpe in-sample Sharpe test Sharpe annual drag
+0bps                0.41             0.53        0.28       0.00%
+5bps                0.37              0.5        0.24       0.64%
+10bps               0.33             0.46         0.2       1.28%
+20bps               0.26              0.4        0.12       2.56%
+40bps                0.1             0.26       -0.05       5.11%
+
+==============================================================================
+ETF CROSS-CHECK (no futures splices, total-return series)
+==============================================================================
+
+Full sample 2005-01-31 on
+-------------------------
+                      futures universe ETF universe
+annual return (gross)           +5.54%       +8.91%
+annual return (net)             +4.87%       +8.24%
+annual vol                      16.65%       18.59%
+Sharpe (gross)                    0.41         0.55
+Sharpe (net)                      0.37         0.52
+max drawdown (net)             -33.40%      -32.60%
+drawdown trough                2011-09      2010-05
+hit rate (monthly)               51.5%        54.2%
+annual turnover                  12.8x        12.5x
+avg gross leverage               3.48x        3.63x
+months                             260          260
+
+monthly net return correlation between the two universes: 0.88
+2008 full year: futures +28.5%, ETF +24.3%, SPY -36.8%
+Lehman, Sep 2008 to Feb 2009: futures +19.0%, ETF +17.9%, SPY -41.8%
+2020 Feb to Mar (the crash): futures +1.9%, ETF +2.2%, SPY -19.4%
+2020 Apr to Dec (the reversal): futures -8.0%, ETF -6.4%, SPY +46.9%
+2020 full year: futures -2.3%, ETF +0.2%, SPY +18.3%
+2022 full year: futures +30.5%, ETF +23.2%, SPY -18.2%
+
+By calendar year, net
+---------------------
+       gross     net  sharpe  months     SPY
+2005  +14.7%  +13.9%    0.84    12.0   +4.8%
+2006   +2.5%   +1.9%    0.20    12.0  +15.8%
+2007  +15.8%  +15.0%    0.96    12.0   +5.1%
+2008  +29.1%  +28.5%    1.72    12.0  -36.8%
+2009  -12.7%  -13.0%   -1.03    12.0  +26.4%
+2010   -6.3%   -6.7%   -0.32    12.0  +15.1%
+2011   -9.8%  -10.3%   -0.35    12.0   +1.9%
+2012   -6.6%   -7.2%   -0.33    12.0  +16.0%
+2013  +36.8%  +35.8%    3.04    12.0  +32.3%
+2014   +9.3%   +8.8%    0.67    12.0  +13.5%
+2015  +23.8%  +23.3%    1.13    12.0   +1.2%
+2016  -20.9%  -21.6%   -1.17    12.0  +12.0%
+2017  +26.0%  +25.1%    2.20    12.0  +21.7%
+2018  -13.8%  -14.7%   -0.73    12.0   -4.6%
+2019  +13.9%  +13.1%    0.75    12.0  +31.2%
+2020   -1.7%   -2.3%   -0.18    12.0  +18.3%
+2021   +3.8%   +3.2%    0.27    12.0  +28.7%
+2022  +31.0%  +30.5%    1.17    12.0  -18.2%
+2023   -4.0%   -4.3%   -0.20    12.0  +26.2%
+2024   -7.8%   -8.5%   -0.50    12.0  +24.9%
+2025  +10.6%   +9.6%    0.81    12.0  +17.7%
+2026  +12.1%  +11.2%    0.91     8.0  +13.1%
+
+charts and tables written to /Users/kelvin/Documents/C.C. General Intelligence/quant-projects/trend-following/reports/
