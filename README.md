@@ -1,6 +1,6 @@
 # Quant projects
 
-Eleven projects from the OSG Global Quant Curriculum, each implemented from the
+Nineteen projects from the OSG Global Quant Curriculum, each implemented from the
 spec rather than from a reference solution. They run on real market data:
 Yahoo Finance for equity prices, the VIX and option chains, FRED for Treasury
 yields and the T-bill rate, the UCI archive for the credit dataset, Binance's
@@ -26,12 +26,14 @@ connection.
 | `pairs-trading/` | Cointegration pair screening on 182 S&P 500 names, strict formation/out-of-sample split | Sharpe 3.01 in-sample, 0.08 out of sample; 99 pairs pass p<0.05 against 74 expected by chance |
 | `momentum/` | 12-1 cross-sectional momentum vs 50/200 crossover on 190 US large caps, 2005-2026, one-day lag and costs, untouched 2021+ test | Long-short 12-1 net Sharpe -0.03 in-sample, 0.12 out of sample; long-only crossover 0.76 / 1.02; a split-adjusted $5 price floor was a look-ahead and was removed |
 | `funding-carry/` | Spot-long, perp-short funding carry on Binance BTCUSDT and ETHUSDT, 2020-2026, 7,211 eight-hour periods, fees, margin buffer and liquidation modelled | BTC funding 11.86%/yr simple, 92% of it the exchange's 0.01% floor; net Sharpe over T-bills 5.09 BTC, 5.86 ETH; excess over cash +12.6% in 2020, +23.7% in 2021, then +0.7%, +0.3%, +3.6%, -0.7%, -3.1% |
+| `fama-french/` | CAPM, FF3, FF5 and FF5+MOM time-series regressions on the 25 size/value portfolios and ten stocks, 1963-2026, GRS joint alpha test, inverse-vol blend of the long-short factors, pre/post-2010 split | FF3 lifts mean R² from 0.73 to 0.91 and halves mean abs alpha; every model rejected by GRS (FF3 3.66, p 7e-9); blend Sharpe 0.80 vs market 0.45 full sample, 0.22 vs 0.88 post-2010; SMB, HML, RMW, CMA all lose significance after 2010 |
 
 ### Derivatives & Volatility
 
 | project | what it does | headline result |
 |---|---|---|
 | `vol-risk-premium/` | Implied vs subsequent realised vol on SPY 2010-2026, GARCH forecast, delta-hedged short straddle with cost and tail accounting | Gap +3.78 vol points, Newey-West t 8.35; strategy 9.55%/yr net, Sharpe 1.74, skew -5.2, max drawdown -13.6%; dropping the worst 1% of days lifts Sharpe to 3.75 |
+| `monte-carlo/` | Risk-neutral GBM engine for European, arithmetic Asian and barrier options, antithetic / control-variate / scrambled-Sobol variance reduction, pathwise, likelihood-ratio and finite-difference Greeks, live SPY quote check | European MC matches Black-Scholes 5.4721 inside 2 SE at every path count; Sobol cuts variance 19x (8.9x after wall time), geometric-Asian control variate 3,666x on the Asian; barrier from 150 to 105 removes 99% of value; common-random-number finite difference matches pathwise delta, independent seeds are 10x noisier |
 
 ### Market Microstructure
 
