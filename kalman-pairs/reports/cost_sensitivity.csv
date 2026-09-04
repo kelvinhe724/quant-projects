@@ -1,0 +1,6 @@
+round trip bps,static oos Sharpe,Kalman oos Sharpe
+0,0.21,-0.03
+5,0.14,-0.09
+10,0.08,-0.16
+20,-0.04,-0.28
+30,-0.16,-0.41

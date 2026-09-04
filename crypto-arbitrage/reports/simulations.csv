@@ -1,0 +1,13 @@
+symbol,scenario,mode,signals,trades,blocked,unresolved,gross_bps_mean,net_usd_total,net_bps_mean,win_rate,samples
+BTC,eval_pro_prepositioned,prepositioned,0,0,0,0,,0.0,,,550
+BTC,eval_retail_prepositioned,prepositioned,0,0,0,0,,0.0,,,550
+BTC,eval_pro_transfer,transfer,0,0,0,0,,0.0,,,550
+BTC,full_zero_fee_prepositioned,prepositioned,1099,96,1003,0,1.113656603464642,106.9110339326071,1.1136566034646573,0.8645833333333334,1100
+BTC,full_pro_prepositioned,prepositioned,0,0,0,0,,0.0,,,1100
+BTC,full_retail_prepositioned,prepositioned,0,0,0,0,,0.0,,,1100
+ETH,eval_pro_prepositioned,prepositioned,0,0,0,0,,0.0,,,550
+ETH,eval_retail_prepositioned,prepositioned,0,0,0,0,,0.0,,,550
+ETH,eval_pro_transfer,transfer,0,0,0,0,,0.0,,,550
+ETH,full_zero_fee_prepositioned,prepositioned,1092,240,852,0,0.5454467677286716,130.90722425488457,0.5454467677286857,0.725,1100
+ETH,full_pro_prepositioned,prepositioned,0,0,0,0,,0.0,,,1100
+ETH,full_retail_prepositioned,prepositioned,0,0,0,0,,0.0,,,1100

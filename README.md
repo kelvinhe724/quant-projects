@@ -1,10 +1,10 @@
 # Quant projects
 
-Twenty-three projects from the OSG Global Quant Curriculum, each implemented from the
+Twenty-six projects from the OSG Global Quant Curriculum, each implemented from the
 spec rather than from a reference solution. They run on real market data:
 Yahoo Finance for equity prices, the VIX and option chains, FRED for Treasury
 yields and the T-bill rate, the UCI archive for the credit dataset, Binance's
-public archives for perpetual funding, football-data.co.uk for bookmaker odds
+public archives for perpetual funding, four spot venues polled live for cross-exchange gaps, football-data.co.uk for bookmaker odds
 and the Kalshi API for prediction-market contracts. Every
 project has an offline `check.py` that fits the same models to simulated data
 with planted parameters, so the code can be verified without a network
@@ -27,6 +27,7 @@ connection.
 | `momentum/` | 12-1 cross-sectional momentum vs 50/200 crossover on 190 US large caps, 2005-2026, one-day lag and costs, untouched 2021+ test | Long-short 12-1 net Sharpe -0.03 in-sample, 0.12 out of sample; long-only crossover 0.76 / 1.02; a split-adjusted $5 price floor was a look-ahead and was removed |
 | `funding-carry/` | Spot-long, perp-short funding carry on Binance BTCUSDT and ETHUSDT, 2020-2026, 7,211 eight-hour periods, fees, margin buffer and liquidation modelled | BTC funding 11.86%/yr simple, 92% of it the exchange's 0.01% floor; net Sharpe over T-bills 5.09 BTC, 5.86 ETH; excess over cash +12.6% in 2020, +23.7% in 2021, then +0.7%, +0.3%, +3.6%, -0.7%, -3.1% |
 | `fama-french/` | CAPM, FF3, FF5 and FF5+MOM time-series regressions on the 25 size/value portfolios and ten stocks, 1963-2026, GRS joint alpha test, inverse-vol blend of the long-short factors, pre/post-2010 split | FF3 lifts mean R² from 0.73 to 0.91 and halves mean abs alpha; every model rejected by GRS (FF3 3.66, p 7e-9); blend Sharpe 0.80 vs market 0.45 full sample, 0.22 vs 0.88 post-2010; SMB, HML, RMW, CMA all lose significance after 2010 |
+| `kalman-pairs/` | Kalman-filter hedge ratios on the 35 pairs and rules from `pairs-trading/`, state noise tuned on the 2015-2019 formation window, untouched 2020+ test | Adaptive hedge scores net out-of-sample Sharpe -0.16 against 0.08 for the frozen OLS beta; nothing in the state-noise grid beats it, the top of the grid finds gross Sharpe 0.51 and spends all of it on turnover |
 
 ### Derivatives & Volatility
 
@@ -43,12 +44,14 @@ connection.
 | `overnight-anomaly/` | Close-to-open vs open-to-close return decomposition on SPY, QQQ, IWM, nine sector SPDRs and twelve large caps, 2000-2026, Newey-West t-stats, stale-open filter, pre/post-2016 split, two-trades-a-day cost model | SPY +7.1%/yr overnight vs +1.1% intraday (NW t 3.77 vs 0.86); dividends are 24% of the SPY overnight leg; breakeven one-way cost 1.49bps, so the overnight-only trade is worth nothing after costs on every asset but one |
 | `dispersion/` | Implied vs realised correlation on SPY and its ten largest names: own Black-Scholes solver on live chains, eleven-year gap history from a VIX-and-trailing-vol proxy, monthly delta-hedged dispersion book with costs, 2015-2020 formation and 2021+ test | Live chains put implied correlation at 0.03 vs realised 0.08; full-sample net Sharpe swings from +0.91 to -1.19 across plausible values of two unobservable proxy constants; what the data does pin down is a -0.76 correlation between monthly P&L and the correlation surprise, skew -0.9, and worst months April 2020 and May 2025 |
 | `regime-hmm/` | 2-state Gaussian HMM on daily SPY, 2000-2026, causal forward filter vs smoothed probabilities, expanding-window refit each January from 2010, 5bps costs, benchmarked against 15% vol targeting | Out of sample the HMM lifts net Sharpe 0.86 to 0.90 and cuts max drawdown -33.7% to -13.8%, but 15% vol targeting gets 0.97 and the HMM gives up a third of the return; the in-sample smoothed version shows Sharpe 1.88, which is the trap |
+| `yield-curve-recession/` | Estrella-Mishkin probit of NBER recession within 12 months on the 10y-3m spread, 1962-2026, expanding-window out-of-sample scoring, HAC t-stats, Sahm-rule and base-rate benchmarks, month-by-month read of the 2022-24 inversion | In-sample coefficient -0.420 (t -3.43), AUC 0.747; out of sample AUC 0.650, 0.754 with the Sahm gap; 0.455 in 2008-2025; the 2022-24 curve kept the model above 50% for 24 straight months, peaking at 81% in May 2023, with no recession through August 2026 |
 
 ### Market Microstructure
 
 | project | what it does | headline result |
 |---|---|---|
 | `market-making/` | Simulated maker with informed order flow: naive, inventory-skewed and Avellaneda-Stoikov quotes over 1,000 sessions, P&L split into spread, adverse selection and inventory | Per-session Sharpe 3.65 naive vs 7.15 Avellaneda-Stoikov; naive gives back 4.81 a session to informed flow; at 100% informed all three makers lose |
+| `crypto-arbitrage/` | Four spot venues polled every three seconds for 55 minutes (1,099 ticks, 8,792 quotes, zero failed requests) plus hourly and daily candles, best executable BTC and ETH gap across twelve ordered venue pairs, fee grid, persistence and simulated fills | Median best gap 1.66 bps BTC, 0.97 bps ETH, never above 5 bps on mids; 0% of samples clear any published taker fee; the zero-fee upper bound is +$107 BTC and +$131 ETH on 1.1 and 0.5 bps a trade, with 91% of BTC and 78% of ETH signals blocked by inventory |
 
 ### Prediction & Betting Markets
 
@@ -79,8 +82,8 @@ Then from any project directory:
 
 Nelson-Siegel caches its FRED pull, gradient boosting caches its download,
 momentum caches its price panel, vol-risk-premium caches its daily series and
-option chain, and funding-carry, betting-markets and prediction-markets cache
-their downloads, so only the first `run.py` in those needs internet.
+option chain, and funding-carry, betting-markets, prediction-markets, kalman-pairs and
+yield-curve-recession cache their downloads, so only the first `run.py` in those needs internet.
 
 Each project has its own README with the data source, the full result tables and
 what I would do differently.
