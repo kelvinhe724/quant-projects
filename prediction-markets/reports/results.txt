@@ -73,38 +73,59 @@ CALIBRATION ON THE QUOTED MID
 0.98-0.99   81     0.9837 1.0000  [0.955, 1.000] -0.0163 -1.0 3.22e-01       False
 0.99-1.00    2     0.9930 1.0000  [0.342, 1.000] -0.0070 -0.0 9.71e-01       False
 
+POOLED BIAS, mid minus realised
+  below 0.50               n=10,542  mean bias +0.0280  t=+7.68
+  0.50 and above           n= 4,018  mean bias -0.0022  t=-0.32
+  below 0.05               n= 1,771  mean bias +0.0129  t=+4.72
+
+BIAS BELOW 0.50 BY QUOTED SPREAD
+  spread [0.00, 0.05)      n= 6,530  mean bias +0.0081  t=+1.86
+  spread [0.05, 0.10)      n= 1,418  mean bias +0.0287  t=+3.05
+  spread [0.10, 0.20)      n=   602  mean bias +0.0396  t=+2.69
+  spread [0.20, 1.01)      n= 1,992  mean bias +0.0889  t=+8.97
+
+QUOTED SPREAD BY PRICE LEVEL
+  price             n  median spread  median spread/price
+  0.00-0.05     1,771          0.010                 0.67
+  0.05-0.20     3,297          0.030                 0.33
+  0.20-0.80     8,428          0.050                 0.12
+  0.80-0.95       777          0.030                 0.03
+  0.95-1.00       287          0.020                 0.02
+
 FADE-THE-BIAS STRATEGY
   fit    7,280 markets, 2026-06-26 to 2026-08-07
-  test   7,280 markets, 2026-08-07 to 2026-09-03
+  test   7,028 markets, 2026-08-08 to 2026-09-03
 
-  mid to mid, no cost: 7,280 of 7,280 markets pass the Kelly filter (100.0%)
-    mean payoff per dollar staked +0.0241 (t = +3.00)
-    bootstrap 95% CI on the k=0.25 Sharpe: [+2.71, +16.29]
+  mid to mid, no cost: 7,028 of 7,028 markets pass the Kelly filter (100.0%)
+    mean payoff per dollar staked +0.0221 (t = +2.70)
+    bootstrap 95% CI on the k=0.25 Sharpe: [+4.26, +20.44]
            scenario    k sharpe log_growth total_return max_drawdown  days mean_daily
-mid to mid, no cost 0.10  +8.79     +0.389       +4.42%       -0.73%    28   +0.00155
-mid to mid, no cost 0.25  +8.79     +0.968      +11.35%       -1.81%    28   +0.00387
-mid to mid, no cost 0.50  +8.79     +1.920      +23.78%       -3.61%    28   +0.00774
-mid to mid, no cost 0.75  +8.79     +2.858      +37.37%       -5.38%    28   +0.01161
-mid to mid, no cost 1.00  +8.79     +3.780      +52.20%       -7.13%    28   +0.01549
+mid to mid, no cost 0.10 +10.87     +0.614       +4.65%       -0.73%    27   +0.00169
+mid to mid, no cost 0.25 +10.87     +1.528      +11.97%       -1.81%    27   +0.00422
+mid to mid, no cost 0.50 +10.87     +3.030      +25.13%       -3.61%    27   +0.00844
+mid to mid, no cost 0.75 +10.87     +4.508      +39.58%       -5.38%    27   +0.01266
+mid to mid, no cost 1.00 +10.87     +5.962      +55.43%       -7.13%    27   +0.01688
 
-  assumed 0.02 spread: 7,131 of 7,280 markets pass the Kelly filter (98.0%)
-    mean payoff per dollar staked +0.0117 (t = +1.49)
-    bootstrap 95% CI on the k=0.25 Sharpe: [-3.56, +8.79]
+  assumed 0.02 spread: 6,890 of 7,028 markets pass the Kelly filter (98.0%)
+    mean payoff per dollar staked +0.0098 (t = +1.23)
+    bootstrap 95% CI on the k=0.25 Sharpe: [-2.98, +11.91]
            scenario    k sharpe log_growth total_return max_drawdown  days mean_daily
-assumed 0.02 spread 0.10  +2.45     +0.115       +1.29%       -1.43%    28   +0.00046
-assumed 0.02 spread 0.25  +2.45     +0.284       +3.20%       -3.55%    28   +0.00115
-assumed 0.02 spread 0.50  +2.45     +0.553       +6.34%       -7.03%    28   +0.00231
-assumed 0.02 spread 0.75  +2.45     +0.810       +9.41%      -10.44%    28   +0.00346
-assumed 0.02 spread 1.00  +2.45     +1.052      +12.40%      -13.78%    28   +0.00461
+assumed 0.02 spread 0.10  +4.02     +0.239       +1.78%       -1.43%    27   +0.00066
+assumed 0.02 spread 0.25  +4.02     +0.591       +4.47%       -3.55%    27   +0.00165
+assumed 0.02 spread 0.50  +4.02     +1.159       +8.95%       -7.03%    27   +0.00330
+assumed 0.02 spread 0.75  +4.02     +1.706      +13.45%      -10.44%    27   +0.00495
+assumed 0.02 spread 1.00  +4.02     +2.230      +17.94%      -13.78%    27   +0.00660
 
-  quoted spread: 4,392 of 7,280 markets pass the Kelly filter (60.3%)
-    mean payoff per dollar staked -0.0120 (t = -1.28)
-    bootstrap 95% CI on the k=0.25 Sharpe: [-12.43, +0.87]
+  quoted spread: 4,223 of 7,028 markets pass the Kelly filter (60.1%)
+    mean payoff per dollar staked -0.0140 (t = -1.45)
+    bootstrap 95% CI on the k=0.25 Sharpe: [-13.14, +3.24]
      scenario    k sharpe log_growth total_return max_drawdown  days mean_daily
-quoted spread 0.10  -4.74     -0.270       -2.96%       -3.81%    28   -0.00107
-quoted spread 0.25  -4.74     -0.683       -7.30%       -9.30%    28   -0.00267
-quoted spread 0.50  -4.74     -1.387      -14.28%      -17.84%    28   -0.00533
-quoted spread 0.75  -4.74     -2.113      -20.92%      -25.68%    28   -0.00800
-quoted spread 1.00  -4.74     -2.860      -27.23%      -32.85%    28   -0.01067
+quoted spread 0.10  -3.76     -0.266       -1.95%       -3.81%    27   -0.00072
+quoted spread 0.25  -3.76     -0.675       -4.87%       -9.30%    27   -0.00181
+quoted spread 0.50  -3.76     -1.382       -9.72%      -17.84%    27   -0.00362
+quoted spread 0.75  -3.76     -2.119      -14.51%      -25.68%    27   -0.00542
+quoted spread 1.00  -3.76     -2.888      -19.24%      -32.85%    27   -0.00723
+
+  tight books only (spread <= 0.05), mid to mid, no cost: 4,486 of 4,486 markets, mean payoff -0.0030 (t = -0.31)
 
 charts and tables written to /Users/kelvin/Documents/C.C. General Intelligence/quant-projects/prediction-markets/reports
