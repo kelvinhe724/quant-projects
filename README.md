@@ -1,6 +1,6 @@
 # Quant projects
 
-Twenty-six projects from the OSG Global Quant Curriculum, each implemented from the
+Twenty-seven projects from the OSG Global Quant Curriculum, each implemented from the
 spec rather than from a reference solution. They run on real market data:
 Yahoo Finance for equity prices, the VIX and option chains, FRED for Treasury
 yields and the T-bill rate, the UCI archive for the credit dataset, Binance's
@@ -59,6 +59,7 @@ connection.
 |---|---|---|
 | `betting-markets/` | Bookmaker efficiency on 37,725 football matches, six leagues, 2010-2026, up to eleven books: margin, favourite-longshot bias, open vs close, betting rules | Margin 2.7% Pinnacle, 4.4-7.6% retail; closing beats opening by 0.00154 Brier, t = -5.89; longshot gradient t = -3.43 at quoted odds, -1.36 de-vigged; the only positive rule is +1.27% taking the best price across books and -6.06% at consensus price |
 | `prediction-markets/` | Calibration and favourite-longshot bias on settled Kalshi binaries, out-of-sample fade of the fitted curve with quoted spreads | Below-50c mid overstates YES by 2.8c pooled (t = 7.7), 0.8c (t = 1.9) in books 5c wide or tighter; fade at mid +2.2c/$ (t = 2.70), tight books only -0.3c, at quoted spread -1.4c (t = -1.45) |
+| `kalshi-desk/` | Live prediction-market desk on top of the longshot-bias research: RSA-PSS signed Kalshi client, public-data scanner scoring every open market by edge after the quoted spread with Kelly sizing, three books (shadow with simulated fills at the recorded touch, demo exchange, production) sharing one ledger and the backtest's statistics, local dashboard | Scanner ranks ~1,000 candidates from 5,000 listed markets; shadow book forward-tests the backtest's finding (+2.2c at mid, -1.4c at the spread) on live markets with no account; production orders are off by default behind a flag, a typed confirmation and hard dollar caps |
 | `diamonds/` | 18-term multiple regression on diamond prices, OLS vs ridge/lasso/elastic net, BIC-selected showcase model | No regulariser beats plain OLS out of sample; the apparent quality-grade price inversion is carat confounding |
 | `commodities-hedging/` | Cross-hedge screen over 78 commodity futures pairs, integer contract hedge ratios, out-of-sample variance reduction | WTI/Brent hedge cuts 83% of out-of-sample variance; levels regression shows R² 0.45 vs 0.09 on returns, the spurious-regression trap |
 | `fx-carry/` | G10 carry: borrow the three lowest yielders, lend the three highest, monthly roll, UIP test | Net Sharpe 0.35 with a −31.7% drawdown in 2007–09; UIP slope 0.05, rejected |
