@@ -4,6 +4,7 @@ Downloads once from yfinance and caches to source-material/trend-following/, so
 reruns are offline. Yahoo's "=F" tickers are front-month splices with no roll
 adjustment, which is the main data caveat the README discusses.
 """
+import importlib.util
 import os
 
 import numpy as np
@@ -13,6 +14,7 @@ import yfinance as yf
 ROOT = os.path.dirname(os.path.abspath(__file__))
 REPORTS = os.path.join(ROOT, "reports")
 CACHE = os.path.join(os.path.dirname(ROOT), "source-material", "trend-following", "prices.csv")
+PIT_UNIVERSE = os.path.join(os.path.dirname(ROOT), "pit-universe", "data.py")
 
 FUTURES = {
     "ES=F": "equities", "NQ=F": "equities", "EFA": "equities", "EEM": "equities",
@@ -67,8 +69,32 @@ def clean(px):
     return px.where(px > 0).ffill().where(px.notna().cummax())
 
 
+def pit_universe():
+    """Import ../pit-universe/data.py; its load() returns the point-in-time S&P 500 panel."""
+    spec = importlib.util.spec_from_file_location("pit_universe", PIT_UNIVERSE)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
 def get_panel(universe=FUTURES):
-    """Return daily prices, daily returns, asset classes and benchmark daily returns."""
+    """Return daily prices, daily returns, asset classes and benchmark daily returns.
+
+    `universe` is a {ticker: class} dict, FUTURES by default and ETFS for the
+    cross-check. The string "pit" swaps in the point-in-time S&P 500 panel from
+    ../pit-universe: every name that was ever a member, priced only on the days
+    it was one, all in class "equities".
+    """
+    if universe == "pit":
+        d = pit_universe().load()
+        member = d["panel"]
+        names = [t for t in member.columns if t in d["px"].columns]
+        px = d["px"][names]
+        px = px.where(px > 0).ffill().where(px.bfill().notna())
+        rets = px.pct_change().where(member[names])
+        classes = pd.Series("equities", index=names, name="class")
+        return px.where(member[names]), rets, classes, d["px"][BENCHMARK].pct_change()
+
     px = clean(download())
     names = [t for t in universe if t in px.columns]
     classes = pd.Series({t: universe[t] for t in names}, name="class")

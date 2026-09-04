@@ -1,4 +1,5 @@
 """Price downloads for the pairs universe, cached to CSV so reruns are offline."""
+import importlib.util
 import os
 
 import numpy as np
@@ -6,6 +7,8 @@ import pandas as pd
 import yfinance as yf
 
 CACHE = os.path.join(os.path.dirname(__file__), "reports", "prices.csv")
+PIT_UNIVERSE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                            "pit-universe", "data.py")
 
 # A liquid subset of the S&P 500, roughly 16-20 names per GICS sector. Not the
 # full 500: 190 names keeps the within-sector pair count near 1,600 instead of
@@ -118,8 +121,36 @@ def clean(px, min_coverage=0.99):
     return px
 
 
-def get_prices(start=FORMATION_START, end=OOS_END):
-    """Return cleaned prices, log prices and the sector label per surviving name."""
+def pit_universe():
+    """Import ../pit-universe/data.py; its load() returns the point-in-time S&P 500 panel."""
+    spec = importlib.util.spec_from_file_location("pit_universe", PIT_UNIVERSE)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def get_prices(start=FORMATION_START, end=OOS_END, universe="today"):
+    """Return cleaned prices, log prices and the sector label per name.
+
+    universe="today" screens the names in UNIVERSE and keeps those with 99%
+    complete history over the whole span, formation and out-of-sample alike;
+    every number in the README comes from it. universe="pit" takes the index as
+    it stood on the last formation day from ../pit-universe, requires
+    completeness over the formation window only, and lets a series end where
+    Yahoo's does, so a name delisted later is still screened and traded until
+    its last print. Sector labels come from the list snapshot of that date.
+    """
+    if universe == "pit":
+        pit = pit_universe()
+        d = pit.load()
+        member = d["panel"].loc[:FORMATION_END].iloc[-1]
+        names = [t for t in member[member].index if t in d["px"].columns]
+        px = d["px"].loc[start:end, names]
+        sectors = pit.sectors_at(d["snapshots"], FORMATION_END).rename("sector")
+        keep = [t for t in clean(px.loc[:FORMATION_END]).columns if t in sectors.index]
+        px = px[keep].where(px[keep] > 0).ffill().where(px[keep].bfill().notna())
+        return px, np.log(px), sectors.reindex(keep)
+
     px = clean(download(start, end))
     sectors = pd.Series({t: UNIVERSE[t] for t in px.columns}, name="sector")
     return px, np.log(px), sectors

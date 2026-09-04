@@ -198,26 +198,48 @@ between 2005 and now is simply absent. Four tickers in my own list
 in miniature. 19 of the 190 names had no price on 2005-01-03 and enter later as
 they list, which the eligibility flag handles correctly.
 
-Direction and size:
+The level of the bias on this slice: the equal-weight eligible universe, with
+membership decided at the close of t-1 and earning the return of t, returns
+**+15.36%/yr** over 2005-2026 against SPY's **+10.94%/yr**, a gap of
+**+4.42%/yr**. A basket chosen for being in the index today beats the index the
+index actually was.
 
-- **Size.** The equal-weight eligible universe, with membership decided at the
-  close of t-1 and earning the return of t, returns **+15.36%/yr** over
-  2005-2026 against SPY's **+10.94%/yr**, a gap of **+4.42%/yr**. That is the
-  level of the selection premium: a basket chosen for being in the index today
-  beats the index the index actually was.
-- **Direction, short leg.** Every stock that fell far enough to be deleted is
-  missing, and those are precisely the names 12-1 momentum would have been short.
-  The sample's worst losers are the ones that survived to recover, so the short
-  leg is biased *against* the strategy.
-- **Direction, long leg.** A stock in the index today is one whose winning streak
-  did not later reverse into deletion, so the long leg is biased *for* it.
+The first version of this README argued the sign of the bias on a long-short
+book was unknown, because the short leg is starved of the deleted losers while
+the long leg is fed by names that joined after winning. The `pit-universe`
+project settled that by rebuilding S&P 500 membership from Wikipedia's change
+list and dated list snapshots and running this project's `momentum.py`,
+`backtest.py` and `data.eligibility` on the full index both ways, with the same
+dates, rules and costs. Measured bias, today's members minus point-in-time:
 
-The two legs pull opposite ways and I cannot sign the net effect without
-point-in-time membership data. The honest claim is that the bias is on the order
-of a few percent a year per leg and its net sign is unknown. I specifically do
-not claim these results are conservative. The quintile table above, where the
-worst-momentum bucket still earns 18%/yr, is the clearest evidence that the
-short leg is being flattered by the missing deletions.
+| | In-sample 2005-2020 | Final test 2021-2026 | Full |
+|---|---|---|---|
+| Gross annual return | +2.17%/yr | +6.35%/yr | +3.18%/yr |
+| Net annual return | +2.13%/yr | +6.29%/yr | +3.14%/yr |
+| Long leg | +8.44%/yr | +12.44%/yr | +9.43%/yr |
+| Short leg | -3.84%/yr | -3.39%/yr | -3.73%/yr |
+
+The bias is positive and it comes from the long leg. The short-leg half of the
+old argument is real: the short leg is 3.4 to 3.8%/yr *better* on the
+point-in-time universe, and in-sample a third of the point-in-time short book
+sits in names no longer in the index. But the long leg swings 8 to 12%/yr the other way
+and wins, because a long leg built from today's members is buying the top
+decile of a list assembled by looking at who won. Point-in-time 12-1 momentum on
+the full index is worse than the survivor version, not better: -8.4%/yr gross
+in-sample, a -91% drawdown, Sharpe indistinguishable from zero in every window.
+A fair universe makes the null result more null. These numbers are on the full
+index, not the 190-name slice here, and the slice is a subset of today's
+members that carries the same bias.
+
+Two caveats on the measurement. It is a lower bound, because 257 of the 390
+names ever removed from the index have no Yahoo prices at all, and those are
+the bankruptcies and takeouts the short leg wants most. And the equal-weight
+level of the bias on the full index is +3.97%/yr in-sample and +4.23%/yr in
+the final test, of which about 3.2 points is holding future members before
+they joined and 0.7 points is the deleted losers, so most of what the old
+"survivorship" caveat described is really a look-ahead in the membership list.
+The quintile table above, where the worst-momentum bucket still earns 18%/yr,
+is what the missing deletions look like from inside the slice.
 
 ## Why it fails
 
@@ -228,16 +250,20 @@ Three things, in order of how much they matter.
    18 names per decile, and large caps are the segment where momentum is weakest
    and most arbitraged. The IC of -0.001 is a real measurement on this universe,
    not a claim about momentum generally.
-2. **Survivorship removes the short leg's raw material.** See above.
+2. **The universe flatters the result, by a measured +2.2%/yr gross in-sample
+   and +6.3%/yr in the final test.** See above. The short leg is starved of
+   deleted losers, but the long leg gains more from future members than the
+   short leg loses, and the point-in-time version is worse.
 3. **The crash risk is unhedged.** A dollar-neutral book at 25-27% vol with a
    -50% drawdown around one reversal has a return distribution that no Sharpe
    ratio summarises usefully.
 
 The one strategy that does work is the least interesting one: 50/200 long only,
 net +12.58%/yr in-sample and +14.02%/yr out-of-sample at Sharpe 1.02. That is
-almost entirely equity beta on a survivorship-biased basket, and it beats SPY's
-+10.94% by less than the survivorship gap. I report it because it is the
-honest reference point, not because it is a strategy.
+almost entirely equity beta on a survivor basket, and it beats SPY's +10.94%
+by less than the +4.42%/yr selection gap on this slice (measured at +3.97 to
++4.23%/yr on the full index). I report it because it is the honest reference
+point, not because it is a strategy.
 
 ## Files
 
@@ -262,13 +288,23 @@ Charts in `reports/`: `equity_curve.png`, `drawdown.png`, `crash_2020.png`,
 those two files to refresh. No dependencies beyond what the shared
 `requirements.txt` already installs.
 
+`data.get_panel(universe="pit")` returns the same five objects built from the
+point-in-time S&P 500 panel in `../pit-universe`: every name that was ever a
+member, eligible only while it was one. The default stays `"today"`, so `run.py`
+reproduces the numbers above unchanged. The two-universe comparison itself is
+`../pit-universe/survivorship.py`.
+
 ## Limitations
 
 The ones I would raise first if someone else handed me this.
 
-**No point-in-time universe.** Discussed at length above, and it is the single
-biggest problem. Fixing it needs CRSP or an index-membership history, and no
-amount of care with the code substitutes.
+**The headline numbers are on today's members.** Discussed at length above.
+The bias is now measured rather than guessed, +2.2%/yr gross in-sample and
++6.3%/yr in the final test, and `data.get_panel(universe="pit")` loads the
+point-in-time panel so the strategy can be run on it here. What no public
+source fixes is the 257 removed names Yahoo no longer serves, so even the
+point-in-time number is a lower bound; closing that needs CRSP with delisting
+returns.
 
 **Weights are held constant between rebalances.** The engine holds the target
 weights flat for the month rather than letting them drift with prices. Real

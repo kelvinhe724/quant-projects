@@ -289,17 +289,16 @@ def survivorship(px, returns, eligible, bench):
     print(f"\nequal-weight universe: {ew_annual:+.2%}/yr   SPY: {spy_annual:+.2%}/yr   "
           f"gap: {ew_annual - spy_annual:+.2%}/yr")
     print("""
-That gap is the level of the bias: a basket picked for being in the index today
-beats the index the index actually was. It hits the long-short book differently
-from a long-only one. Every name that fell far enough to be deleted is missing,
-and those deletions are exactly the names 12-1 momentum would have been short.
-The short leg is therefore the biased leg, and it is biased against the strategy:
-the worst losers were removed from the sample before they could be shorted. The
-long leg is biased the other way, since a stock in the index today is one whose
-past winning streak did not later reverse into deletion. Net direction for a
-long-short book is genuinely ambiguous, which is why the honest claim is only
-that the sign of the bias is unknown and the magnitude is on the order of the
-2-4%/yr gap above, not that the results are conservative.""")
+That gap is the level of the bias on this slice: a basket picked for being in
+the index today beats the index the index actually was. On the full index the
+pit-universe project measures it at +3.97%/yr in-sample and +4.23%/yr in the
+final test, a lower bound because 257 of the 390 names ever removed have no
+Yahoo prices. For this long-short book the measured bias is +2.17%/yr gross
+in-sample and +6.35%/yr in the final test (today's members minus point-in-time,
+same code, dates and costs). The short leg is starved of deleted losers and is
+3.4 to 3.8%/yr better on the point-in-time universe; the long leg gains 8 to
+12%/yr from names that joined after winning, and it wins. Run
+data.get_panel(universe="pit") for the point-in-time version.""")
 
 
 def charts(baseline, crossover, long_only, wf_book, bench, years, px, eligible, dates):

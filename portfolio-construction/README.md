@@ -229,7 +229,15 @@ column's sign flips from window to window.
 clean 21-year history, which is why I picked them. Asset classes are less prone
 to this than single stocks, but the choice was still made in 2026 knowing what
 survived. The equal-weight benchmark inherits the same selection, so the
-comparison between rules is fair; the absolute Sharpe levels are not.
+comparison between rules is fair; the absolute Sharpe levels are not. For
+scale, the `pit-universe` project measured the single-stock version of this on
+the S&P 500: an equal-weight basket of today's members applied backwards beats
+the point-in-time basket by +3.97%/yr in-sample and +4.23%/yr in the final
+test, about 3.2 points of it from holding future members before they joined
+and 0.7 from deleted losers, and a lower bound because 257 of the 390 names
+ever removed have no Yahoo prices. Fourteen sector and asset-class ETFs carry
+far less of that than a stock list, and I have not measured how much.
+`data.monthly_panel(universe="pit")` loads that stock panel here.
 
 **A discount-basis, lagged risk-free rate.** TB3MS is the monthly average of
 the 3-month bill's discount yield, dated by FRED to the first of its month. I
@@ -264,6 +272,13 @@ python3 run.py       full pipeline, writes tables and charts to reports/
 ```
 
 Dependencies are in the shared `requirements.txt` one level up.
+
+`data.monthly_panel(universe="pit")` returns month-end returns, the same
+risk-free rate and excess returns for the point-in-time S&P 500 panel in
+`../pit-universe`, one column per name that was ever a member and NaN in the
+months it was not one. The rules in `run.py` need a complete panel, so a caller
+picks a window and drops names before optimising. The default is `"etf"`, the
+fourteen names above, so `run.py` reproduces the numbers unchanged.
 
 ## Files
 

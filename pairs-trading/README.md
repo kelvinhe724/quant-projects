@@ -171,22 +171,34 @@ Places I checked, and what the code does:
   point they are used, so it is not look-ahead, but it does mean the 2020 signals
   inherit a window that straddles the split.
 
-One genuine leak remains and I have not fixed it: the universe filter drops any
-ticker without near-complete history over 2015-2026, so the 2015 formation
-screen is run on a universe defined using data through 2026. See below.
+One genuine leak remains in the default universe: the filter drops any ticker
+without near-complete history over 2015-2026, so the 2015 formation screen is
+run on a universe defined using data through 2026. The `pit` universe option in
+`data.py` requires completeness over the formation window only. See below.
 
 ## Limitations
 
-**Survivorship bias.** `yfinance` gives current index members, and my coverage
-filter then removes anything that did not trade continuously through 2026. Both
-push the same way. Names that were delisted, acquired or dropped from the index
-are absent, and those are disproportionately the ones whose spreads blew out and
-never reverted. The bias inflates the results, and it inflates the in-sample
-number more than the out-of-sample one because the formation window is further
-in the past. I cannot size it without point-in-time index membership, but the
-standard estimate in the literature for US equity strategies is on the order of
-1-4% a year on returns; against a 0.72% gross out-of-sample return, that alone
-could account for the whole thing.
+**Survivorship bias, measured and small.** `yfinance` gives current index
+members, and my coverage filter then removes anything that did not trade
+continuously through 2026. Names that were delisted, acquired or dropped from
+the index are absent, and the first version of this README assumed that
+inflated the result and could not say by how much. The `pit-universe` project
+then rebuilt S&P 500 membership from Wikipedia's change list and dated list
+snapshots and ran this project's `pairs.py` and `backtest.py` on the full index
+both ways: today's members with the full-sample completeness rule, and the
+index as it stood on 2019-12-31 with completeness required over formation only.
+The survivor universe made the strategy look slightly *worse*: out-of-sample
+net return +0.69%/yr against +1.35%/yr point-in-time, net Sharpe 0.20 against
+0.27, a bias of -0.66%/yr and -0.07 in Sharpe, which is inside the noise on a
+6.7-year Sharpe (standard error about 0.4). A survivor filter removes the names
+that fell apart, and for a mean-reversion trade that removes the recoveries
+along with the blow-ups; the pairs that lost most in March 2020 on the
+point-in-time book (MGM/UAA, NWL/VFC, BBWI/LOW) earned it back through 2021.
+Two caveats: the point-in-time run is a lower bound on the true effect because
+257 of the 390 names ever removed from the index have no Yahoo prices, and it
+is on the full index rather than the 190-name slice here, where the
+equal-weight level of the bias is +3.97%/yr in-sample and +4.23%/yr out of
+sample. `data.get_prices(universe="pit")` loads that panel for this project.
 
 **One split, no rolling re-formation.** Pairs chosen in 2019 are still being
 traded in 2026 on a hedge ratio estimated seven years earlier. Real pairs books
@@ -226,3 +238,10 @@ smaller with any position limit.
 ```
 
 `check.py` is offline. `run.py` downloads once, then reads the cache.
+
+`data.get_prices(universe="pit")` returns the same three objects built from
+the point-in-time S&P 500 panel in `../pit-universe`: the index as it stood on
+2019-12-31, sector labels from that date, completeness required over formation
+only, and each series ending at its last print. The default stays `"today"`, so
+`run.py` reproduces the numbers above unchanged. The two-universe comparison
+itself is `../pit-universe/survivorship.py`.
