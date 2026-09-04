@@ -11,3 +11,5 @@ scikit-learn
 xlrd
 certifi
 requests
+hmmlearn
+cryptography

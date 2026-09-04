@@ -1,0 +1,206 @@
+prices 2015-01-02 to 2026-09-03, 2933 return days
+basket: AAPL, MSFT, NVDA, AMZN, META, GOOGL, BRK-B, JPM, XOM, UNH
+weights (cap within basket): AAPL 18.6%, MSFT 14.7%, NVDA 21.5%, AMZN 10.9%, META 6.1%, GOOGL 16.3%, BRK-B 4.2%, JPM 3.7%, XOM 2.6%, UNH 1.4%
+
+==============================================================================
+TODAY: IMPLIED CORRELATION FROM THE OPTION CHAINS
+==============================================================================
+chain snapshot 2026-09-04 03:36 UTC, risk-free 4%
+
+ATM implied vol by expiry (call/put average at the strike nearest the forward)
+------------------------------------------------------------------------------
+              SPY   AAPL   MSFT   NVDA   AMZN   META  GOOGL  BRK-B    JPM    XOM    UNH
+expiry                                                                                 
+2026-09-18  11.6%  25.6%  23.7%  33.0%  28.8%  34.4%  27.1%  13.4%  20.5%  26.7%  27.3%
+2026-09-25  11.4%  24.7%  23.7%  32.9%  28.8%  34.9%  27.1%  13.5%  20.6%  27.1%  26.2%
+2026-09-30  11.3%                                                                      
+2026-10-02  11.7%  24.5%  24.1%  33.3%  29.1%  35.2%  27.2%  13.6%  20.3%  27.6%  24.7%
+2026-10-09  11.9%  24.3%  24.3%  33.6%  29.5%  35.3%  27.8%  13.6%  19.2%  27.9%  27.8%
+2026-10-16  12.2%  24.3%  24.5%  33.9%  29.8%  35.4%  28.3%  14.1%  23.6%  27.4%  32.1%
+2026-10-30  12.8%                                                                      
+
+30-day implied vs trailing realised vol as of 2026-09-02
+--------------------------------------------------------
+      weight implied 30d implied 60d realised 21d realised 63d implied/realised 21d
+AAPL   18.6%       24.4%       24.3%        18.3%        31.8%                 1.34
+MSFT   14.7%       24.1%       24.5%        21.2%        41.8%                 1.14
+NVDA   21.5%       33.4%       33.9%        44.4%        42.3%                 0.75
+AMZN   10.9%       29.2%       29.8%        25.9%        42.6%                 1.13
+META    6.1%       35.2%       35.4%        29.7%        45.9%                 1.19
+GOOGL  16.3%       27.3%       28.3%        25.0%        36.4%                 1.09
+BRK-B   4.2%       13.6%       14.1%        15.0%        15.1%                 0.91
+JPM     3.7%       20.0%       23.6%        12.3%        21.0%                 1.63
+XOM     2.6%       27.7%       27.4%        26.5%        25.8%                 1.04
+UNH     1.4%       25.5%       32.1%        20.2%        25.2%                 1.26
+SPY     nan%       11.7%       12.8%         7.1%        13.6%                 1.66
+
+implied correlation, 30 day: 0.027
+implied correlation, 60 day: 0.059
+VIX close on 14.32 (SPY chain 30d ATM: 11.7%, wedge 2.6 vol pts: VIX is a variance-swap strip including the skew, an ATM straddle is not)
+realised correlation, trailing  21d: weighted -0.158, average pairwise 0.075
+realised correlation, trailing  63d: weighted -0.031, average pairwise 0.076
+realised correlation, trailing 252d: weighted 0.005, average pairwise 0.096
+implied minus realised (30d vs 21d): +0.185; (30d vs 63d): +0.058
+Cboe implied correlation on 2026-09-03: COR1M 9.5, COR3M 10.1 (S&P 500 top-50 basket, Cboe methodology; mine is a 10-name basket)
+pooled single-name premium ratio (cap-weighted implied 30d / realised 21d): 1.09
+
+==============================================================================
+HISTORY: IMPLIED MINUS REALISED CORRELATION, 2015 ONWARD
+==============================================================================
+
+Single-name option prices are not available historically, so the daily implied
+correlation below is a proxy: the index side is VIX, the single-name side is
+each name's trailing 21-day realised vol scaled by a constant premium ratio.
+Two versions are shown. `k=1` uses raw VIX and puts no premium on single names,
+so every bit of the VIX premium over realised is attributed to correlation,
+which is an upper bound. `k=snapshot` subtracts today's VIX-to-ATM wedge from
+VIX and applies today's pooled single-name implied/realised ratio backward,
+which is the best fixed estimate available but assumes both constants held for
+eleven years. Neither is the number a desk would have seen.
+
+k=snapshot constants: premium ratio 1.09 on every name, wedge 2.6 vol pts off VIX
+
+Implied correlation proxy, realised correlation and the gap: daily statistics
+-----------------------------------------------------------------------------
+                                  mean  median    std  share > 0
+full      implied k=1            0.279   0.214  0.299      0.879
+          implied k=snapshot     0.078   0.035  0.213      0.611
+          realised 21d           0.055   0.035  0.189      0.592
+          realised 63d           0.060   0.042  0.158      0.691
+          pairwise 21d           0.358   0.333  0.189      0.991
+          gap k=1 vs 21d         0.224   0.177  0.286      0.853
+          gap k=snapshot vs 21d  0.023   0.008  0.205      0.525
+          gap k=snapshot vs 63d  0.018  -0.009  0.206      0.475
+formation implied k=1            0.294   0.214  0.327      0.876
+          implied k=snapshot     0.078   0.025  0.235      0.576
+          realised 21d           0.070   0.028  0.229      0.559
+          realised 63d           0.073   0.054  0.197      0.697
+          pairwise 21d           0.420   0.397  0.183      1.000
+          gap k=1 vs 21d         0.224   0.186  0.306      0.831
+          gap k=snapshot vs 21d  0.008   0.006  0.219      0.523
+          gap k=snapshot vs 63d  0.004  -0.012  0.217      0.463
+test      implied k=1            0.264   0.213  0.267      0.881
+          implied k=snapshot     0.078   0.045  0.189      0.647
+          realised 21d           0.041   0.038  0.134      0.626
+          realised 63d           0.046   0.031  0.103      0.686
+          pairwise 21d           0.295   0.279  0.175      0.982
+          gap k=1 vs 21d         0.223   0.170  0.264      0.875
+          gap k=snapshot vs 21d  0.037   0.012  0.190      0.526
+          gap k=snapshot vs 63d  0.032  -0.004  0.193      0.487
+
+By year
+-------
+      implied k=snapshot  realised 21d  gap k=snapshot vs 21d
+Date                                                         
+2015               0.098         0.158                 -0.060
+2016               0.113         0.090                  0.023
+2017              -0.108        -0.165                  0.057
+2018               0.037         0.056                 -0.019
+2019               0.041         0.047                 -0.006
+2020               0.289         0.252                  0.037
+2021               0.207         0.026                  0.181
+2022               0.095         0.148                 -0.053
+2023               0.013         0.013                  0.000
+2024              -0.028        -0.048                  0.021
+2025               0.085         0.077                  0.009
+2026               0.105         0.025                  0.080
+
+Five most negative gap days (realised correlation far above implied)
+--------------------------------------------------------------------
+              vix  implied k=snapshot  realised 21d  gap k=snapshot vs 21d
+Date                                                                      
+2020-04-06  45.24              -0.032         0.720                 -0.752
+2020-04-08  43.35              -0.034         0.697                 -0.730
+2020-04-03  46.80              -0.008         0.722                 -0.730
+2020-04-09  41.67              -0.043         0.684                 -0.728
+2020-04-07  46.70              -0.011         0.688                 -0.699
+
+==============================================================================
+SIMULATED DISPERSION BOOK
+==============================================================================
+
+monthly cycle: decide at the month-end close, fill at the next close, hold 21 trading days. 141 decision dates.
+costs per vega unit: index half-spread 0.25 vol pts, single-name 0.75, hedging allowance 0.1 per leg per month
+P&L is in vol points per one vega unit of index straddle. Read 1 vol point as 1% of capital if the book is sized so that the index vega is 1% of capital per vol point.
+index implied in the book is VIX minus the snapshot wedge of 2.6 vol pts; single-name implied is 1.09 times trailing 21d realised
+correlation-weighted book: single-name vega scaled by the parallel vega, mean 0.41, range 0.00 to 1.00
+conditional book: on when the decision-date gap (k=snapshot vs 63d) exceeds the formation median -0.012; on in 50% of months (49% in the test window)
+
+Formation (2015-2020) and test (2021-2026) windows, gross and net
+-----------------------------------------------------------------
+                     always on, cap weights | formation | gross always on, cap weights | formation | net always on, cap weights | test | gross always on, cap weights | test | net
+months                                                       70                                       70                                    68                                  68
+mean (vol pts/month)                                      -2.53                                    -3.73                                 -1.47                               -2.67
+std                                                        9.94                                     9.94                                  8.70                                8.70
+Sharpe                                                    -0.88                                    -1.30                                 -0.58                               -1.06
+total                                                    -176.8                                   -260.8                                 -99.8                              -181.4
+hit rate                                                    36%                                      31%                                   49%                                 43%
+skew                                                      -0.91                                    -0.91                                 -0.78                               -0.78
+5th pct month                                            -16.75                                   -17.95                                -16.65                              -17.85
+1st pct month                                            -30.99                                   -32.19                                -24.82                              -26.02
+worst month                                 -44.64 (2020-04-01)                      -45.84 (2020-04-01)                   -34.17 (2025-05-01)                 -35.37 (2025-05-01)
+max drawdown                                            -189.68                                  -264.08                               -159.88                             -219.23
+drawdown peak                                        2015-04-01                               2015-04-01                            2022-02-01                          2021-12-01
+drawdown trough                                      2020-06-01                               2020-06-01                            2025-06-02                          2026-08-03
+
+Alternative books, net
+----------------------
+                     always on, equal weights | formation | net always on, equal weights | test | net always on, k=1, raw VIX | formation | net always on, k=1, raw VIX | test | net always on, 63d proxy | formation | net always on, 63d proxy | test | net correlation-weighted | formation | net correlation-weighted | test | net conditional on gap | formation | net conditional on gap | test | net
+months                                                       70                                    68                                        70                                   68                                     68                                68                                     70                                68                                   70                              68
+mean (vol pts/month)                                      -3.49                                 -2.35                                     +1.57                                +2.97                                  -4.78                             -3.43                                  -0.71                             +0.21                                +0.73                           +0.69
+std                                                        8.78                                  7.63                                      9.09                                 8.13                                  10.41                              7.72                                   6.80                              5.29                                 5.23                            4.77
+Sharpe                                                    -1.38                                 -1.07                                      0.60                                 1.26                                  -1.59                             -1.54                                  -0.36                              0.14                                 0.48                            0.50
+total                                                    -244.6                                -159.9                                    +109.9                               +201.8                                 -324.8                            -233.3                                  -49.6                             +14.1                                +50.9                           +46.8
+hit rate                                                    33%                                   40%                                       63%                                  71%                                    28%                               28%                                    53%                               54%                                  26%                             28%
+skew                                                      -1.29                                 -0.64                                     -0.52                                -0.65                                  -1.11                             -0.26                                  -0.97                             -0.10                                +1.47                           +0.68
+5th pct month                                            -15.06                                -14.34                                    -11.72                               -10.88                                 -19.36                            -16.18                                 -11.26                             -6.81                                -7.48                           -5.27
+1st pct month                                            -25.53                                -22.40                                    -23.63                               -18.24                                 -40.63                            -22.89                                 -21.62                            -13.56                               -10.13                          -11.39
+worst month                                 -45.86 (2020-04-01)                   -30.65 (2025-05-01)                       -33.52 (2020-04-01)                  -26.60 (2025-05-01)                    -45.05 (2020-06-01)               -24.74 (2025-06-02)                    -29.58 (2020-03-02)               -19.51 (2025-04-01)                  -13.45 (2015-09-01)             -13.43 (2023-11-01)
+max drawdown                                            -244.48                               -195.78                                    -43.81                               -29.72                                -325.48                           -266.27                                 -86.51                            -64.58                               -19.18                          -23.82
+drawdown peak                                        2015-04-01                            2022-02-01                                2020-02-03                           2025-01-02                             2015-05-01                        2022-03-01                             2017-12-01                        2021-12-01                           2016-11-01                      2023-10-02
+drawdown trough                                      2020-06-01                            2026-08-03                                2020-05-01                           2025-06-02                             2020-06-01                        2026-08-03                             2020-06-01                        2025-06-02                           2018-06-01                      2024-08-01
+
+full sample, always on, net: Sharpe -1.19, max drawdown -434.40 vol pts (2015-04-01 to 2026-08-03), worst month -45.84 (2020-04-01)
+
+Six worst months, always on
+---------------------------
+             decision  implied_corr  realised_corr  single_leg  index_leg  gross    net
+fill                                                                                   
+2020-04-01 2020-03-31          0.08           0.46      -61.10      16.46 -44.64 -45.84
+2025-05-01 2025-04-30         -0.09           0.13      -39.19       5.01 -34.17 -35.37
+2019-02-01 2019-01-31         -0.17           0.02      -30.09       5.24 -24.85 -26.05
+2018-12-03 2018-11-30         -0.24           0.27       -3.95     -17.69 -21.63 -22.83
+2022-12-01 2022-11-30         -0.10           0.10      -19.24      -0.97 -20.22 -21.42
+2016-12-01 2016-11-30         -0.37          -0.23      -21.39       3.20 -18.19 -19.39
+
+leg contribution, full sample: single-name leg -410.5, index leg +133.9, gross -276.6 vol pts
+break-even single-name premium ratio: net mean is -3.20 at k=1.09 and falls 30.4 vol pts per unit of k, so the book breaks even at k=0.989 (gross: k=1.029)
+correlation of monthly gross P&L with realised minus implied correlation: -0.76
+
+Conditional filter: mean monthly leg P&L in months it is on vs off
+------------------------------------------------------------------
+       single_leg  index_leg  gross
+on                                 
+False       -8.02       1.40  -6.62
+True         2.07       0.54   2.61
+
+Calibration sensitivity, full sample net: the two unobservable constants
+------------------------------------------------------------------------
+                                         net mean  single leg mean  index leg mean  net Sharpe  max drawdown
+k=1.00, wedge=0.0                            2.26            -0.10            3.56        0.91         -43.8
+k=1.00, wedge=2.6                           -0.33            -0.10            0.97       -0.13        -103.0
+k=1.09, wedge=0.0                           -0.62            -2.97            3.56       -0.23        -111.8
+k=1.09, wedge=2.6                           -3.20            -2.97            0.97       -1.19        -434.4
+k=1.00, wedge=0.0, correlation-weighted      3.48             0.76            3.56        1.93         -28.5
+k=1.09, wedge=2.6, correlation-weighted     -0.26            -0.53            0.97       -0.15         -86.5
+
+Net Sharpe by cost scenario (index spread / single spread / hedge, vol pts)
+---------------------------------------------------------------------------
+                         cost per month  formation Sharpe  test Sharpe  full Sharpe
+frictionless (0/0/0)                0.0             -0.88        -0.58        -0.74
+half (0.125/0.375/0.05)             0.6             -1.09        -0.82        -0.97
+base (0.25/0.75/0.1)                1.2             -1.30        -1.06        -1.19
+double (0.5/1.5/0.2)                2.4             -1.72        -1.54        -1.64
+triple (0.75/2.25/0.3)              3.6             -2.14        -2.02        -2.08
+
+charts and tables written to /Users/kelvin/Documents/C.C. General Intelligence/quant-projects/dispersion/reports/
