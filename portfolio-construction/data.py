@@ -1,4 +1,5 @@
 """Monthly total returns for 14 ETFs plus a T-bill rate, cached under source-material."""
+import importlib.util
 import os
 
 import pandas as pd
@@ -10,10 +11,13 @@ CACHE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PRICE_CACHE = os.path.join(CACHE, "prices_daily.csv")
 RF_CACHE = os.path.join(CACHE, "TB3MS.csv")
 REPORTS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "reports")
+PIT_UNIVERSE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                            "pit-universe", "data.py")
 
 # Nine SPDR sectors, two Treasury tenors, gold, developed and emerging ex-US.
 # All fourteen launched before 2005, and all fourteen are still trading, which is
-# the survivorship caveat the README discusses.
+# the selection caveat the README discusses. monthly_panel(universe="pit") swaps
+# in the point-in-time S&P 500 panel from ../pit-universe for scale.
 TICKERS = ["XLK", "XLF", "XLE", "XLV", "XLI", "XLP", "XLU", "XLY", "XLB",
            "TLT", "IEF", "GLD", "EFA", "EEM"]
 START = "2004-06-01"
@@ -38,7 +42,15 @@ def download():
     return px, rf
 
 
-def monthly_panel():
+def pit_universe():
+    """Import ../pit-universe/data.py; its load() returns the point-in-time S&P 500 panel."""
+    spec = importlib.util.spec_from_file_location("pit_universe", PIT_UNIVERSE)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def monthly_panel(universe="etf"):
     """Return month-end simple returns, the matching monthly risk-free rate, and excess returns.
 
     Adjusted closes already include dividends, so a close-to-close change is a
@@ -46,10 +58,23 @@ def monthly_panel():
     yield, annualised, dated by FRED to the first of its month. It is converted
     to a monthly decimal and lagged one month, so the rate subtracted from month
     t's return is the one published before t began.
+
+    universe="etf" is the fourteen names in TICKERS, a complete panel, and every
+    number in the README comes from it. universe="pit" is the point-in-time
+    S&P 500 panel from ../pit-universe: one column per name that was ever a
+    member, NaN in the months it was not one. The rules in run.py need a
+    complete panel, so a caller has to choose a window and drop names first.
     """
     px, rf = download()
-    month_end = px.resample("ME").last()
-    rets = month_end.pct_change().dropna(how="any")
+    if universe == "pit":
+        d = pit_universe().load()
+        names = [t for t in d["panel"].columns if t in d["px"].columns]
+        px = d["px"][names]
+        px = px.where(px > 0).ffill().where(px.bfill().notna())
+        member = d["panel"][names].resample("ME").last()
+        rets = px.resample("ME").last().pct_change().where(member).dropna(how="all")
+    else:
+        rets = px.resample("ME").last().pct_change().dropna(how="any")
     rf_monthly = ((1 + rf / 100) ** (1 / 12) - 1).shift(1)
     rf_monthly.index = rf_monthly.index + pd.offsets.MonthEnd(0)
     rf_monthly = rf_monthly.reindex(rets.index).ffill()

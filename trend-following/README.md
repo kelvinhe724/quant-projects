@@ -289,6 +289,12 @@ Charts in `reports/`: `equity_curve.png`, `drawdown.png`, `crisis_2020.png`,
 to `../source-material/trend-following/prices.csv` and is offline after that.
 No dependencies beyond the shared `requirements.txt`.
 
+`data.get_panel(universe)` takes the `FUTURES` dict by default and `ETFS` for
+the cross-check. Passing `"pit"` instead returns the point-in-time S&P 500
+panel from `../pit-universe`, every name that was ever a member priced only on
+its member days, all in one "equities" class. The default is unchanged, so
+`run.py` reproduces the numbers above.
+
 ## Limitations
 
 **The futures data is a splice.** Discussed above. Roll gaps are returns the
@@ -310,7 +316,15 @@ on three currencies whose stand-alone Sharpe is 0.02.
 the fifteen most liquid contracts today, chosen in 2026. Nothing was delisted,
 but I picked markets I already knew trend well (gold, Nasdaq, yen) and did not
 pick ones I did not (softs, livestock, European rates). A universe chosen with
-hindsight is a mild form of the same bias.
+hindsight is a mild form of the same bias. For scale, the `pit-universe`
+project measured what the same hindsight does on single stocks: an equal-weight
+basket of today's S&P 500 members applied backwards beats the point-in-time
+basket by +3.97%/yr in-sample and +4.23%/yr in the final test, a lower bound
+because 257 of the 390 names ever removed from the index have no Yahoo prices.
+Fifteen futures contracts that all still trade carry much less of that than a
+stock list does, and I have not measured how much.
+`data.get_panel(universe="pit")` loads that stock panel here for anyone who
+wants to run the trend rule on it.
 
 **Weights are fixed inside the month.** Positions are set at month end and held
 flat; real positions drift with price and a real vol-scaled book would trade

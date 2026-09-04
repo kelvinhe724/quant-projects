@@ -1,4 +1,5 @@
 """Daily prices and volumes for the momentum universe, cached to CSV so reruns are offline."""
+import importlib.util
 import os
 
 import numpy as np
@@ -8,11 +9,14 @@ import yfinance as yf
 REPORTS = os.path.join(os.path.dirname(__file__), "reports")
 PRICE_CACHE = os.path.join(REPORTS, "prices.csv")
 VOLUME_CACHE = os.path.join(REPORTS, "volumes.csv")
+PIT_UNIVERSE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                            "pit-universe", "data.py")
 
 # A liquid slice of the S&P 500, roughly 14-20 names per GICS sector. This is the
-# current membership list, which is the survivorship problem the README quantifies:
-# yfinance has no point-in-time constituent history, so names deleted from the index
-# between 2005 and today are simply absent.
+# current membership list applied backwards, which is the survivorship bias the
+# README sizes: the pit-universe project measured it at +2.2%/yr gross in-sample
+# and +6.3%/yr in the final test for this strategy. get_panel(universe="pit")
+# swaps in the point-in-time membership panel from that project.
 UNIVERSE = {
     "AAPL": "Information Technology", "MSFT": "Information Technology",
     "NVDA": "Information Technology", "AVGO": "Information Technology",
@@ -146,8 +150,36 @@ def eligibility(px, vol):
             & (dollar_volume >= MIN_DOLLAR_VOLUME))
 
 
-def get_panel():
-    """Return prices, simple returns, the eligibility mask, sectors and the benchmark."""
+def pit_universe():
+    """Import ../pit-universe/data.py; its load() returns the point-in-time S&P 500 panel."""
+    spec = importlib.util.spec_from_file_location("pit_universe", PIT_UNIVERSE)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def get_panel(universe="today"):
+    """Return prices, simple returns, the eligibility mask, sectors and the benchmark.
+
+    universe="today" is the 190-name slice of the current index in UNIVERSE applied
+    back to 2003, and every number in the README comes from it. universe="pit" is
+    the full point-in-time panel from ../pit-universe: every name that was ever a
+    member, eligible only on the days it was one, with each series ending at its
+    last print instead of being carried forward. Sector labels come from the
+    latest list snapshot and are NaN for names no longer in the index.
+    """
+    if universe == "pit":
+        pit = pit_universe()
+        d = pit.load()
+        px, vol, member = d["px"], d["vol"], d["panel"]
+        bench = px[BENCHMARK]
+        names = [t for t in member.columns if t in px.columns]
+        px, vol = px[names], vol[names]
+        px = px.where(px > 0).ffill().where(px.bfill().notna())
+        eligible = eligibility(px, vol) & member[names]
+        sectors = pit.sectors_at(d["snapshots"], TEST_END).reindex(names).rename("sector")
+        return px, px.pct_change(), eligible, sectors, bench.pct_change()
+
     px, vol = download()
     bench = px[BENCHMARK]
     names = [t for t in sorted(UNIVERSE) if t in px.columns]
