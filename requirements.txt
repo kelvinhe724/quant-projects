@@ -17,3 +17,4 @@ skfolio
 purgedcv==0.1.5
 quantstats
 alpaca-py
+lxml

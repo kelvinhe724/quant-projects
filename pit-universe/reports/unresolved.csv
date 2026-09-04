@@ -1,0 +1,155 @@
+from,to,kind,ticker,name
+2007-11-29,2008-06-20,gone,ADCT,ADC Telecommunications
+2007-11-29,2008-06-20,gone,ASN,Archstone-Smith Trust
+2007-11-29,2008-06-20,gone,BOL,Bausch & Lomb
+2007-11-29,2008-06-20,gone,BMET,"Biomet, Inc."
+2007-11-29,2008-06-20,gone,DG,Dollar General
+2007-11-29,2008-06-20,gone,FDC,First Data
+2007-11-29,2008-06-20,gone,HLT,Hilton Hotels
+2007-11-29,2008-06-20,gone,KSE,Keyspan Energy
+2007-11-29,2008-06-20,gone,KMI,Kinder Morgan
+2007-11-29,2008-06-20,gone,HCR,Manor Care Inc.
+2007-11-29,2008-06-20,gone,MXIM,Maxim Integrated Prod
+2007-11-29,2008-06-20,gone,MEL,Mellon Bank Corp.
+2007-11-29,2008-06-20,gone,NCR,NCR Corp.
+2007-11-29,2008-06-20,gone,PD,Phelps Dodge
+2007-11-29,2008-06-20,gone,TSG,Sabre Holding Corp.
+2007-11-29,2008-06-20,gone,SANM,Sanmina-SCI Corp.
+2007-11-29,2008-06-20,gone,SLR,Solectron
+2007-11-29,2008-06-20,gone,SNV,Synovus Financial
+2007-11-29,2008-06-20,gone,TXU,TXU Corp.
+2007-11-29,2008-06-20,gone,TEK,"Tektronix, Inc."
+2007-11-29,2008-06-20,gone,TIN,Temple-Inland
+2007-11-29,2008-06-20,gone,UVN,Univision Communications
+2007-11-29,2008-06-20,new,ANF,Abercrombie & Fitch Co.
+2007-11-29,2008-06-20,new,AKAM,Akamai Technologies Inc
+2007-11-29,2008-06-20,new,ACAS,American Capital Strategies Ltd
+2007-11-29,2008-06-20,new,COV,Covidien Ltd.
+2007-11-29,2008-06-20,new,DDR,Developers Diversified Rlty
+2007-11-29,2008-06-20,new,DFS,Discover Financial Services
+2007-11-29,2008-06-20,new,EXPE,Expedia Inc.
+2007-11-29,2008-06-20,new,EXPD,Expeditors Int'l
+2007-11-29,2008-06-20,new,GGP,Genl Growth Properties
+2007-11-29,2008-06-20,new,HST,Host Hotels & Resorts
+2007-11-29,2008-06-20,new,ICE,IntercontinentalExchange Inc.
+2007-11-29,2008-06-20,new,MDLZ,Kraft Foods Inc-A
+2007-11-29,2008-06-20,new,JEF,Leucadia National Corp.
+2007-11-29,2008-06-20,new,MTW,Manitowoc Co.
+2007-11-29,2008-06-20,new,WFR,MEMC Electronic Materials
+2007-11-29,2008-06-20,new,NBL,Noble Energy Inc
+2007-11-29,2008-06-20,new,NYX,NYSE Euronext
+2007-11-29,2008-06-20,new,POM,Pepco Holdings Inc.
+2007-11-29,2008-06-20,new,TDC,Teradata Corp.
+2007-11-29,2008-06-20,new,ANDV,Tesoro Petroleum Co.
+2007-11-29,2008-06-20,new,TIE,Titanium Metals Corp
+2007-11-29,2008-06-20,new,TSS,Total System Services
+2007-11-29,2008-06-20,new,TEL,Tyco Electronics Ltd.
+2007-11-29,2008-06-20,new,GHC,Washington Post
+2008-06-20,2008-12-31,gone,BUD,Anheuser-Busch
+2008-06-20,2008-12-31,gone,BRL,Barr Pharmaceuticals Inc.
+2008-06-20,2008-12-31,gone,BSC,Bear Stearns Cos.
+2008-06-20,2008-12-31,gone,CC,Circuit City Group
+2008-06-20,2008-12-31,gone,CZN,Citizens Communications
+2008-06-20,2008-12-31,gone,CCU,Clear Channel Communications
+2008-06-20,2008-12-31,gone,CBH,Commerce Bancorp
+2008-06-20,2008-12-31,gone,DDS,Dillard Inc.
+2008-06-20,2008-12-31,gone,EDS,Electronic Data Systems
+2008-06-20,2008-12-31,gone,HET,Harrah's Entertainment
+2008-06-20,2008-12-31,gone,IACI,IAC/InterActive Corp.
+2008-06-20,2008-12-31,gone,LIZ,Liz Claiborne Inc.
+2008-06-20,2008-12-31,gone,MTG,MGIC Investment
+2008-06-20,2008-12-31,gone,SAF,SAFECO Corp.
+2008-06-20,2008-12-31,gone,SSP,Scripps (E. W.) 'A'
+2008-06-20,2008-12-31,gone,TEX,Terex Corp.
+2008-06-20,2008-12-31,gone,UST,UST Inc.
+2008-06-20,2008-12-31,gone,WM,Washington Mutual
+2008-06-20,2008-12-31,gone,WEN,Wendy's International
+2008-06-20,2008-12-31,gone,WWY,Wrigley (Wm) Jr.
+2008-06-20,2008-12-31,new,CAM,Cameron International Corp.
+2008-06-20,2008-12-31,new,CF,CF Industries Holdings Inc
+2008-06-20,2008-12-31,new,DVA,DaVita Inc.
+2008-06-20,2008-12-31,new,DPS,Dr Pepper Snapple Group
+2008-06-20,2008-12-31,new,DNB,Dun & Bradstreet
+2008-06-20,2008-12-31,new,FLS,Flowserve Corporation
+2008-06-20,2008-12-31,new,FTR,Frontier Communications
+2008-06-20,2008-12-31,new,DOC,HCP Inc.
+2008-06-20,2008-12-31,new,ISRG,Intuitive Surgical Inc.
+2008-06-20,2008-12-31,new,IVZ,Invesco Ltd.
+2008-06-20,2008-12-31,new,MA,Mastercard Inc.
+2008-06-20,2008-12-31,new,MFE,McAfee
+2008-06-20,2008-12-31,new,NDAQ,NASDAQ OMX Group
+2008-06-20,2008-12-31,new,PM,Philip Morris International
+2008-06-20,2008-12-31,new,PXD,Pioneer Natural Resources
+2008-06-20,2008-12-31,new,SNI,Scripps Networks Interactive Inc.
+2008-06-20,2008-12-31,new,SJM,Smucker (J.M.) (New)
+2008-06-20,2008-12-31,new,SWN,Southwestern Energy
+2008-06-20,2008-12-31,new,IRM,Iron Mountain Inc.
+2008-06-20,2008-12-31,new,WMI,Waste Management Inc.
+2008-06-20,2008-12-31,new,WEC,Wisconsin Energy Corporation
+2008-12-31,2009-06-10,gone,AW,Allied Waste Industries
+2008-12-31,2009-06-10,gone,ABI,Applera Corp-Applied Biosystems Group
+2008-12-31,2009-06-10,gone,DDR,Developers Diversified Rlty
+2008-12-31,2009-06-10,gone,GM,General Motors
+2008-12-31,2009-06-10,gone,GGP,Genl Growth Properties
+2008-12-31,2009-06-10,gone,HPC,Hercules Inc.
+2008-12-31,2009-06-10,gone,MER,Merrill Lynch
+2008-12-31,2009-06-10,gone,NCC,National City Corp.
+2008-12-31,2009-06-10,gone,NE,Noble Corporation
+2008-12-31,2009-06-10,gone,ROH,Rohm & Haas
+2008-12-31,2009-06-10,gone,SOV,Sovereign Bancorp
+2008-12-31,2009-06-10,gone,RIG,Transocean Inc. (New)
+2008-12-31,2009-06-10,gone,UIS,Unisys Corp.
+2008-12-31,2009-06-10,gone,WFT,Weatherford International Ltd.
+2008-12-31,2009-06-10,new,CEPH,Cephalon Inc
+2008-12-31,2009-06-10,new,DNR,Denbury Resources Inc.
+2008-12-31,2009-06-10,new,XRAY,Dentsply Intl
+2008-12-31,2009-06-10,new,DV,"DeVry, Inc."
+2008-12-31,2009-06-10,new,DO,Diamond Offshore Drilling
+2008-12-31,2009-06-10,new,EQT,EQT Corporation
+2008-12-31,2009-06-10,new,FLIR,FLIR Systems
+2008-12-31,2009-06-10,new,HCN,Health Care REIT
+2008-12-31,2009-06-10,new,LIFE,Life Technologies
+2008-12-31,2009-06-10,new,ES,Northeast Utilities
+2008-12-31,2009-06-10,new,ORLY,O'Reilly Auto Parts
+2008-12-31,2009-06-10,new,PBCT,People's United Bank
+2008-12-31,2009-06-10,new,RSG,Republic Services Inc.
+2008-12-31,2009-06-10,new,SCG,SCANA Corp.
+2008-12-31,2009-06-10,new,SRCL,Stericycle Inc.
+2008-12-31,2009-06-10,new,TWC,Time Warner Cable Inc.
+2008-12-31,2009-06-10,new,WYNN,Wynn Resorts Ltd
+2009-06-10,2009-12-31,gone,CIT,CIT Group
+2009-06-10,2009-12-31,gone,EQ,Embarq Corporation
+2009-06-10,2009-12-31,gone,ESV,ENSCO Int'l
+2009-06-10,2009-12-31,gone,TT,Ingersoll-Rand Co. Ltd.
+2009-06-10,2009-12-31,gone,MTW,Manitowoc Co.
+2009-06-10,2009-12-31,gone,TYC,Tyco International
+2009-06-10,2009-12-31,gone,WYE,Wyeth
+2009-06-10,2009-12-31,new,CFN,Carefusion Corporation
+2009-06-10,2009-12-31,new,FSLR,First Solar Inc
+2009-06-10,2009-12-31,new,PWR,Quanta Services Inc.
+2009-06-10,2009-12-31,new,RHT,Red Hat Inc.
+2009-06-10,2009-12-31,new,ROP,Roper Industries
+2009-06-10,2009-12-31,new,WDC,Western Digital
+2009-12-31,2010-05-08,gone,ACS,Affiliated Computer Services
+2009-12-31,2010-05-08,gone,BDK,Black & Decker Corp.
+2009-12-31,2010-05-08,gone,BNI,Burlington Northern Santa Fe Corp.
+2009-12-31,2010-05-08,gone,PBG,Pepsi Bottling Group
+2009-12-31,2010-05-08,gone,SGP,Schering-Plough
+2009-12-31,2010-05-08,gone,JAVA,Sun Microsystems
+2009-12-31,2010-05-08,new,BRK-B,Berkshire Hathaway
+2009-12-31,2010-05-08,new,WBD,Discovery Communications
+2009-12-31,2010-05-08,new,MXB,MSCI
+2009-12-31,2010-05-08,new,NRG,NRG Energy
+2009-12-31,2010-05-08,new,OKE,ONEOK
+2009-12-31,2010-05-08,new,URBN,Urban Outfitters
+2010-05-08,2010-12-07,gone,ASH,Ashland Inc.
+2010-05-08,2010-12-07,gone,CBE,Cooper Industries Ltd.
+2010-05-08,2010-12-07,gone,MXB,MSCI
+2010-05-08,2010-12-07,new,ARG,Airgas Inc
+2010-05-08,2010-12-07,new,APH,Amphenol Corp A
+2010-05-08,2010-12-07,new,BKNG,Priceline.com Inc
+2010-12-07,2011-06-29,gone,QLGC,QLogic Corp.
+2010-12-07,2011-06-29,new,NE,Noble Corp
+2013-06-18,2013-12-29,new,FOXA,Twenty-First Century Fox
+2016-06-26,2016-12-30,new,UAA,Under Armour
+2025-12-23,2026-06-30,new,ECHO,EchoStar

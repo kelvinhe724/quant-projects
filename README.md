@@ -1,6 +1,6 @@
 # Quant projects
 
-Twenty-eight projects from the OSG Global Quant Curriculum, each implemented from the
+Twenty-nine projects from the OSG Global Quant Curriculum, each implemented from the
 spec rather than from a reference solution. They run on real market data:
 Yahoo Finance for equity prices, the VIX and option chains, FRED for Treasury
 yields and the T-bill rate, the UCI archive for the credit dataset, Binance's
@@ -28,6 +28,7 @@ connection.
 | `funding-carry/` | Spot-long, perp-short funding carry on Binance BTCUSDT and ETHUSDT, 2020-2026, 7,211 eight-hour periods, fees, margin buffer and liquidation modelled | BTC funding 11.86%/yr simple, 92% of it the exchange's 0.01% floor; net Sharpe over T-bills 5.09 BTC, 5.86 ETH; excess over cash +12.6% in 2020, +23.7% in 2021, then +0.7%, +0.3%, +3.6%, -0.7%, -3.1% |
 | `fama-french/` | CAPM, FF3, FF5 and FF5+MOM time-series regressions on the 25 size/value portfolios and ten stocks, 1963-2026, GRS joint alpha test, inverse-vol blend of the long-short factors, pre/post-2010 split | FF3 lifts mean R² from 0.73 to 0.91 and halves mean abs alpha; every model rejected by GRS (FF3 3.66, p 7e-9); blend Sharpe 0.80 vs market 0.45 full sample, 0.22 vs 0.88 post-2010; SMB, HML, RMW, CMA all lose significance after 2010 |
 | `kalman-pairs/` | Kalman-filter hedge ratios on the 35 pairs and rules from `pairs-trading/`, state noise tuned on the 2015-2019 formation window, untouched 2020+ test | Adaptive hedge scores net out-of-sample Sharpe -0.16 against 0.08 for the frozen OLS beta; nothing in the state-noise grid beats it, the top of the grid finds gross Sharpe 0.51 and spends all of it on turnover |
+| `pit-universe/` | Point-in-time S&P 500 membership from Wikipedia change rows and 39 dated list snapshots, 893 names 2003-2026, then `momentum/` and `pairs-trading/` rerun on today's list vs the point-in-time panel with the same code, dates and costs | Equal-weight level bias +4.0%/yr, 3.2 of it from holding future members before they joined; 12-1 momentum gross return overstated +2.2%/yr in-sample and +6.3%/yr on the 2021+ test, all from the long leg; pairs screen bias -0.7%/yr, inside noise; 257 of 390 deleted names have no Yahoo prices so every number is a lower bound |
 
 ### Derivatives & Volatility
 

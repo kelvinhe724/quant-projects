@@ -1,0 +1,155 @@
+panel: 893 distinct names, 2003-06-02 to 2026-08-31, 5850 trading days
+sources: 39 list snapshots (2007-11-29 to 2026-09-04), 408 change rows (1976-07-01 to 2026-08-18)
+symbol renames applied: 71 (54 by hand, 17 matched on security name)
+unresolved snapshot differences: 154 (changes the table lacks; the panel snaps to the snapshot for these)
+today's list: 503 names
+
+Membership panel by year
+------------------------
+      members (median)  priced members (median)  additions  removals  change rows  snapshots  anchor corrections  priced share
+2003               493                      296          1         1            1          0                   0         0.601
+2004               493                      300          0         0            0          0                   0         0.607
+2005               493                      301          2         1            2          0                   0         0.612
+2006               494                      305          1         1            1          0                   0         0.618
+2007               494                      307          3         3           11          1                   0         0.622
+2008               496                      324         53        50            8          2                  87         0.643
+2009               500                      341         37        35           13          2                  49         0.680
+2010               499                      350         19        20           11          2                  18         0.699
+2011               498                      355         18        18           19          2                   2         0.713
+2012               498                      365         18        18           18          2                   0         0.734
+2013               497                      378         19        19           19          2                   1         0.758
+2014               499                      387         16        14           17          2                   2         0.774
+2015               501                      396         29        26           29          2                   3         0.793
+2016               504                      420         30        28           30          2                   1         0.830
+2017               505                      435         27        27           29          2                   0         0.862
+2018               505                      445         23        23           23          2                   0         0.881
+2019               505                      450         21        21           24          2                   0         0.893
+2020               505                      462         16        16           20          2                   0         0.914
+2021               505                      469         19        19           20          2                   0         0.928
+2022               503                      475         16        18           22          2                   0         0.944
+2023               503                      485         15        15           17          2                   2         0.962
+2024               503                      489         17        17           21          2                   0         0.971
+2025               503                      492         19        19           21          2                   0         0.981
+2026               503                      499         14        14           15          2                   2         0.994
+
+names removed from the index at some point: 390
+  with any price history on Yahoo: 133 (34%)
+  with prices on at least 90% of their member days: 121 (31%)
+  with no price history at all: 257
+names in today's list whose history Yahoo has already cut to a stub: 14 (CEG, DELL, DG, DOW, FOX, FOXA, GM, HLT, KMI, NWSA, PSKY, Q, SNDK, SW)
+
+Removed names recovered from Yahoo, by year of removal
+------------------------------------------------------
+year       2003  2005  2006  2007  2008  2009  2010  2011  2012  2013  2014  2015  2016  2017  2018  2019  2020  2021  2022  2023  2024  2025  2026
+recovered     0     0     0     0     8     5     2     1     2     2     3     3     6     7     9    10     8     9     5     9    12    12     8
+removed       1     1     1     3    46    21    20    17    17    15    12    25    27    24    23    19    16    19    18    15    17    19    14
+
+==============================================================================
+LEVEL OF THE BIAS: EQUAL-WEIGHT BASKETS
+==============================================================================
+
+Equal-weight annual return by universe
+--------------------------------------
+                                    in-sample final test     full
+today's members, full history         +16.61%    +16.95%  +16.70%
+today's members, only while members   +13.38%    +14.44%  +13.66%
+point-in-time members                 +12.64%    +12.72%  +12.66%
+SPY                                    +9.49%    +15.09%  +10.92%
+
+The first row is what every project in this repo was doing. The second keeps
+today's names but only from the day each one joined, so the gap between rows
+one and two is the "future winners held early" half of the bias, and the gap
+between rows two and three is the "losers deleted" half. Row three still lacks
+every removed name Yahoo no longer serves, so it understates the true index.
+
+==============================================================================
+MOMENTUM: 12-1 DECILE LONG-SHORT, SAME RULES, TWO UNIVERSES
+==============================================================================
+
+12-1 momentum, in-sample (2005-01-03 to 2020-12-31)
+---------------------------------------------------
+                                         today's members point-in-time difference (a - b)
+gross annual return                               -6.25%        -8.42%             +2.17%
+net annual return                                 -7.98%       -10.11%             +2.13%
+gross Sharpe                                       -0.14         -0.17              +0.03
+net Sharpe                                         -0.22         -0.24              +0.02
+annual vol                                        24.19%        27.95%             -3.76%
+max drawdown (net)                               -84.76%       -91.17%             +6.41%
+long leg                                         +18.34%        +9.90%             +8.44%
+short leg                                        -24.69%       -20.85%             -3.84%
+annual turnover                                     6.78          6.80              -0.02
+eligible names (median)                              401           367             +34.00
+share of long book outside today's list            0.00%        17.61%            -17.61%
+share of short book outside today's list           0.00%        32.31%            -32.31%
+
+12-1 momentum, final test (2021-01-01 to 2026-08-31)
+----------------------------------------------------
+                                         today's members point-in-time difference (a - b)
+gross annual return                               +6.39%        +0.03%             +6.35%
+net annual return                                 +4.50%        -1.80%             +6.29%
+gross Sharpe                                        0.36          0.13              +0.23
+net Sharpe                                          0.30          0.06              +0.23
+annual vol                                        28.21%        26.34%             +1.88%
+max drawdown (net)                               -35.72%       -33.57%             -2.15%
+long leg                                         +30.98%       +18.53%            +12.44%
+short leg                                        -20.84%       -17.45%             -3.39%
+annual turnover                                     6.46          6.71              -0.26
+eligible names (median)                              491           482              +9.00
+share of long book outside today's list            0.00%         4.50%             -4.50%
+share of short book outside today's list           0.00%        17.38%            -17.38%
+
+12-1 momentum, full (2005-01-03 to 2026-08-31)
+----------------------------------------------
+                                         today's members point-in-time difference (a - b)
+gross annual return                               -3.11%        -6.29%             +3.18%
+net annual return                                 -4.87%        -8.01%             +3.14%
+gross Sharpe                                        0.00         -0.10              +0.10
+net Sharpe                                         -0.07         -0.16              +0.09
+annual vol                                        25.30%        27.54%             -2.24%
+max drawdown (net)                               -88.78%       -93.55%             +4.77%
+long leg                                         +21.52%       +12.09%             +9.43%
+short leg                                        -23.70%       -19.98%             -3.73%
+annual turnover                                     6.70          6.78              -0.08
+eligible names (median)                              446           397             +49.00
+share of long book outside today's list            0.00%        14.18%            -14.18%
+share of short book outside today's list           0.00%        28.40%            -28.40%
+
+stock-days held past a name's last print (point-in-time book): 27
+
+==============================================================================
+PAIRS: WITHIN-SECTOR ENGLE-GRANGER SCREEN, SAME RULES, TWO UNIVERSES
+==============================================================================
+screening date 2019-12-31: sectors for the point-in-time universe come from the list snapshot of 2019-12-31
+
+pairs, formation
+----------------
+                    today's members point-in-time difference (a - b)
+gross annual return          +9.28%       +10.41%             -1.13%
+net annual return            +8.76%        +9.89%             -1.12%
+gross Sharpe                   5.02          4.26              +0.76
+net Sharpe                     4.75          4.06              +0.69
+max drawdown (net)           -1.14%        -1.67%             +0.53%
+trades                          970           962              +8.00
+hit rate                     81.86%        82.85%             -0.99%
+pairs                         40.00         40.00              +0.00
+names screened                  459           446             +13.00
+pairs tested                  11508         10511            +997.00
+
+pairs, out-of-sample
+--------------------
+                    today's members point-in-time difference (a - b)
+gross annual return          +1.17%        +1.84%             -0.67%
+net annual return            +0.69%        +1.35%             -0.66%
+gross Sharpe                   0.33          0.36              -0.03
+net Sharpe                     0.20          0.27              -0.07
+max drawdown (net)           -8.01%       -13.35%             +5.34%
+trades                         1296          1307             -11.00
+hit rate                     62.65%        62.66%             -0.01%
+pairs                         40.00         40.00              +0.00
+names screened                  459           446             +13.00
+pairs tested                  11508         10511            +997.00
+
+pairs chosen on both universes: 23 of 40 / 40
+names in the point-in-time selection that are no longer in the index: 7 (BBWI, HOG, NWL, PRGO, UAA, VFC, ZION)
+
+tables and charts written to /Users/kelvin/Documents/C.C. General Intelligence/quant-projects/pit-universe/reports/
