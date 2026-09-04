@@ -5,6 +5,7 @@ __pycache__/
 
 # copyrighted OSG course material and downloaded datasets
 source-material/
+betting-markets/data/
 
 # teaching scaffolding and interview prep, not part of the projects
 walk.py
@@ -12,3 +13,5 @@ DEFENSE.md
 !pairs-trading/reports/performance.csv
 !pairs-trading/reports/selected_pairs.csv
 !pairs-trading/reports/cost_sensitivity.csv
+momentum/reports/prices.csv
+momentum/reports/volumes.csv
