@@ -1,6 +1,6 @@
 # Premia book
 
-A paper-traded risk-premia book on one daily engine, run once per NYSE session into two books (the engine's own shadow fills and an Alpaca paper account). Built to the plan in `outputs/2026-09/2026-09-04_trading-framework-research/PLAN.md`; every number below is recomputed by `book/validate.py` and lives in `book/reports/`.
+A paper-traded risk-premia book on one daily engine, run once per NYSE session into two books (the engine's own shadow fills and an Alpaca paper account, or a simulated stand-in while there are no paper keys) through a broker layer that carries the kill switch and the limits. Built to the plan in `outputs/2026-09/2026-09-04_trading-framework-research/PLAN.md`; every number below is recomputed by `book/validate.py` and lives in `book/reports/`.
 
 Three versions so far. v1 was three sleeves at 1/N: ETF trend, FX carry through currency ETFs, long/flat crypto trend. v2 added a continuous EWMAC trend rule as a candidate. v3 (2026-09-04) moved the position buffer into the engine, ran EWMAC through the untouched window, compared four books on that window and put the winner live: **`beta+alpha`**, a vol-targeted 1/N of the 14 ETFs as the core and EWMAC on top, 1/2 each.
 
@@ -119,7 +119,7 @@ TrendETF's alpha is positive but not significant and its residual Sharpe sits un
 | Sleeve allocation | [skfolio 1.0.3](https://skfolio.org) | `RiskBudgeting` with `EmpiricalPrior(covariance_estimator=LedoitWolf())`. |
 | Walk-forward, DSR, PSR, MinBTL, MinTRL | [purgedcv 0.1.5](https://pypi.org/project/purgedcv/) (pinned) | Cross-checked against the retired `archive/framework-metrics-honesty.py` on the best-of-100-random case: DSR 0.6855 vs 0.6848, PSR identical. |
 | Tearsheet | [quantstats 0.0.81](https://github.com/ranaroussi/quantstats) | `book/reports/tearsheet.html`, SPY benchmark passed as a Series. |
-| Broker and crypto bars | [alpaca-py 0.44.0](https://github.com/alpacahq/alpaca-py) | Paper endpoint only; crypto bars need no key. |
+| Broker and crypto bars | [alpaca-py 0.44.0](https://github.com/alpacahq/alpaca-py), `book/broker.py` | Paper endpoint only; crypto bars need no key. The layer's kill switch, limits, reconciliation, simulated account, L2 fill model and dormant live adapters are described under Broker layer below. |
 | ETF bars | yfinance via `engine.load_yfinance` | Cached under `source-material/framework/yf/`; `auto_adjust=True`, so a re-pull can rewrite history (the daemon logs a fixed-window panel hash to make that visible). |
 | Rates | FRED (OECD `IR3TIB01*`) | FRED stopped updating the EUR and GBP series in 2026-01; `universe.RATE_FALLBACK` splices monthly averages of ECBDFR and SONIA on after each series' last print. The daemon re-downloads every series each run. |
 
@@ -131,7 +131,7 @@ All commands from `quant-projects/` with its venv (Python 3.14; do not install b
 
 ```
 .venv/bin/python3 framework/check.py                 # engine, 46 checks, offline, ~40 s
-.venv/bin/python3 framework/book/check.py            # sleeves, EWMAC, books, attribution, broker, daemon, 48 checks, offline
+.venv/bin/python3 framework/book/check.py            # sleeves, EWMAC, books, attribution, broker layer, L2 fills, daemon, offline
 .venv/bin/python3 -m framework.book.universe         # panel summary and hash
 .venv/bin/python3 -m framework.book.allocate         # ERC vs 1/N on the live book, writes reports/allocations.json
 .venv/bin/python3 -m framework.book.validate         # everything in validation.md, ~25 min (seven daily EWMAC runs)
@@ -151,17 +151,70 @@ res = run(sleeves("beta+alpha"), bars, config=book_config(kill=False, allocation
 res.metrics; res.by_year(); res.report("some/dir")
 ```
 
-Paper account: put `ALPACA_PAPER_KEY` and `ALPACA_PAPER_SECRET` in `framework/.env` (paper keys only; the file is gitignored and currently holds empty placeholders). `AlpacaBroker` constructs with `paper=True`, checks the client is in sandbox mode and that the base URL host is `paper-api.alpaca.markets`, and raises otherwise. Without keys the daemon runs the shadow book and skips Alpaca.
+Paper account: put `ALPACA_PAPER_KEY` and `ALPACA_PAPER_SECRET` in `framework/.env` (paper keys only; the file is gitignored and currently holds empty placeholders). With keys `AlpacaBroker` is in **paper** mode: it constructs with `paper=True`, checks the client is in sandbox mode and that the base URL host is `paper-api.alpaca.markets`, and raises otherwise. Without keys it is in **simulated** mode, says so on every run, and the ledger rows carry `simulated:` in their note. **As of 2026-09-05 the keys are empty, so the mode that is actually running is simulated.**
 
-Schedule: `book/com.kelvin.premia-book.plist` fires 15:45 Central Mon-Fri (16:45 ET).
+Schedule: `book/com.kelvinhe.premia-book.plist` fires 15:45 Central Mon-Fri (16:45 ET). Same label and command as before the broker layer; the plist was edited in place (a comment block documents the layer and the KILL file) and reloaded on 2026-09-05.
 
 ```
-cp framework/book/com.kelvin.premia-book.plist ~/Library/LaunchAgents/
-launchctl load ~/Library/LaunchAgents/com.kelvin.premia-book.plist
+launchctl bootout gui/$(id -u)/com.kelvinhe.premia-book        # if loaded
+cp framework/book/com.kelvinhe.premia-book.plist ~/Library/LaunchAgents/
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.kelvinhe.premia-book.plist
 launchctl list | grep premia
 ```
 
-The daemon refuses to run unless the newest bar is the last completed NYSE session, skips a session already in the ledger, cancels any orders still queued before submitting new ones, and rebuilds the shadow book by replaying the engine from `LIVE_START` (2026-08-31) on every run, so a missed day is caught up by the next run rather than by a state file. Its targets are what each sleeve holds with the engine's fresh sends laid over, so an instrument the buffer left alone is not re-traded at Alpaca.
+To stop all trading now: `touch framework/KILL`. The next run stops before it fetches a bar, and in paper mode cancels anything still queued. Delete the file to restart; the session that was skipped is picked up by the next run.
+
+The daemon refuses to run unless the newest bar is the last completed NYSE session, skips a session whose shadow and alpaca rows are both in the ledger, cancels any orders still queued before submitting new ones, and rebuilds the shadow book by replaying the engine from `LIVE_START` (2026-08-31) on every run, so a missed day is caught up by the next run rather than by a state file. Its targets are what each sleeve holds with the engine's fresh sends laid over, so an instrument the buffer left alone is not re-traded at Alpaca.
+
+## Broker layer
+
+`book/broker.py`, added 2026-09-05. One set of targets from the shadow book, one `AlpacaBroker` that is either the paper account or a simulated one, and the safety in the layer rather than in any strategy. `book/check.py` covers all of it offline; `walk.py` (gitignored) is a press-Enter tour on synthetic bars.
+
+**Modes.** `AlpacaBroker()` never raises for want of keys any more. With paper keys in `.env` it is `mode == "paper"` and talks to `paper-api.alpaca.markets` only (host and sandbox checked at construction). Without them it is `mode == "simulated"`: a `SimulatedAccount` rebuilt on every run from the ledger's own `simulated:` alpaca rows, the way the shadow book is rebuilt from the engine. An order recorded on session D's row fills at the open of the next session in the bars (Alpaca paper's own convention for a market order queued after the close), a limit fills at the better of the open and the limit if the day's range touched it and otherwise stays pending, and a crypto order fills at the second it was submitted through the L2 model below. No commission, no spread, no partials, no borrow, cash can go negative: it is a stand-in for Alpaca paper, which charges none of that either, and it is more optimistic than Alpaca paper because it has no random partial fills. There is no live mode in this class and no key it could read that would make one.
+
+**Order routing.** `build_orders` turns weights into alpaca request objects: market by default, `LimitOrderRequest` for any name given a `limit_prices` entry, longs by notional, shorts in whole shares, sign flips closed first, Carver's 10% buffer and a $25 floor. The daemon sends market orders only.
+
+**Kill switch.** `framework/KILL`. `killed()` is checked at the top of `run_once` before any data is fetched, and again inside every adapter's `submit`. Paper mode cancels queued orders on the way out. Every halt the layer raises (`Halted`) appends its reason and a timestamp to the same file, so a limit breach, a reconciliation failure and a hand-placed kill all leave the same trace and need the same restart: read it, delete it, rerun. The daemon then writes no alpaca row for that session, so a rerun trades it.
+
+**Limits** (`Limits`, enforced in `submit`, not in the strategy): gross at most 3.0x equity, any one name at most 0.5x, and equity no more than 3% below the previous run's ledger equity. A breach halts before anything is sent, and in paper mode the cancel of anything still queued runs before the check, so a halt leaves no order from an earlier crashed run waiting for the open. `submit` refuses orders given without targets, so nothing leaves the layer unchecked. The engine's own overlay (10% vol target, 3x gross, drawdown cuts) is what keeps the book well inside these; the layer's numbers are the fence, not the target.
+
+**Reconciliation.** Every run, before ordering, the account's weights are checked against what the previous ledger row of the same mode implies: a name that run sent an order for should sit at that run's target, everything else at what was held. Any name off by more than 5% of equity halts, with the list in the KILL file. Drift from one day's price move is well inside that; an Alpaca partial fill of a large position is not, on purpose. The first run has nothing to reconcile against and says so.
+
+**Dormant live adapters.** `AlpacaLive`, `IBKRBroker` (ib_insync, TWS paper port 7497 by default, 7496 is live) and `KalshiLive` (wrapping `kalshi-desk/kalshi.py`'s client in `prod`) all call `live_gate` on their first line, which raises unless `LIVE_ENABLED=true` is in `framework/.env` (or the process environment; `read_env` lets the environment win) **and** the caller passed `confirm="LIVE YYYY-MM-DD"` for today **and** no KILL file exists. Only then is a live key read (`read_env` takes the key names it may return, and skips every other line before parsing its value). The daemon never constructs any of them; there is no flag that would make it. Checks: each of the three refuses in four configurations (no `LIVE_ENABLED`, no token, yesterday's token, `LIVE_ENABLED=false`) with the spy showing only `LIVE_ENABLED` was read, and refuses with both locks open while KILL exists. With both open, `AlpacaLive` reads the live key and constructs against `api.alpaca.markets`; `IBKRBroker` gets past the gate and stops at the import (ib_insync is not installed, on purpose); `KalshiLive` stops at kalshi-desk's own `LIVE_TRADING` lock, so that one has three locks. None of the three has been run against a real endpoint; `IBKRBroker`'s order mapping is written to the ib_insync docs and untested.
+
+**Simulated crypto fills** (`book/l2fill.py`). Against the data lake's `crypto_l2` stream (top 20 levels, once a second, Bybit spot with OKX fallback, from 2026-09-05). A market order walks the far side of the first snapshot within 5 s of the order time; if the visible 20 levels run out the remainder is priced at the last level and flagged. A limit order that crosses the touch fills at once up to its price; otherwise it joins behind whatever rests at its price and is worked through the following snapshots for an hour: a drop in resting size at the price counts as executions ahead of it (never as cancels, so fills come early), and the far touch reaching the price fills the rest. Both are tested on planted books, and both ran against the real stream on 2026-09-05 (0.5 BTC market buy at 79,575.40 against a 79,575.30 bid; a 0.2 BTC limit at the touch filled in 45 s). `SimulatedAccount` routes BTC/USD and ETH/USD orders through it, falling back to the daily bar's open when the lake has no row for that second. The live book (`beta+alpha`) has no crypto sleeve, so this path is wired and idle until one is promoted.
+
+## Daily report
+
+`book/report.py` writes the desk summary the morning brief reads (`agents/morning.md`, Task 10 and the DESK section). It is read-only: it opens `ledger.csv`, the bar files the daemon already cached under `source-material/framework/`, `kalshi-desk/ledger.sqlite` on a `mode=ro` connection, `data-lake/reports/status.json`, `framework/KILL` and `launchctl list`. It never imports `read_env` or `AlpacaBroker` (a check enforces this), never downloads, never writes to a ledger.
+
+```
+.venv/bin/python3 -m framework.book.report     # about 2 s; prints the three headline lines
+```
+
+Output, every run: `book/reports/daily/<date>.md` (the full report), `book/reports/daily/<date>.json` and `book/reports/latest.json` (the same compact JSON, fixed path for the brief) and `book/reports/alerts.json`. `<date>` is the run date in Chicago; the book numbers inside are for the last session in the ledger.
+
+What is in it:
+
+- **Book.** Equity, day and since-`LIVE_START` P&L, drawdown from the equity path, gross against the overlay's 3x cap, the largest name against the broker's 50% per-name limit, the day's loss against its 3% daily-loss limit, held and target weights, the account row if there is one. **Per-sleeve P&L, gross and net, drawdown and cap usage come from replaying the shadow book** from `LIVE_START` on the cached bars of the ledger's last session, the same replay the daemon does; gross is net plus that day's commission and slippage for the sleeve (borrow stays in both). If any bar file for that session is missing the replay is skipped and the report says so; it does not download. Before the replay exists (or when it is skipped) equity comes from the ledger rows, and rows before 2026-09-04 are the v1 book, so a drawdown read across that boundary compares two books.
+- **Risk.** One-day parametric VaR (95, 99) of the held weights under a Ledoit-Wolf covariance (`sklearn`) on the last 250 cached daily returns, in fraction of equity and dollars, with the model's annualised vol against the 10% target and the realised 20-day vol of the same weights. Gaussian, so a scale rather than a bound. `../risk-model/` does not exist yet; when it does, swap it in here.
+- **Kalshi shadow desk.** Per book with any fills: fills, settled, open contracts and dollars at risk, P&L gross and net on dollars staked, mean payoff and t, Brier, through `kalshi-desk/paper.py`'s own `stats` and `exposure` so the numbers match `paper.py stats`. The backtest line it is being tested against sits beside it.
+- **Data lake.** `status.json`'s verdict and age, stale and duplicated datasets, the last row per dataset.
+- **Daemons.** `launchctl list` for the six `com.kelvinhe.*` jobs (pid, last exit status), the ledger's last run and last session against the last completed NYSE session, `daemon.log`'s mtime, the KILL file, and the broker layer's reconciliation rerun on the ledger (the last account row against what the row before it said would be held, `RECON_TOL` 5%).
+
+Alerts (`alerts.json`, and the third headline line), in this order: `kill` (KILL file present, with the reason written in it), `drawdown` (book or sleeve past the 15% half-size line or 25% kill, a sleeve over 3x gross, a name over 50%, a day past the 3% loss limit), `daemon` (the last NYSE session not in the ledger by 19:00 ET, a job unloaded or with a nonzero exit status, no Kalshi mark for 6 hours), `feed` (lake not ok, a stale dataset, `status.json` older than 3 hours or missing), `reconcile` (an account row off the ledger by more than 5% on a name, the panel hash moving between the last two shadow rows).
+
+`book/com.kelvinhe.desk-report.plist` fires the report at 07:30 local every day (optional: the brief's Task 10 runs it itself, so the job only matters if you want the files before the brief). Not loaded by default; `cp` to `~/Library/LaunchAgents/` and `launchctl bootstrap gui/$(id -u) ...` as for the book.
+
+Checks live at the end of `book/check.py`: synthetic ledgers with a peak and drop, a missing session, a broken and an unloaded launchd job, stale and old and missing `status.json`, account rows inside and outside the reconciliation tolerance, a moved panel hash, a KILL file, a day past the loss limit, VaR on white noise (1.645 sigma, linear in the weight, zero with no positions, an uncached name dropped), a temporary Kalshi ledger with one settled bet, and the written files.
+
+Limitations of the report itself:
+
+- The drawdown is peak-to-now on the shadow equity path since `LIVE_START`, five sessions old at the time of writing; it says nothing about the backtest's -12% until the live path is long enough to have one.
+- VaR uses close-to-close returns of the cached files and ignores the crypto sleeve unless a coin is held; there is no stress or historical VaR, and the covariance is on 250 days, which is one regime.
+- Daemon health is inferred from files and `launchctl`, not from the process: a job that runs and writes nothing (the daemon's own "already in the ledger" path) looks the same as one that never fired until the next session is missed.
+- The panel-hash alert fires on the first run after any change to `HASH_START` or the hash window, not only on rewritten history; the two ledger rows at the time of writing differ for that reason.
+- The Kalshi shadow book's P&L is the optimistic fill (README there); the report prints it as recorded.
 
 ## Limitations
 
@@ -169,7 +222,7 @@ From the plan's risk register, still true:
 
 - **#3, no futures.** Yahoo `=F` continuous contracts are unadjusted front-month splices; there is no free back-adjusted series. The book is ETFs only until an IB paper account and a proper roll exist. That means no short-vol, no ags beyond DBA, no rates beyond IEF/TLT.
 - **#4, ETF proxies.** USO and DBC carry contango roll drag and USO restructured in 2020; TLT is not ZB duration; the currency ETFs charge 0.40% and CurrencyShares has delisted several (FXS, FXSG gone); nothing here is leveraged or inverse. The trend project's own ETF-vs-futures gap discussion applies unchanged.
-- **#5, Alpaca paper flatters.** NBBO fills, no slippage or impact, no borrow on shorts, random 10% partial fills, no crypto shorts, no fractional shorts. The shadow book charges all of that; read Alpaca-minus-shadow in `reports/index.html` as the optimism gap, not as skill. Partial fills are re-reconciled on the next run.
+- **#5, Alpaca paper flatters.** NBBO fills, no slippage or impact, no borrow on shorts, random 10% partial fills, no crypto shorts, no fractional shorts. The shadow book charges all of that; read Alpaca-minus-shadow in `reports/index.html` as the optimism gap, not as skill. A partial fill large enough to leave a name 5% of equity off its target halts the book (see Broker layer); smaller ones are re-reconciled on the next run. The simulated account flatters more still: every order fills in full at the open.
 
 Also:
 
@@ -179,6 +232,11 @@ Also:
 - Ledger rows dated before 2026-09-04 are the v1 book; the 2026-09-03 row was also written before the rate fix below. They are left in place because the ledger is append-only. The first live-book run replays `beta+alpha` from `LIVE_START` and moves the paper account to it in one session.
 - Yahoo's daily bar is not always final at 16:45 ET; a bar that later changes shows up as a panel-hash change in the ledger, not as a corrected fill.
 - The untouched window has been read once now, for the decision above. It is spent: any further change to the book that is judged on it is in-sample.
+- The broker layer's limits are checked on the post-trade book once a day, when the daemon runs. Nothing watches the account intraday; a 3% daily loss is caught at 16:45 ET, not when it happens. That is what a once-a-session daemon can do.
+- The daily loss limit compares to the previous ledger row's equity, so a weekend or a missed run stretches "daily" to whatever the gap was.
+- Reconciliation reads weights, not shares, and its tolerance is per name; a small error on every name adds up to nothing it would catch.
+- The simulated account has no market impact, no partials and no rejected orders, so it cannot surface any of the things the paper account exists to surface. It keeps the ledger, the reconciliation and the kill path exercised until keys exist, and nothing more.
+- The queue model in `l2fill` is optimistic by construction (drops in resting size are trades, never cancels) and the stream has no sequence numbers, so a dropped delta corrupts the book until the next reconnect (`data-lake/README.md`). Its numbers are an upper bound on fill quality.
 
 ## Audit, 2026-09-04
 

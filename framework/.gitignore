@@ -1,6 +1,12 @@
 .env
 *.log
 *.sqlite
-*.plist
+*.plist*
 __pycache__/
 **/ledger.csv
+DEFENSE.md
+walk.py
+KILL
+book/reports/daily/
+book/reports/latest.json
+book/reports/alerts.json

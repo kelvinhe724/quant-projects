@@ -9,6 +9,33 @@
     "ETFBeta": 0.3516,
     "EWMAC": 0.6484
   },
+  "candidate": {
+    "allocator": "mvo",
+    "weights": {
+      "ETFBeta": 0.75,
+      "EWMAC": 0.59
+    },
+    "params": {
+      "risk_aversion": 1.0,
+      "target_vol": 0.1,
+      "max_gross": 1.5,
+      "max_net": 1.5,
+      "max_sleeve": 0.75,
+      "turnover": 0.5,
+      "kelly": 0.5,
+      "financing_spread_bps": 50.0
+    },
+    "fit": {
+      "status": "optimal",
+      "budgeted": false,
+      "budget_bound": false,
+      "vol_bound": true,
+      "kelly_scaled": false,
+      "budget_dropped": false,
+      "leverage": 1.3400106298473946,
+      "cov": "ledoit-wolf"
+    }
+  },
   "fit_date": "2026-08-31",
   "window_days": 756,
   "oos": {
