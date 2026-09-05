@@ -1,0 +1,54 @@
+11,123 markets with candles of 14,560 in the snapshot, 2026-06-26 to 2026-09-03, data hash 1dba9788b70a5d57
+untouched window from 2026-08-25: 2,318 markets, not yet opened
+walk-forward:
+  fold 1: picked logit+platt (val log-loss 0.4400), 38s
+  fold 2: picked logit+isotonic (val log-loss 0.4745), 73s
+  fold 3: picked bias (val log-loss 0.4473), 107s
+  fold 4: picked bias (val log-loss 0.4545), 142s
+     train_start   train_end  test_start    test_end  n_train  n_test          picked  picked_val_log_loss  picked_test_log_loss  baseline_test_log_loss  market_test_log_loss
+fold                                                                                                                                                                          
+1     2026-06-26  2026-07-22  2026-07-23  2026-08-01     2699    1467     logit+platt             0.439953              0.442984                0.442984              0.449536
+2     2026-06-26  2026-07-31  2026-08-01  2026-08-09     4237    1467  logit+isotonic             0.474530              0.448977                0.441960              0.442724
+3     2026-06-26  2026-08-08  2026-08-09  2026-08-17     5677    1467            bias             0.447300              0.443865                0.446542              0.447550
+4     2026-06-26  2026-08-16  2026-08-17  2026-08-24     7205    1467            bias             0.454506              0.446346                0.443364              0.449517
+chosen for the untouched window: bias
+untouched window opened now; result stored in reports/untouched.json
+
+Walk-forward OOS, every variant on the stitched test folds, headline cost scenario:
+
+| variant | log_loss | brier | reliability | n_bets | mean_payoff | t | sharpe | max_drawdown |
+|---|---|---|---|---|---|---|---|---|
+| logit+none | 0.4439 | 0.1463 | 0.0005 | 2131.0000 | -0.0305 | -2.2299 | -2.4851 | -0.0590 |
+| logit+isotonic | 0.4469 | 0.1468 | 0.0007 | 2447.0000 | -0.0084 | -0.6578 | -0.8438 | -0.0526 |
+| logit+platt | 0.4437 | 0.1463 | 0.0005 | 1913.0000 | -0.0436 | -2.8885 | -1.5159 | -0.0534 |
+| hgb+none | 0.4582 | 0.1517 | 0.0015 | 2897.0000 | -0.0422 | -2.4181 | -8.4411 | -0.2267 |
+| hgb+isotonic | 0.4543 | 0.1500 | 0.0003 | 2617.0000 | -0.1086 | -5.1574 | -11.2909 | -0.2519 |
+| hgb+platt | 0.4532 | 0.1498 | 0.0003 | 2390.0000 | -0.1559 | -6.0517 | -12.4986 | -0.5115 |
+| mlp+none | 0.4462 | 0.1468 | 0.0004 | 1831.0000 | -0.1146 | -4.1820 | -0.0425 | -0.1582 |
+| mlp+isotonic | 0.4449 | 0.1468 | 0.0007 | 2215.0000 | -0.0120 | -0.5324 | 2.6991 | -0.0589 |
+| mlp+platt | 0.4538 | 0.1482 | 0.0014 | 2960.0000 | -0.2239 | -9.0586 | -14.1709 | -0.4497 |
+| bias | 0.4431 | 0.1464 | 0.0005 | 2368.0000 | -0.0074 | -0.6485 | 3.8662 | -0.0251 |
+| market | 0.4473 | 0.1475 | 0.0018 | 0.0000 | nan | nan | nan | nan |
+| hgb+none+settle_volume | 0.4435 | 0.1471 | 0.0010 | 3056.0000 | 0.0245 | 1.0956 | 9.0374 | -0.0435 |
+| selected | 0.4455 | 0.1466 | 0.0005 | 2399.0000 | -0.0126 | -0.9867 | -0.8070 | -0.0453 |
+
+Untouched window 2026-08-25 on, 2,318 markets, trained on 8,627:
+
+| variant | log_loss | brier | reliability | n_bets | mean_payoff | t | sharpe | max_drawdown |
+|---|---|---|---|---|---|---|---|---|
+| bias, mid, no cost | 0.5139 | 0.1719 | 0.0016 | 897.0000 | -0.0364 | -1.5945 | -8.4390 | -0.0521 |
+| bias, quoted spread | 0.5139 | 0.1719 | 0.0016 | 897.0000 | -0.0488 | -2.1736 | -10.5687 | -0.0619 |
+| bias, quoted spread + fee | 0.5139 | 0.1719 | 0.0016 | 871 | -0.0648 | -2.9531 | -11.8324 | -0.0603 |
+| bias, kelly rule, quoted spread + fee | 0.5139 | 0.1719 | 0.0016 | 1116.0000 | -0.0565 | -3.1228 | -14.5850 | -0.0654 |
+| logit+platt, mid, no cost | 0.5136 | 0.1718 | 0.0019 | 774.0000 | -0.0114 | -0.4567 | -7.6255 | -0.0568 |
+| logit+platt, quoted spread | 0.5136 | 0.1718 | 0.0019 | 774.0000 | -0.0256 | -1.0467 | -10.6348 | -0.0842 |
+| logit+platt, quoted spread + fee | 0.5136 | 0.1718 | 0.0019 | 684 | -0.0561 | -2.3293 | -13.8204 | -0.0980 |
+| logit+platt, kelly rule, quoted spread + fee | 0.5136 | 0.1718 | 0.0019 | 881.0000 | -0.0467 | -2.3822 | -14.1228 | -0.0727 |
+| market, mid, no cost | 0.5097 | 0.1708 | 0.0004 | 0.0000 | nan | nan | nan | nan |
+| market, quoted spread | 0.5097 | 0.1708 | 0.0004 | 0.0000 | nan | nan | nan | nan |
+| market, quoted spread + fee | 0.5097 | 0.1708 | 0.0004 | 0.0000 | nan | nan | nan | nan |
+| market, kelly rule, quoted spread + fee | 0.5097 | 0.1708 | 0.0004 | 0.0000 | nan | nan | nan | nan |
+
+Headline (bias, quoted spread + fee): log-loss 0.5139 vs market 0.5097 and bias curve 0.5139; Brier 0.1719 vs 0.1708 / 0.1719; 871 bets, -0.0648 per dollar (t -2.95), Sharpe -11.83, DSR 0.001 over 20 trials
+lake: {'rows': 30000, 'tickers': 7121, 'snapshots': 6, 'first': '2026-09-05 01:07:21+00:00', 'last': '2026-09-05 05:15:05+00:00', 'settled': 0}
+models saved: {'chosen': '0ee881a512f0', 'baseline': 'a45df96b92e5'}; 20 trials in the registry; 143s
