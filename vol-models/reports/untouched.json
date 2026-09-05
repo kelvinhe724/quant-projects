@@ -1,0 +1,380 @@
+{
+  "start": "2022-01-04",
+  "end": "2026-09-03",
+  "n_sessions": 1171,
+  "data_hash": "5006a92054c4fdae",
+  "opened_at": "2026-09-04T20:43:07",
+  "result": {
+    "reads": {
+      "chosen": {
+        "model": "gjr",
+        "q": 0.75
+      },
+      "baseline": {
+        "model": "none",
+        "q": 0.0
+      },
+      "best_forecast": {
+        "model": "gjr",
+        "q": 0.75
+      }
+    },
+    "scores": {
+      "5": {
+        "naive": {
+          "rmse": 0.1597846025271738,
+          "mae": 0.10539962399129163,
+          "bias": 5.196247338859317e-05,
+          "qlike": 1.1466441636164053,
+          "corr": 0.4031796890788116,
+          "n": 24486
+        },
+        "har": {
+          "rmse": 0.12828201215400348,
+          "mae": 0.08156870082417235,
+          "bias": -0.027135677518919266,
+          "qlike": 0.6390394609671105,
+          "corr": 0.5161984796695126,
+          "n": 24420
+        },
+        "garch": {
+          "rmse": 0.13234182927430013,
+          "mae": 0.09086732673526784,
+          "bias": 0.023371139044299546,
+          "qlike": 0.4769353886822447,
+          "corr": 0.5055901674815936,
+          "n": 24486
+        },
+        "gjr": {
+          "rmse": 0.13302370556575002,
+          "mae": 0.09073517591935323,
+          "bias": 0.023995484306668993,
+          "qlike": 0.4754353773511541,
+          "corr": 0.5138704754581274,
+          "n": 24486
+        },
+        "lgb": {
+          "rmse": 0.1270618420288758,
+          "mae": 0.08142731348933721,
+          "bias": -0.014038567424318037,
+          "qlike": 0.5502996865655153,
+          "corr": 0.5243806455002898,
+          "n": 24420
+        }
+      },
+      "21": {
+        "naive": {
+          "rmse": 0.1076826427375338,
+          "mae": 0.07373238807152167,
+          "bias": -0.0006039005146696171,
+          "qlike": 0.32841400118089775,
+          "corr": 0.5819379480687978,
+          "n": 24150
+        },
+        "har": {
+          "rmse": 0.09159571781475102,
+          "mae": 0.061569179935070474,
+          "bias": -0.01908070932852243,
+          "qlike": 0.2671771841835915,
+          "corr": 0.6530395538549515,
+          "n": 24084
+        },
+        "garch": {
+          "rmse": 0.09561429171811528,
+          "mae": 0.06607493155040697,
+          "bias": 0.010250510836332456,
+          "qlike": 0.22453199950093747,
+          "corr": 0.6365715393511946,
+          "n": 24150
+        },
+        "gjr": {
+          "rmse": 0.09630367202869954,
+          "mae": 0.06581983147216619,
+          "bias": 0.010767595672414126,
+          "qlike": 0.22298766591418992,
+          "corr": 0.6452526060180604,
+          "n": 24150
+        },
+        "lgb": {
+          "rmse": 0.0965000891937049,
+          "mae": 0.06400725483309379,
+          "bias": -0.007759446898014642,
+          "qlike": 0.23850088603383238,
+          "corr": 0.6196078290544176,
+          "n": 24084
+        }
+      }
+    },
+    "dm_pooled": {
+      "5": {
+        "qlike": {
+          "naive vs har": 13.53,
+          "naive vs garch": 15.63,
+          "naive vs gjr": 15.28,
+          "naive vs lgb": 15.14,
+          "har vs naive": -13.53,
+          "har vs garch": 8.99,
+          "har vs gjr": 8.39,
+          "har vs lgb": 5.43,
+          "garch vs naive": -15.63,
+          "garch vs har": -8.99,
+          "garch vs gjr": 0.33,
+          "garch vs lgb": -5.24,
+          "gjr vs naive": -15.28,
+          "gjr vs har": -8.39,
+          "gjr vs garch": -0.33,
+          "gjr vs lgb": -5.13,
+          "lgb vs naive": -15.14,
+          "lgb vs har": -5.43,
+          "lgb vs garch": 5.24,
+          "lgb vs gjr": 5.13
+        },
+        "mse": {
+          "naive vs har": 9.29,
+          "naive vs garch": 10.14,
+          "naive vs gjr": 9.65,
+          "naive vs lgb": 9.59,
+          "har vs naive": -9.29,
+          "har vs garch": -2.01,
+          "har vs gjr": -1.81,
+          "har vs lgb": 0.76,
+          "garch vs naive": -10.14,
+          "garch vs har": 2.01,
+          "garch vs gjr": -0.75,
+          "garch vs lgb": 2.62,
+          "gjr vs naive": -9.65,
+          "gjr vs har": 1.81,
+          "gjr vs garch": 0.75,
+          "gjr vs lgb": 2.52,
+          "lgb vs naive": -9.59,
+          "lgb vs har": -0.76,
+          "lgb vs garch": -2.62,
+          "lgb vs gjr": -2.52
+        }
+      },
+      "21": {
+        "qlike": {
+          "naive vs har": 4.57,
+          "naive vs garch": 8.89,
+          "naive vs gjr": 9.26,
+          "naive vs lgb": 7.36,
+          "har vs naive": -4.57,
+          "har vs garch": 3.4,
+          "har vs gjr": 3.2,
+          "har vs lgb": 2.51,
+          "garch vs naive": -8.89,
+          "garch vs har": -3.4,
+          "garch vs gjr": 0.44,
+          "garch vs lgb": -1.53,
+          "gjr vs naive": -9.26,
+          "gjr vs har": -3.2,
+          "gjr vs garch": -0.44,
+          "gjr vs lgb": -1.6,
+          "lgb vs naive": -7.36,
+          "lgb vs har": -2.51,
+          "lgb vs garch": 1.53,
+          "lgb vs gjr": 1.6
+        },
+        "mse": {
+          "naive vs har": 3.99,
+          "naive vs garch": 5.59,
+          "naive vs gjr": 5.38,
+          "naive vs lgb": 2.34,
+          "har vs naive": -3.99,
+          "har vs garch": -1.53,
+          "har vs gjr": -1.51,
+          "har vs lgb": -1.33,
+          "garch vs naive": -5.59,
+          "garch vs har": 1.53,
+          "garch vs gjr": -0.62,
+          "garch vs lgb": -0.2,
+          "gjr vs naive": -5.38,
+          "gjr vs har": 1.51,
+          "gjr vs garch": 0.62,
+          "gjr vs lgb": -0.03,
+          "lgb vs naive": -2.34,
+          "lgb vs har": 1.33,
+          "lgb vs garch": 0.2,
+          "lgb vs gjr": 0.03
+        }
+      }
+    },
+    "beats_naive_5pct": {
+      "5": {
+        "har": 21,
+        "garch": 21,
+        "gjr": 21,
+        "lgb": 21
+      },
+      "21": {
+        "har": 14,
+        "garch": 20,
+        "gjr": 20,
+        "lgb": 13
+      }
+    },
+    "spy": {
+      "naive": {
+        "rmse": 0.07379321933010516,
+        "mae": 0.047066552533887064,
+        "bias": 0.0006352363252773857,
+        "qlike": 0.3287255187426783,
+        "corr": 0.5085026222581326,
+        "n": 1150.0
+      },
+      "har": {
+        "rmse": 0.06280420259618222,
+        "mae": 0.04122782100561444,
+        "bias": -0.01139898277165075,
+        "qlike": 0.2774027643969474,
+        "corr": 0.5601118794210327,
+        "n": 1148.0
+      },
+      "garch": {
+        "rmse": 0.07011720276706976,
+        "mae": 0.04642117974919828,
+        "bias": 0.01583936558251592,
+        "qlike": 0.2315757407332526,
+        "corr": 0.535111888745424,
+        "n": 1150.0
+      },
+      "gjr": {
+        "rmse": 0.06247854766663153,
+        "mae": 0.041458897478590065,
+        "bias": 0.00483203391015218,
+        "qlike": 0.21799959721991632,
+        "corr": 0.6049384142082737,
+        "n": 1150.0
+      },
+      "lgb": {
+        "rmse": 0.06714856853998458,
+        "mae": 0.04362918264367206,
+        "bias": 0.002132070115481383,
+        "qlike": 0.23481931875899464,
+        "corr": 0.5563048251190558,
+        "n": 1148.0
+      },
+      "vix": {
+        "rmse": 0.06773566084588832,
+        "mae": 0.05309069419659777,
+        "bias": 0.03442827620955028,
+        "qlike": 0.24934981909408416,
+        "corr": 0.629538825337741,
+        "n": 1150.0
+      }
+    },
+    "spy_dm": {
+      "naive vs har": 1.26,
+      "naive vs garch": 2.16,
+      "naive vs gjr": 2.46,
+      "naive vs lgb": 2.26,
+      "naive vs vix": 1.41,
+      "har vs naive": -1.26,
+      "har vs garch": 1.36,
+      "har vs gjr": 1.8,
+      "har vs lgb": 1.56,
+      "har vs vix": 0.62,
+      "garch vs naive": -2.16,
+      "garch vs har": -1.36,
+      "garch vs gjr": 0.88,
+      "garch vs lgb": -0.14,
+      "garch vs vix": -0.88,
+      "gjr vs naive": -2.46,
+      "gjr vs har": -1.8,
+      "gjr vs garch": -0.88,
+      "gjr vs lgb": -0.89,
+      "gjr vs vix": -1.2,
+      "lgb vs naive": -2.26,
+      "lgb vs har": -1.56,
+      "lgb vs garch": 0.14,
+      "lgb vs gjr": 0.89,
+      "lgb vs vix": -0.5,
+      "vix vs naive": -1.41,
+      "vix vs har": -0.62,
+      "vix vs garch": 0.88,
+      "vix vs gjr": 1.2,
+      "vix vs lgb": 0.5
+    },
+    "trading": {
+      "chosen": {
+        "config": {
+          "model": "gjr",
+          "q": 0.75
+        },
+        "threshold": 0.05763788867929263,
+        "sharpe": 0.9478903452708487,
+        "annual_return": 0.053794015903466885,
+        "annual_vol": 0.056993486341406135,
+        "max_drawdown": -0.029289565880581514,
+        "start": "2022-02-01",
+        "end": "2026-06-01",
+        "n_obs": 179,
+        "sharpe_full": 0.3709185896626166,
+        "annual_return_full": 0.00825808710921924,
+        "time_in_market": 0.15286080273270708,
+        "max_drawdown_full": -0.029289565880581514,
+        "dsr": {
+          "sharpe": 0.9505492294426251,
+          "psr": 0.7762629392893468,
+          "dsr": 0.5175982438768539,
+          "n_trials": 16,
+          "var_sharpe": 0.000981304815105522,
+          "n_obs": 179
+        }
+      },
+      "baseline": {
+        "config": {
+          "model": "none",
+          "q": 0.0
+        },
+        "threshold": -Infinity,
+        "sharpe": 1.4146217431446775,
+        "annual_return": 0.07484252497979105,
+        "annual_vol": 0.051988156535575085,
+        "max_drawdown": -0.07041508171226596,
+        "start": "2022-01-04",
+        "end": "2026-09-03",
+        "n_obs": 1171,
+        "sharpe_full": 1.4146217431446775,
+        "annual_return_full": 0.07354357662123358,
+        "time_in_market": 1.0,
+        "max_drawdown_full": -0.07041508171226596,
+        "dsr": {
+          "sharpe": 1.4152261532312793,
+          "psr": 0.995955471727873,
+          "dsr": 0.8346943675079157,
+          "n_trials": 16,
+          "var_sharpe": 0.000981304815105522,
+          "n_obs": 1171
+        }
+      },
+      "best_forecast": {
+        "config": {
+          "model": "gjr",
+          "q": 0.75
+        },
+        "threshold": 0.05763788867929263,
+        "sharpe": 0.9478903452708487,
+        "annual_return": 0.053794015903466885,
+        "annual_vol": 0.056993486341406135,
+        "max_drawdown": -0.029289565880581514,
+        "start": "2022-02-01",
+        "end": "2026-06-01",
+        "n_obs": 179,
+        "sharpe_full": 0.3709185896626166,
+        "annual_return_full": 0.00825808710921924,
+        "time_in_market": 0.15286080273270708,
+        "max_drawdown_full": -0.029289565880581514,
+        "dsr": {
+          "sharpe": 0.9505492294426251,
+          "psr": 0.7762629392893468,
+          "dsr": 0.5175982438768539,
+          "n_trials": 16,
+          "var_sharpe": 0.000981304815105522,
+          "n_obs": 179
+        }
+      }
+    }
+  },
+  "hash": "55de099a4959714d"
+}
