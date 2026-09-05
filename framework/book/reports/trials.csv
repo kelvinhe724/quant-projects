@@ -162,3 +162,28 @@ run_at,name,params,sharpe_daily,n_obs
 2026-09-05T02:12:13,TrendETF,"{""buffer"": 0.1, ""lookback"": 12, ""target"": 0.4}",0.028883940264249668,5577
 2026-09-05T02:15:35,book,"{""alloc"": ""erc"", ""book"": ""beta+alpha"", ""buffer"": 0.1, ""oos"": ""quarterly refit""}",0.053877253273744964,5577
 2026-09-05T02:15:35,book,"{""alloc"": ""equal"", ""book"": ""beta+alpha"", ""buffer"": 0.1, ""oos"": ""quarterly refit""}",0.05483898965690381,5577
+2026-09-05T02:19:03,TrendETF,"{""alone"": true, ""buffer"": 0.1, ""kill"": true}",0.028883940264249668,5577
+2026-09-05T02:19:03,FXCarryETF,"{""alone"": true, ""buffer"": 0.1, ""kill"": true}",-0.01950972461388718,1050
+2026-09-05T02:19:03,CryptoTrend,"{""alone"": true, ""buffer"": 0.1, ""kill"": true}",0.005513687328194038,798
+2026-09-05T02:19:03,ETFBeta,"{""alone"": true, ""buffer"": 0.1, ""kill"": true}",0.03694913085630303,3175
+2026-09-05T02:19:03,EWMAC,"{""alone"": true, ""buffer"": 0.1, ""kill"": true}",0.04292646863528193,5340
+2026-09-05T02:20:47,TrendETF,"{""buffer"": 0.1, ""signs"": ""long_only"", ""v"": 1}",0.03891983513761537,5577
+2026-09-05T02:24:01,book,"{""alloc"": ""equal"", ""book"": ""beta+alpha"", ""buffer"": 0.1, ""cost_scale"": 1.0}",0.05101291320707524,5849
+2026-09-05T02:27:04,book,"{""alloc"": ""equal"", ""book"": ""beta+alpha"", ""buffer"": 0.1, ""cost_scale"": 2.0}",0.045754382171284205,5849
+2026-09-05T02:30:07,book,"{""alloc"": ""equal"", ""book"": ""beta+alpha"", ""buffer"": 0.1, ""cost_scale"": 4.0}",0.03463929646047649,5849
+2026-09-05T02:33:17,book,"{""alloc"": ""equal"", ""book"": ""beta+alpha"", ""buffer"": 0.1, ""delay"": 1}",0.05134964825765216,5848
+2026-09-05T02:36:24,book,"{""alloc"": ""equal"", ""book"": ""beta+alpha"", ""buffer"": 0.1, ""delay"": 2}",0.052101048957943936,5847
+2026-09-05T02:39:28,book,"{""alloc"": ""equal"", ""book"": ""beta+alpha"", ""buffer"": 0.1, ""delay"": 5}",0.04796645186205027,5844
+2026-09-05T02:50:01,EWMAC,"{""buffer"": 0.1, ""speeds"": ""combined"", ""v"": 2}",0.04292646863528193,5340
+2026-09-05T02:50:01,EWMAC,"{""buffer"": 0.1, ""speeds"": ""16/64"", ""v"": 2}",0.033197645682490215,5340
+2026-09-05T02:50:01,EWMAC,"{""buffer"": 0.1, ""speeds"": ""32/128"", ""v"": 2}",0.0448482822084544,5340
+2026-09-05T02:50:01,EWMAC,"{""buffer"": 0.1, ""speeds"": ""64/256"", ""v"": 2}",0.041429869676185664,5340
+2026-09-05T02:50:01,EWMAC,"{""buffer"": 0.1, ""speeds"": ""combined"", ""v"": 2, ""window"": ""untouched""}",0.02604012082850242,1170
+2026-09-05T02:50:11,book,"{""alloc"": ""equal"", ""book"": ""v1"", ""buffer"": 0.1}",0.01560440468393234,5577
+2026-09-05T02:53:18,book,"{""alloc"": ""equal"", ""book"": ""v1+ewmac"", ""buffer"": 0.1}",0.03406034498207634,5577
+2026-09-05T02:56:20,book,"{""alloc"": ""equal"", ""book"": ""ewmac-for-trend"", ""buffer"": 0.1}",0.03473508654312209,5340
+2026-09-05T02:59:23,book,"{""alloc"": ""equal"", ""book"": ""beta+alpha"", ""buffer"": 0.1}",0.05101291320707524,5849
+2026-09-05T02:59:24,book,"{""alloc"": ""mvo"", ""book"": ""v1"", ""buffer"": 0.1, ""financing_spread_bps"": 50.0, ""kelly"": 0.5, ""max_gross"": 1.5, ""max_net"": 1.5, ""max_sleeve"": 0.75, ""oos"": ""quarterly refit"", ""risk_aversion"": 1.0, ""target_vol"": 0.1, ""turnover"": 0.5}",0.0038029758968483726,4330
+2026-09-05T02:59:25,book,"{""alloc"": ""mvo"", ""book"": ""v1+ewmac"", ""buffer"": 0.1, ""financing_spread_bps"": 50.0, ""kelly"": 0.5, ""max_gross"": 1.5, ""max_net"": 1.5, ""max_sleeve"": 0.75, ""oos"": ""quarterly refit"", ""risk_aversion"": 1.0, ""target_vol"": 0.1, ""turnover"": 0.5}",0.028233071175056315,5263
+2026-09-05T02:59:26,book,"{""alloc"": ""mvo"", ""book"": ""ewmac-for-trend"", ""buffer"": 0.1, ""financing_spread_bps"": 50.0, ""kelly"": 0.5, ""max_gross"": 1.5, ""max_net"": 1.5, ""max_sleeve"": 0.75, ""oos"": ""quarterly refit"", ""risk_aversion"": 1.0, ""target_vol"": 0.1, ""turnover"": 0.5}",0.028122167602127743,5011
+2026-09-05T02:59:27,book,"{""alloc"": ""mvo"", ""book"": ""beta+alpha"", ""buffer"": 0.1, ""financing_spread_bps"": 50.0, ""kelly"": 0.5, ""max_gross"": 1.5, ""max_net"": 1.5, ""max_sleeve"": 0.75, ""oos"": ""quarterly refit"", ""risk_aversion"": 1.0, ""target_vol"": 0.1, ""turnover"": 0.5}",0.04570893214123217,5577
