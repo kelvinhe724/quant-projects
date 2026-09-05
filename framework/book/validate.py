@@ -20,7 +20,7 @@ from purgedcv import (WalkForwardSplit, deflated_sharpe_ratio, min_track_record_
                       minimum_backtest_length, probabilistic_sharpe_ratio)
 from scipy.stats import kurtosis, skew
 
-from framework.book import allocate, universe
+from framework.book import allocate, optimizer, universe
 from framework.book.strategies import BOOKS, EWMAC, SPEEDS, TrendETF, book_config, ex_ante_vol, sleeves
 from framework.engine import Strategy, drawdown, run, sharpe
 
@@ -38,6 +38,9 @@ HOLDOUT = 0.2
 ENGINE = {"buffer": book_config().risk.buffer}
 PROMOTION = ("net Sharpe above zero on the untouched window, above TrendETF's on the same window, "
              "and a positive alpha t against the ETF universe there")
+ALLOCATOR_PROMOTION = ("the candidate allocator goes live only if its best book's Sharpe on the untouched window "
+                       "beats the best 1/N book's there, net of reallocation costs and financing; otherwise 1/N "
+                       "stays live and the candidate is a documented trial")
 
 
 class Wrap(Strategy):
@@ -236,6 +239,31 @@ def candidate_books(bars, hold):
     return table, res, start
 
 
+def candidate_allocator(books_res, bars, hold):
+    """optimizer.walk on every book's sleeve streams: candidate vs daily-rebalanced 1/N, whole walk and untouched window.
+
+    Each book's candidate stream is a logged trial in trials.csv and a run in
+    the research registry under reports/registry/, keyed on the allocator's
+    parameters; the registry's own DSR is reported next to the book's.
+    """
+    from research.registry.experiments import Registry
+
+    reg = Registry(os.path.join(REPORTS, "registry"))
+    fin, source = optimizer.financing(bars)
+    params = optimizer.asdict(optimizer.Params())
+    table, streams, paths = {}, {}, {}
+    for name, res in books_res.items():
+        oos, path, log = optimizer.walk(res.returns_by_strategy, res, fin)
+        row = optimizer.summary(oos, log, hold)
+        log_trial("book", {"book": name, "alloc": "mvo", "oos": "quarterly refit", **params}, oos["mvo"])
+        entry = reg.record(f"allocator:{name}", {"allocator": "mvo", "cov": str(log["cov"].iloc[-1]), **params},
+                           list(res.books), (oos.index[0].date(), oos.index[-1].date()), oos["mvo"],
+                           tags={"stage": "candidate allocator"})
+        row["registry_id"] = entry["id"]
+        table[name], streams[name], paths[name] = row, oos, path
+    return table, streams, paths, source, reg
+
+
 def md_table(d, cols=("sharpe", "annual_return", "annual_vol", "max_drawdown")):
     out = ["| variant | " + " | ".join(cols) + " |", "|---|" + "---|" * len(cols)]
     for k, s in d.items():
@@ -303,6 +331,7 @@ def main():
     oos_winner = max(books_table, key=lambda k: books_table[k]["oos_sharpe"])
     gate_oos, _ = allocate.walk(books_res[oos_winner].returns_by_strategy)
     gate_table, _ = allocate.compare(gate_oos)
+    cand_table, cand_streams, cand_paths, fin_source, reg = candidate_allocator(books_res, bars, hold)
 
     # Every configuration above is now in trials.csv; count after, not before.
     tr = trials()
@@ -316,6 +345,15 @@ def main():
     for name, row in books_table.items():
         br = books_res[name].returns.loc[books_start:]
         row["dsr"] = float(deflated_sharpe_ratio(br[br != 0].to_numpy(), n_trials, var_sharpe))
+    for name, row in cand_table.items():
+        cr = cand_streams[name]["mvo"]
+        cr = cr[cr != 0].to_numpy()
+        row["dsr"] = float(deflated_sharpe_ratio(cr, n_trials, var_sharpe))
+        row["dsr_registry"] = reg.dsr(cand_streams[name]["mvo"], extra_trials=n_trials - reg.trials())["dsr"]
+    cand_best = max(cand_table, key=lambda k: cand_table[k]["oos_sharpe_mvo"])
+    cand_promoted = bool(cand_table[cand_best]["oos_sharpe_mvo"] > books_table[oos_winner]["oos_sharpe"])
+    pd.DataFrame({d: p["mvo"] for d, p in cand_paths[allocate.LIVE_BOOK].items()}).T.to_csv(
+        os.path.join(REPORTS, "mvo_weights.csv"))
     head["n_runs_logged"] = int(len(pd.read_csv(TRIALS)))
     head["min_btl_years"] = float(minimum_backtest_length(n_trials, head["sharpe"]))
     head["backtest_years"] = len(r) / 252
@@ -334,6 +372,10 @@ def main():
                    "untouched": untouched, "books": books_table, "books_start": str(books_start.date()),
                    "oos_winner": oos_winner,
                    "winner_erc_gate": {k: {m: v for m, v in gate_table[k].items()} for k in gate_table},
+                   "candidate_allocator": {"params": optimizer.asdict(optimizer.Params()), "financing": fin_source,
+                                           "books": cand_table, "best": cand_best, "promoted": cand_promoted,
+                                           "rule": ALLOCATOR_PROMOTION, "live_allocator": allocate.LIVE_ALLOCATOR,
+                                           "registry_trials": reg.trials()},
                    "attribution": attr, "dsr_crosscheck": xcheck, "kill_dates": kill_dates,
                    "panel_hash": universe.panel_hash(bars),
                    "run_at": pd.Timestamp.now().isoformat(timespec="seconds")}, fh, indent=2, default=str)
@@ -351,7 +393,7 @@ def main():
         f"{head['min_btl_years']:.1f} y (have {head['backtest_years']:.1f}) | {head['min_trl_years']:.1f} y |", "",
         f"Live book `{allocate.LIVE_BOOK}`. DSR uses n_trials = {n_trials}: every configuration this file runs on "
         "the real panel (sleeves, the trend grid, allocators, cost and delay variants, kill on, the EWMAC "
-        f"variants, the candidate books) is appended to `trials.csv` ({head['n_runs_logged']} rows so far) and "
+        f"variants, the candidate books, the candidate allocator) is appended to `trials.csv` ({head['n_runs_logged']} rows so far) and "
         f"identical return streams count once; the variance of their daily Sharpes is {var_sharpe:.2e}. Trials "
         f"are tagged with the engine settings ({ENGINE}), so the runs before the buffer moved into the engine "
         "still count: they were looked at. The per-asset vol target is undone by the sleeve-level 10% target, so "
@@ -419,6 +461,27 @@ def main():
                                "turnover", "oos_sharpe", "oos_max_drawdown")), "",
         f"ERC vs 1/N gate on `{oos_winner}`'s sleeves, quarterly refits, out of sample:", "",
         gate_table.to_markdown(), "",
+        "## Candidate allocator: cost-aware mean-variance", "",
+        "`optimizer.py` on each book's sleeve streams: maximise mu'w - w'Sw / 2 - cost'|dw| over long-only sleeve "
+        f"weights, parameters {optimizer.asdict(optimizer.Params())} fixed before the run. mu is the trailing "
+        "three-year mean, S Ledoit-Wolf (no `risk-model/` at run time), cost each sleeve's realised cost per traded "
+        "notional times its gross. Quarterly refits, weights held for the next quarter, the move charged on its "
+        f"first day, leverage above 1 financed at {fin_source} plus the spread. Both columns are daily-rebalanced "
+        "to their weights; the 1/N column here is that convention, the books table above is the engine's static "
+        "1/N, and the rule compares against the engine's. Every row is a logged trial and a research-registry run "
+        f"({reg.trials()} there). Rule, written before the run: " + ALLOCATOR_PROMOTION + ".", "",
+        "| book | walk Sharpe mvo | walk Sharpe 1/N | DSR | DSR (registry) | untouched Sharpe mvo | untouched "
+        "Sharpe 1/N (walk) | untouched Sharpe 1/N (engine) | mean leverage | turnover / refit | refits | budget "
+        "bound | vol bound | Kelly scaled |",
+        "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|",
+        *[f"| {k} | {s['sharpe_mvo']:.3f} | {s['sharpe_equal']:.3f} | {s['dsr']:.3f} | {s['dsr_registry']:.3f} | "
+          f"{s['oos_sharpe_mvo']:.3f} | {s['oos_sharpe_equal']:.3f} | {books_table[k]['oos_sharpe']:.3f} | "
+          f"{s['mean_leverage']:.2f} | {s['turnover_per_refit']:.2f} | {s['refits']} | {s['budget_bound']} | "
+          f"{s['vol_bound']} | {s['kelly_scaled']} |" for k, s in cand_table.items()], "",
+        f"Best candidate book on the untouched window: `{cand_best}` at {cand_table[cand_best]['oos_sharpe_mvo']:.3f} "
+        f"against the best 1/N book `{oos_winner}` at {books_table[oos_winner]['oos_sharpe']:.3f}. "
+        f"**Promoted: {'yes' if cand_promoted else 'no'}.** `allocate.LIVE_ALLOCATOR = \"{allocate.LIVE_ALLOCATOR}\"`. "
+        "The live book's candidate weight path is in `mvo_weights.csv`.", "",
         "## Signal vs beta", "",
         "Each sleeve's live net returns regressed on its own universe: the daily-rebalanced 1/N return of its "
         "instruments, and that return scaled to the sleeves' 10% vol target (60-day EWMA vol, one-day lag, 3x "

@@ -10,6 +10,7 @@ import os
 import pandas as pd
 
 from framework.book.allocate import REPORTS
+from framework.book.broker import KILL, killed
 
 INDEX = os.path.join(REPORTS, "index.html")
 CSS = """
@@ -85,6 +86,8 @@ def render(path=INDEX):
     now = pd.Timestamp.now(tz="America/New_York")
     last_run = pd.Timestamp(led.run_at.max()) if len(led) else None
     since = f"{(now - last_run).days}" if last_run is not None else "never"
+    mode = str(alpaca.note.iloc[-1]).split(":")[0] if len(alpaca) else "no keys"
+    kill = "KILL PRESENT" if killed() else "armed"
 
     series = {}
     if len(shadow):
@@ -121,14 +124,14 @@ def render(path=INDEX):
 <div class="grid">
 <section class="wide"><h2>Book</h2><div class="stats">
 <div class="stat">{f"{shadow.equity.iloc[-1]:,.0f}" if len(shadow) else '-'}<span class="q">shadow equity</span></div>
-<div class="stat">{f"{alpaca.equity.iloc[-1]:,.0f}" if len(alpaca) else '<span class=meta>no keys</span>'}<span class="q">alpaca equity</span></div>
+<div class="stat">{f"{alpaca.equity.iloc[-1]:,.0f}" if len(alpaca) else '<span class=meta>no keys</span>'}<span class="q">alpaca equity · {html.escape(mode)}</span></div>
 <div class="stat{' neg' if dd < -1e-9 else ''}">{dd:.2%}<span class="q">shadow drawdown</span></div>
-<div class="stat">{since}<span class="q">days since kill-switch check</span></div>
+<div class="stat{' neg' if killed() else ''}">{kill}<span class="q">kill switch · {since} days since last run</span></div>
 <div class="stat">{head.get('sharpe', float('nan')):.2f}<span class="q">backtest sharpe · dsr {head.get('dsr', float('nan')):.2f}</span></div>
 </div></section>
 <section class="wide"><h2>Equity</h2>{chart(series)}
-<div class="legend"><b>shadow</b> engine fills at the shadow cost model · <b>alpaca</b> paper account · <b>expected</b> backtest drift {head.get('annual_return', 0):+.2%}/yr</div></section>
-<section><h2>Positions, weight of equity</h2><table><tr><th>instrument</th><th>shadow</th><th>target</th><th>alpaca</th></tr>{pos_rows or '<tr><td class=meta colspan=4>none</td></tr>'}</table></section>
+<div class="legend"><b>shadow</b> engine fills at the shadow cost model · <b>alpaca</b> {html.escape(mode)} account · <b>expected</b> backtest drift {head.get('annual_return', 0):+.2%}/yr</div></section>
+<section><h2>Positions, weight of equity</h2><table><tr><th>instrument</th><th>shadow</th><th>target</th><th>alpaca ({html.escape(mode)})</th></tr>{pos_rows or '<tr><td class=meta colspan=4>none</td></tr>'}</table></section>
 <section><h2>Last orders</h2><table><tr><th>run</th><th>instrument</th><th>qty</th><th>fill / notional</th></tr>{fill_rows}</table></section>
 <section class="wide"><h2>Allocator</h2><p class="meta">{html.escape(json.dumps(alloc.get('weights', {})))} · ERC vs 1/N out of sample:
 Sharpe {alloc.get('oos', {}).get('erc', {}).get('sharpe', '-')} vs {alloc.get('oos', {}).get('equal', {}).get('sharpe', '-')} · full report in validation.md</p></section>

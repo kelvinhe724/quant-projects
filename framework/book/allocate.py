@@ -28,6 +28,11 @@ MIN_LIVE = 252
 # only by beating it on the untouched window in validate.py (README, v3).
 # 2026-09-04: beta+alpha 0.79 vs v1 0.40 on 2021-12-31 to 2026-08-31.
 LIVE_BOOK = "beta+alpha"
+# The allocator the daemon's weights come from: "rule" lets allocate() pick
+# ERC or 1/N on the full out-of-sample walk as before; "mvo" is the
+# optimizer.py candidate and is set here only if it wins the four-book
+# comparison on the untouched window in validate.py (README, candidate allocator).
+LIVE_ALLOCATOR = "rule"
 
 
 def run_sleeves(bars, book=LIVE_BOOK, **config_kwargs):
@@ -54,11 +59,16 @@ def erc(X):
     return pd.Series(m.weights_, index=X.columns)
 
 
-def fit(R, date, window=WINDOW, min_live=MIN_LIVE):
-    """ERC and 1/N weights fit on the window ending at `date`, zero for sleeves not yet eligible."""
+def eligible(R, date, window=WINDOW, min_live=MIN_LIVE):
+    """The trailing window to `date`, each sleeve's first live day in it, and the sleeves with min_live days since."""
     hist = R.loc[:date].tail(window)
     start = live_from(hist)
-    eligible = [c for c in R if pd.notna(start[c]) and (hist.index > start[c]).sum() >= min_live]
+    return hist, start, [c for c in R if pd.notna(start[c]) and (hist.index > start[c]).sum() >= min_live]
+
+
+def fit(R, date, window=WINDOW, min_live=MIN_LIVE):
+    """ERC and 1/N weights fit on the window ending at `date`, zero for sleeves not yet eligible."""
+    hist, start, eligible = globals()["eligible"](R, date, window, min_live)
     w_erc, w_eq = pd.Series(0.0, index=R.columns), pd.Series(0.0, index=R.columns)
     if len(eligible) >= 2:
         X = hist.loc[hist.index >= start[eligible].max(), eligible]
@@ -114,9 +124,15 @@ def allocate(bars=None, results=None, write=True):
     table, years = compare(oos)
     winner = "erc" if table.loc["sharpe", "erc"] > table.loc["sharpe", "equal"] else "equal"
     w_erc, w_eq = fit(R, R.index[-1])
-    live = w_erc if winner == "erc" else w_eq
+    from framework.book import optimizer
+    w_mvo, _, mvo_info = optimizer.fit(R, R.index[-1], optimizer.sleeve_costs(results, R.index[-1]))
+    if LIVE_ALLOCATOR == "mvo":
+        winner = "mvo"
+    live = {"erc": w_erc, "equal": w_eq, "mvo": w_mvo}[winner]
     out = {"book": LIVE_BOOK, "allocator": winner, "weights": {k: round(float(v), 4) for k, v in live.items()},
            "erc_weights": {k: round(float(v), 4) for k, v in w_erc.items()},
+           "candidate": {"allocator": "mvo", "weights": {k: round(float(v), 4) for k, v in w_mvo.items()},
+                         "params": optimizer.asdict(optimizer.Params()), "fit": mvo_info},
            "fit_date": str(R.index[-1].date()), "window_days": WINDOW,
            "oos": {k: {m: (round(v, 4) if isinstance(v, float) else v) for m, v in table[k].items()}
                    for k in table},

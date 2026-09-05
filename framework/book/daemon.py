@@ -1,10 +1,17 @@
-"""One run per NYSE session: fresh bars, shadow replay, Alpaca reconcile, ledger row, dashboard.
+"""One run per NYSE session: fresh bars, shadow replay, broker reconcile, ledger row, dashboard.
 
 The run refuses unless the newest bar is the last completed NYSE session, so
 a fire before Yahoo finalises the day's bar does nothing. A session already in
 the ledger is not logged or traded twice. The shadow book is a replay of the
 engine from LIVE_START, so a missed day is caught up by the next run rather
-than by a state file.
+than by a state file; the simulated Alpaca account is a replay of the ledger's
+own order rows in the same way.
+
+Order of the safety checks, every run: KILL file (before any data is fetched),
+positions reconciled against the previous ledger row (halts past 5% of equity
+on any name), then limits on the post-trade book inside broker.submit. A halt
+writes framework/KILL and the alpaca row is not written, so the session is
+retried once a human deletes the file.
 
 Run: ../../.venv/bin/python3 -m framework.book.daemon [--dry-run]
 """
@@ -16,7 +23,7 @@ import pandas as pd
 
 from framework.book import dashboard, universe
 from framework.book.allocate import LIVE_BOOK, REPORTS, load_allocations
-from framework.book.broker import AlpacaBroker, ShadowBroker
+from framework.book.broker import KILL, AlpacaBroker, Halted, ShadowBroker, killed, order_record, verify_positions
 from framework.book.strategies import sleeves
 from framework.book.universe import sessions
 
@@ -61,22 +68,49 @@ def append_ledger(rows, path=LEDGER):
     return len(new)
 
 
+def sim_rows(ledger):
+    """Ledger rows the simulated account replays: alpaca rows written in simulated mode."""
+    if not len(ledger):
+        return []
+    rows = ledger[(ledger.book == "alpaca") & ledger.note.astype(str).str.startswith("simulated")]
+    return [dict(r, date=r["date"].strftime("%Y-%m-%d")) for r in rows.to_dict("records")]
+
+
+def previous_row(ledger, mode, session):
+    """The last alpaca row before `session` written in the same mode, or None."""
+    if not len(ledger):
+        return None
+    rows = ledger[(ledger.book == "alpaca") & ledger.note.astype(str).str.startswith(mode)
+                  & (ledger.date < pd.Timestamp(session))]
+    return rows.sort_values("date").iloc[-1].to_dict() if len(rows) else None
+
+
 def run_once(dry_run=False, session=None, now=None):
+    if killed():
+        print(f"KILL file present at {KILL}; nothing fetched, nothing traded. Delete it to restart.")
+        try:
+            AlpacaBroker().submit([])  # paper mode cancels anything still queued, then raises
+        except Halted:
+            pass
+        return None
     now = pd.Timestamp.now(tz=ET) if now is None else pd.Timestamp(now)
     last = last_session(now)
     session = last if session is None else pd.Timestamp(session)
     if session > last:
         raise ValueError(f"{session.date()} has not closed yet; last session is {last.date()}")
+    day = session.strftime("%Y-%m-%d")
+    ledger = read_ledger()
+    done = set(zip(ledger.date.astype(str).str[:10], ledger.book)) if len(ledger) else set()
+    if not dry_run and {(day, "shadow"), (day, "alpaca")} <= done:
+        print(f"{session.date()} already in the ledger; nothing to do")
+        dashboard.render()
+        return []
     bars = live_bars(session)
     if bars.asof != session:
         print(f"refused: newest bar is {bars.asof.date()}, last NYSE session is {session.date()}")
         return None
     if session < last:
         print(f"catch-up run for {session.date()}; last session is {last.date()}")
-    if not dry_run and session.strftime("%Y-%m-%d") in set(read_ledger().date.astype(str).str[:10]):
-        print(f"{session.date()} already in the ledger; nothing to do")
-        dashboard.render()
-        return []
 
     alloc = load_allocations()
     live = {k: v for k, v in alloc["weights"].items() if v > 0}
@@ -86,7 +120,7 @@ def run_once(dry_run=False, session=None, now=None):
     prices = bars.close.iloc[-1].to_dict()
     stamp = pd.Timestamp.now(tz=ET).isoformat(timespec="seconds")
     phash = universe.panel_hash(bars, HASH_START, LIVE_START)
-    rows = [{"date": session.strftime("%Y-%m-%d"), "book": "shadow", "equity": round(shadow.equity, 2),
+    rows = [{"date": day, "book": "shadow", "equity": round(shadow.equity, 2),
              "gross": round(sum(abs(v) for v in shadow.positions().values()), 4),
              "positions": json.dumps(shadow.positions()), "fills": json.dumps(shadow.fills(session)),
              "targets": json.dumps(targets), "panel_hash": phash, "run_at": stamp,
@@ -94,25 +128,32 @@ def run_once(dry_run=False, session=None, now=None):
     print(f"{session.date()}  shadow equity {shadow.equity:,.2f}  positions {shadow.positions()}")
     print(f"targets for next open: {targets}")
 
+    broker = AlpacaBroker(sim_rows=sim_rows(ledger), bars=bars)
+    prev = previous_row(ledger, broker.mode, session)
+    if broker.mode == "simulated":
+        print(f"SIMULATED account (no paper keys): {broker.why}")
     try:
-        alpaca = AlpacaBroker()
-    except RuntimeError as e:
-        print(f"Alpaca skipped: {e}")
-    else:
-        equity = alpaca.equity()
-        orders = alpaca.reconcile(targets, equity, prices)
-        print(f"Alpaca equity {equity:,.2f}, {len(orders)} orders:")
+        equity = broker.equity()
+        held_w = broker.weights()
+        verify_positions(held_w, prev)
+        print(f"{broker.mode} equity {equity:,.2f}, reconciled against the ledger row of "
+              + (str(prev["date"])[:10] if prev else "nothing (first run)"))
+        orders = broker.reconcile(targets, equity, prices)
         for o in orders:
-            print(f"  {o.side.value:4s} {o.symbol:8s} " + (f"qty {o.qty}" if o.qty else f"${o.notional}"))
+            print(f"  {o.side.value:4s} {o.symbol:8s} " + (f"qty {o.qty}" if o.qty else f"${o.notional}")
+                  + (f" limit {o.limit_price}" if getattr(o, "limit_price", None) else ""))
         if not dry_run:
-            alpaca.submit(orders)
-        rows.append({"date": session.strftime("%Y-%m-%d"), "book": "alpaca", "equity": round(equity, 2),
-                     "gross": round(sum(abs(v) for _, v in alpaca.positions().values()) / equity, 4),
-                     "positions": json.dumps({k: round(v / equity, 4) for k, (_, v) in alpaca.positions().items()}),
-                     "fills": json.dumps([{"symbol": o.symbol, "side": o.side.value, "qty": o.qty,
-                                           "notional": o.notional} for o in orders]),
+            broker.submit(orders, targets, equity, prev["equity"] if prev else None)
+    except Halted as e:
+        print(f"HALTED: {e}\nKILL file written at {KILL}; the alpaca row for {day} is not written, delete the file and rerun")
+        orders = None
+    if orders is not None:
+        rows.append({"date": day, "book": "alpaca", "equity": round(equity, 2),
+                     "gross": round(sum(abs(v) for v in held_w.values()), 4),
+                     "positions": json.dumps({k: round(v, 4) for k, v in held_w.items()}),
+                     "fills": json.dumps([order_record(o) for o in orders]),
                      "targets": json.dumps(targets), "panel_hash": phash, "run_at": stamp,
-                     "note": "submitted" if not dry_run else "dry run"})
+                     "note": f"{broker.mode}: " + ("submitted" if not dry_run else "dry run")})
     if dry_run:
         print("dry run: nothing written")
         return rows
