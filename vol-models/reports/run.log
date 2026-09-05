@@ -1,0 +1,109 @@
+21 names, 2003-06-02 to 2026-09-03, 5853 sessions, close hash 5006a92054c4fdae
+untouched window 2022-01-04 to 2026-09-03, 1171 sessions, not yet opened
+
+Horse race, pre-window sessions 2006-06-01 to 2022-01-03, 21 names pooled:
+
+5-day realised vol
+         rmse     mae    bias   qlike    corr        n
+naive  0.1645  0.1011 -0.0000  1.2360  0.6560  82446.0
+har    0.1509  0.0852 -0.0264  0.6873  0.6716  81906.0
+garch  0.1453  0.0929  0.0239  0.5055  0.6967  82446.0
+gjr    0.1430  0.0916  0.0233  0.4960  0.7070  82446.0
+lgb    0.1532  0.0852 -0.0218  0.6497  0.6494  81906.0
+pairwise DM t (QLIKE, row beats column when negative):
+       naive    har  garch    gjr    lgb
+naive    NaN  11.83  16.81  17.19  15.15
+har   -11.83    NaN   8.63   8.37   1.81
+garch -16.81  -8.63    NaN   2.94  -8.61
+gjr   -17.19  -8.37  -2.94    NaN  -8.88
+lgb   -15.15  -1.81   8.61   8.88    NaN
+names where the model beats naive at 5% (of 21): {'har': 21, 'garch': 21, 'gjr': 21, 'lgb': 21}
+
+21-day realised vol
+         rmse     mae    bias   qlike    corr        n
+naive  0.1381  0.0821 -0.0001  0.5021  0.7049  82446.0
+har    0.1302  0.0732 -0.0176  0.4474  0.6979  81906.0
+garch  0.1266  0.0765  0.0113  0.3555  0.7212  82446.0
+gjr    0.1255  0.0761  0.0107  0.3524  0.7246  82446.0
+lgb    0.1498  0.0784 -0.0105  0.4450  0.6221  81906.0
+pairwise DM t (QLIKE, row beats column when negative):
+       naive   har  garch   gjr   lgb
+naive    NaN  1.49   6.15  6.29  2.61
+har    -1.49   NaN   3.30  3.07  0.07
+garch  -6.15 -3.30    NaN  0.64 -2.92
+gjr    -6.29 -3.07  -0.64   NaN -2.86
+lgb    -2.61 -0.07   2.92  2.86   NaN
+names where the model beats naive at 5% (of 21): {'har': 7, 'garch': 19, 'gjr': 19, 'lgb': 8}
+
+SPY alone, 21 days, with the VIX:
+         rmse     mae    bias   qlike    corr       n
+naive  0.0982  0.0584 -0.0000  0.6334  0.6589  3926.0
+har    0.0949  0.0533 -0.0168  0.5739  0.6237  3915.0
+garch  0.0905  0.0554  0.0103  0.4207  0.6805  3926.0
+gjr    0.0865  0.0525  0.0023  0.4359  0.6992  3926.0
+lgb    0.1336  0.0631  0.0094  0.5551  0.5177  3915.0
+vix    0.0919  0.0656  0.0369  0.4040  0.7106  3926.0
+       naive   har  garch   gjr   lgb   vix
+naive    NaN  1.14   4.33  4.28  1.18  3.43
+har    -1.14   NaN   3.16  2.95  0.45  2.44
+garch  -4.33 -3.16    NaN -1.15 -2.04  0.62
+gjr    -4.28 -2.95   1.15   NaN -1.96  0.91
+lgb    -1.18 -0.45   2.04  1.96   NaN  1.77
+vix    -3.43 -2.44  -0.62 -0.91 -1.77   NaN
+
+Walk-forward over the timing grid, pre-untouched sessions:
+
+     train_start   train_end  test_start    test_end                       picked  picked_train_sharpe  picked_test_sharpe
+fold                                                                                                                      
+1     2003-06-02  2013-12-04  2014-01-02  2015-12-31  {"model": "gjr", "q": 0.75}                3.046                 NaN
+2     2003-06-02  2015-12-04  2016-01-04  2018-01-02  {"model": "gjr", "q": 0.75}                2.901                 NaN
+3     2003-06-02  2017-12-05  2018-01-03  2020-01-03  {"model": "gjr", "q": 0.75}                2.731                 NaN
+4     2003-06-02  2019-12-06  2020-01-06  2022-01-03  {"model": "gjr", "q": 0.75}                2.902               2.898
+
+selected-in-sample OOS Sharpe 2.898 (active days), 1.137 (all days); chosen for the window: {'model': 'gjr', 'q': 0.75}
+
+Every variant on the pre-window sessions (10 bps on switches, straddle costs inside the P&L):
+                                 sharpe sharpe_full annual_return_full max_drawdown_full time_in_market
+{"model": "none", "q": 0.0}    1.898445    1.894123           0.097124         -0.140639       0.995515
+{"model": "har", "q": 0.25}    1.659469    1.339336           0.063068         -0.140639        0.65378
+{"model": "har", "q": 0.5}     1.564649    1.076487           0.046904         -0.148955       0.475651
+{"model": "har", "q": 0.75}    1.715897    0.846215           0.031226         -0.120468       0.245194
+{"model": "garch", "q": 0.25}  1.754229     1.42317           0.061331          -0.14035       0.660829
+{"model": "garch", "q": 0.5}   1.726897    1.227011           0.047716         -0.143856       0.507689
+{"model": "garch", "q": 0.75}  1.639562    0.798221           0.026036         -0.143856       0.238787
+{"model": "gjr", "q": 0.25}    2.102055     1.70243           0.069026         -0.055298       0.659761
+{"model": "gjr", "q": 0.5}     2.294765    1.555926           0.056001         -0.055298       0.464759
+{"model": "gjr", "q": 0.75}    2.835132    1.308868           0.034723         -0.042981       0.218283
+{"model": "lgb", "q": 0.25}    1.645787    1.325929           0.060683         -0.140639       0.651431
+{"model": "lgb", "q": 0.5}     1.572739    1.075172           0.045035         -0.140639       0.469671
+{"model": "lgb", "q": 0.75}    1.610162    0.719589           0.022554         -0.139099       0.201196
+
+untouched window opened now; result stored in /Users/kelvin/Documents/C.C. General Intelligence/quant-projects/vol-models/reports/untouched.json
+
+Horse race on the untouched window 2022-01-04 to 2026-09-03:
+
+5-day realised vol
+         rmse     mae    bias   qlike    corr        n
+naive  0.1598  0.1054  0.0001  1.1466  0.4032  24486.0
+har    0.1283  0.0816 -0.0271  0.6390  0.5162  24420.0
+garch  0.1323  0.0909  0.0234  0.4769  0.5056  24486.0
+gjr    0.1330  0.0907  0.0240  0.4754  0.5139  24486.0
+lgb    0.1271  0.0814 -0.0140  0.5503  0.5244  24420.0
+
+21-day realised vol
+         rmse     mae    bias   qlike    corr        n
+naive  0.1077  0.0737 -0.0006  0.3284  0.5819  24150.0
+har    0.0916  0.0616 -0.0191  0.2672  0.6530  24084.0
+garch  0.0956  0.0661  0.0103  0.2245  0.6366  24150.0
+gjr    0.0963  0.0658  0.0108  0.2230  0.6453  24150.0
+lgb    0.0965  0.0640 -0.0078  0.2385  0.6196  24084.0
+
+Timing test on the untouched window:
+                                    config    sharpe sharpe_full annual_return_full max_drawdown_full time_in_market       dsr n_trials
+chosen         {'model': 'gjr', 'q': 0.75}   0.94789    0.370919           0.008258          -0.02929       0.152861  0.517598       16
+baseline       {'model': 'none', 'q': 0.0}  1.414622    1.414622           0.073544         -0.070415            1.0  0.834694       16
+best_forecast  {'model': 'gjr', 'q': 0.75}   0.94789    0.370919           0.008258          -0.02929       0.152861  0.517598       16
+
+Pre-window chosen {'model': 'gjr', 'q': 0.75}: Sharpe 1.309 all days, DSR 0.998 over 16 trials
+Untouched window: chosen Sharpe 0.371 vs always-on 1.415 (all days); DSR 0.518 over 16 trials
+Model 05b9ddc36d45 saved; 16 trials in the registry; 5s
