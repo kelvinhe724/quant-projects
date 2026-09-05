@@ -33,7 +33,16 @@ BANKROLL_FALLBACK = 100.0
 
 
 def load_curve():
-    """Price -> estimated true probability, from the research calibration table."""
+    """Price -> estimated true probability, from the research calibration table.
+
+    SCANNER_MODEL=kalshi-model swaps in the registered ML calibrator from
+    ../kalshi-model (mid, row -> P(YES); it pulls the market's candles). The
+    default is the bin curve, unchanged.
+    """
+    if os.environ.get("SCANNER_MODEL") == "kalshi-model":
+        sys.path.insert(0, os.path.join(HERE, "..", "kalshi-model"))
+        import model as kalshi_model
+        return kalshi_model.curve()
     if os.path.exists(CALIBRATION_CSV):
         table = pd.read_csv(CALIBRATION_CSV)
     else:
@@ -68,6 +77,7 @@ def candidates(client, max_pages=MAX_PAGES):
             "ticker": m["ticker"],
             "title": m.get("title", ""),
             "close_time": m["close_time"],
+            "open_time": m.get("open_time"),
             "hours": hours_to_close(m, now),
             "volume": float(m["volume_fp"]),
             "bid": q[0],
@@ -89,7 +99,7 @@ def score(rows, curve, k=0.25, bankroll=BANKROLL_FALLBACK, max_order=5.0,
     for r in rows:
         bid, ask = r["bid"], r["ask"]
         mid = (bid + ask) / 2
-        p = float(curve(mid))
+        p = float(curve(mid, r) if getattr(curve, "needs_row", False) else curve(mid))
         f_yes = float(kelly_fraction(p, ask))
         f_no = float(kelly_fraction(1 - p, 1 - bid))
         if f_yes >= f_no:

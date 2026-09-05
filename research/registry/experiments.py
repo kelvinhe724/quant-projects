@@ -67,7 +67,7 @@ class Registry:
         var = float(t["sharpe_daily"].var(ddof=1)) if len(t) > 1 else 0.0
         if not np.isfinite(var):
             var = 0.0
-        return {"sharpe": float(r.mean() / r.std() * np.sqrt(252)),
+        return {"sharpe": float(r.mean() / r.std(ddof=1) * np.sqrt(252)),  # ddof=1, same as record() and validate.stats
                 "psr": float(validate.probabilistic_sharpe_ratio(r, 0.0)),
                 "dsr": float(validate.deflated_sharpe_ratio(r, max(n, 1), var)),
                 "n_trials": int(n), "var_sharpe": var, "n_obs": int(len(r))}

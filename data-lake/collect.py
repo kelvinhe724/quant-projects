@@ -78,8 +78,11 @@ def equities(full=False):
     rows, got = 0, 0
     for i in range(0, len(tickers), 100):
         chunk = tickers[i:i + 100]
+        # threads=True gives every ticker its own curl handle whose sockets and pipes
+        # only go away on garbage collection, ~2 fds a ticker; under launchd's 256 fd
+        # cap the run died mid-universe. Sequential is ~100s for the whole panel.
         raw = yf.download(chunk, start=start, auto_adjust=False, progress=False,
-                          group_by="column", threads=True)
+                          group_by="column", threads=False)
         if raw.empty:
             continue
         for t in chunk:

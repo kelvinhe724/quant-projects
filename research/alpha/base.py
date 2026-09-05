@@ -77,19 +77,28 @@ def forward_returns(close, horizon):
 
 
 def walk_forward(make_alpha, grid, panel, close, n_splits, test_size, rebalance="month_end", horizon=21,
-                 cost_bps=COST_BPS, registry=None, universe=None):
+                 cost_bps=COST_BPS, registry=None, universe=None, score=None):
     """Rolling train/test over `grid`: fit every variant on the train window, keep the best train Sharpe, hold it on test.
 
     Each fold's training rows are purged by `horizon` sessions before the
-    test window so a forward-return label cannot cross into it. Returns
-    (table, stitched OOS returns, per-variant full-window returns).
+    test window so a forward-return label cannot cross into it. `score`
+    maps a stream of bar returns to the number a fold is judged and
+    reported on; the default is the Sharpe of the nonzero bars annualised
+    by sqrt(252), which is only a daily Sharpe when the bars are days, so
+    an intraday project passes its own. Returns (table, stitched OOS
+    returns, per-variant full-window returns).
     """
+    score = score or (lambda r: sharpe(r[r != 0]))
     cal = panel.index
     X = long_panel(panel)
     y = long_panel(pd.concat({"y": forward_returns(close, horizon)}, axis=1, names=["feature", "instrument"]))["y"]
     dates = rebalance_dates(cal, rebalance)
+    # A row's label is known `horizon` sessions later, on the calendar itself, not `horizon` business
+    # days later: a holiday inside the horizon would otherwise shorten the purge by a session.
+    evaluation = cal[horizon:].append(pd.DatetimeIndex([cal[-1] + pd.tseries.offsets.BDay(k)
+                                                        for k in range(1, horizon + 1)]))
     split = WalkForwardSplit(n_splits=n_splits, test_size=test_size, prediction_times=cal,
-                             evaluation_times=cal + pd.tseries.offsets.BDay(horizon), purge_horizon="0D")
+                             evaluation_times=evaluation, purge_horizon="0D")
     rows, picked, full = [], [], {}
     for k, (tr, te) in enumerate(split.split(np.zeros((len(cal), 1)))):
         train, test = cal[tr], cal[te]
@@ -97,14 +106,14 @@ def walk_forward(make_alpha, grid, panel, close, n_splits, test_size, rebalance=
         for i, params in enumerate(grid):
             a = make_alpha(**params).fit(X.loc[train], y.loc[train])
             r = backtest(positions(a, panel, dates[dates.isin(train)]), close.loc[train], cost_bps)
-            scores[i] = (sharpe(r[r != 0]), a)
+            scores[i] = (score(r), a)
         best = max(scores, key=lambda i: scores[i][0] if np.isfinite(scores[i][0]) else -np.inf)
         a = scores[best][1]
         r = window_returns(a, panel, close, test[0], test[-1], dates, cost_bps)
         picked.append(r)
         rows.append({"fold": k + 1, "train_start": train[0].date(), "train_end": train[-1].date(),
                      "test_start": test[0].date(), "test_end": test[-1].date(), "picked": json.dumps(grid[best]),
-                     "picked_train_sharpe": scores[best][0], "picked_test_sharpe": sharpe(r[r != 0])})
+                     "picked_train_sharpe": scores[best][0], "picked_test_sharpe": score(r)})
     for params in grid:
         a = make_alpha(**params).fit(X, y)
         r = backtest(positions(a, panel, dates), close, cost_bps)

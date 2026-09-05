@@ -154,6 +154,13 @@ edge at the mid and edge after crossing the quoted spread, exact Kelly fraction
 by edge after the spread. Expect the 0.40 to 0.50 bin to dominate: that is
 where the research found the largest bias (+4.9 cents) in tight books.
 
+An optional signal: `SCANNER_MODEL=kalshi-model ../.venv/bin/python scanner.py`
+scores each market with the registered calibrator from `../kalshi-model`
+instead of the bin curve (it pulls each candidate's candles, so the scan is
+slower). The default is unchanged; that project's untouched window found the
+market mid better than either curve, so the swap is for comparison, not an
+upgrade.
+
 ## Caveats carried over from the research
 
 The sample was 77% sports props, the horizon was 24h, and the bias in tight
