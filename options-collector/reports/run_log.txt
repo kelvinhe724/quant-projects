@@ -1,7 +1,6 @@
 days collected: 1 (2026-09-04 to 2026-09-04)
-latest snapshot 2026-09-04T13:49:30Z [intraday], 36406 raw quotes across 13 tickers, missing: none, bill rate 0.0378
+latest snapshot 2026-09-04T22:49:04Z [close], 36406 raw quotes across 13 tickers, missing: none, bill rate 0.0378
 storage: 5.6 MB raw per day, 41 KB summary; a year of trading days is roughly 1.4 GB raw
-this snapshot is intraday; the launchd job takes the closing one
 
 Quotes per ticker: raw, share with no bid or ask, surviving the cleaning pass, expiries with an ATM vol
 -------------------------------------------------------------------------------------------------------
