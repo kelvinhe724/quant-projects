@@ -1,0 +1,132 @@
+{
+ "generated_at": "2026-09-05T01:24:33.835164+00:00",
+ "datasets": {
+  "equities_daily": {
+   "parts": 680,
+   "rows": 3355162,
+   "last": "2026-09-03 00:00:00",
+   "stale": false,
+   "gaps": [
+    {
+     "after": "2026-05-22 00:00:00",
+     "before": "2026-05-26 00:00:00",
+     "missing": 1
+    },
+    {
+     "after": "2026-06-18 00:00:00",
+     "before": "2026-06-22 00:00:00",
+     "missing": 1
+    },
+    {
+     "after": "2026-07-02 00:00:00",
+     "before": "2026-07-06 00:00:00",
+     "missing": 1
+    }
+   ],
+   "dupes": 0
+  },
+  "fred": {
+   "parts": 20,
+   "rows": 192858,
+   "last": "2026-09-03 00:00:00",
+   "stale": false,
+   "gaps": [
+    {
+     "after": "2026-05-22 00:00:00",
+     "before": "2026-05-26 00:00:00",
+     "missing": 1
+    },
+    {
+     "after": "2026-06-18 00:00:00",
+     "before": "2026-06-22 00:00:00",
+     "missing": 1
+    },
+    {
+     "after": "2026-07-02 00:00:00",
+     "before": "2026-07-06 00:00:00",
+     "missing": 1
+    }
+   ],
+   "dupes": 0
+  },
+  "kalshi_markets": {
+   "parts": 1,
+   "rows": 10000,
+   "last": "2026-09-05 01:21:21+00:00",
+   "stale": false,
+   "gaps": [],
+   "dupes": 0
+  },
+  "kalshi_books": {
+   "parts": 1,
+   "rows": 11008,
+   "last": "2026-09-05 01:21:21+00:00",
+   "stale": false,
+   "gaps": [],
+   "dupes": 0
+  },
+  "edgar_8k": {
+   "parts": 2,
+   "rows": 37,
+   "last": "2026-09-03 00:00:00",
+   "stale": false,
+   "gaps": [],
+   "dupes": 0
+  },
+  "crypto_l2": {
+   "parts": 1,
+   "rows": 1298,
+   "last": "2026-09-05 01:23:36+00:00",
+   "stale": false,
+   "gaps": [
+    {
+     "after": "2026-09-05 01:12:04+00:00",
+     "before": "2026-09-05 01:14:01+00:00",
+     "missing": 116
+    },
+    {
+     "after": "2026-09-05 01:12:04+00:00",
+     "before": "2026-09-05 01:14:01+00:00",
+     "missing": 116
+    },
+    {
+     "after": "2026-09-05 01:14:19+00:00",
+     "before": "2026-09-05 01:14:36+00:00",
+     "missing": 16
+    },
+    {
+     "after": "2026-09-05 01:14:19+00:00",
+     "before": "2026-09-05 01:14:36+00:00",
+     "missing": 16
+    }
+   ],
+   "dupes": 0
+  },
+  "crypto_klines_1m": {
+   "parts": 2,
+   "rows": 83520,
+   "last": "2026-09-03 23:59:00+00:00",
+   "stale": false,
+   "gaps": [],
+   "dupes": 0
+  },
+  "crypto_bookdepth": {
+   "parts": 2,
+   "rows": 2004480,
+   "last": "2026-09-03 23:59:31+00:00",
+   "stale": false,
+   "gaps": [],
+   "dupes": 0
+  },
+  "options": {
+   "parts": 1,
+   "rows": 36406,
+   "last": "2026-09-04 13:49:30",
+   "stale": false,
+   "gaps": [],
+   "dupes": 0
+  }
+ },
+ "ok": true,
+ "summary": "all feeds fresh"
+}
