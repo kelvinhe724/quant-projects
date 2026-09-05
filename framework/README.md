@@ -2,9 +2,9 @@
 
 A paper-traded risk-premia book on one daily engine, run once per NYSE session into two books (the engine's own shadow fills and an Alpaca paper account, or a simulated stand-in while there are no paper keys) through a broker layer that carries the kill switch and the limits. Built to the plan in `outputs/2026-09/2026-09-04_trading-framework-research/PLAN.md`; every number below is recomputed by `book/validate.py` and lives in `book/reports/`.
 
-Three versions so far. v1 was three sleeves at 1/N: ETF trend, FX carry through currency ETFs, long/flat crypto trend. v2 added a continuous EWMAC trend rule as a candidate. v3 (2026-09-04) moved the position buffer into the engine, ran EWMAC through the untouched window, compared four books on that window and put the winner live: **`beta+alpha`**, a vol-targeted 1/N of the 14 ETFs as the core and EWMAC on top, 1/2 each.
+Three versions so far. v1 was three sleeves at 1/N: ETF trend, FX carry through currency ETFs, long/flat crypto trend. v2 added a continuous EWMAC trend rule as a candidate. v3 (2026-09-04) moved the position buffer into the engine, ran EWMAC through the untouched window, compared four books on that window and put the winner live: **`beta+alpha`**, a vol-targeted 1/N of the 14 ETFs as the core and EWMAC on top, 1/2 each. 2026-09-05: a cost-aware mean-variance allocator (`book/optimizer.py`) was run as a candidate through the same four-book comparison and lost on every book; it stays documented below and 1/N stays live.
 
-The one-line honest summary: the live book's net Sharpe is 0.81 over 23 years (DSR 0.63 after deflating for the 56 configurations tried), and 0.79 on the untouched last fifth of the panel against 0.40 for the v1 book. Most of that is the core: on the untouched window the ETF universe held 1/N scores 0.98 by itself, and EWMAC alone scores 0.41 there and fails its own promotion test. The book is live because the rule written down in advance says the out-of-sample winner goes live; the rule does not say the winner has skill, and this one mostly has beta.
+The one-line honest summary: the live book's net Sharpe is 0.81 over 23 years (DSR 0.63 after deflating for the 60 configurations tried), and 0.79 on the untouched last fifth of the panel against 0.40 for the v1 book. Most of that is the core: on the untouched window the ETF universe held 1/N scores 0.98 by itself, and EWMAC alone scores 0.41 there and fails its own promotion test. The book is live because the rule written down in advance says the out-of-sample winner goes live; the rule does not say the winner has skill, and this one mostly has beta.
 
 ## Sleeves
 
@@ -14,7 +14,7 @@ The one-line honest summary: the live book's net Sharpe is 0.81 over 23 years (D
 - **EWMAC** (v2) is a continuous-forecast trend rule on the same 14 ETFs: fast minus slow EWMA over a 35-day price vol, three speeds (16/64, 32/128, 64/256) combined with a diversification multiplier, forecast scalars fit on trailing data only, cap 20, forecast / 10 times TrendETF's 40% per-asset target with class balance, sent every day.
 - **ETFBeta** (v3) is 1/N of the ETFs with a price that day, sent every day; the overlay sizes it to the 10% vol target. It exists because the attribution table below kept saying that owning the universe beat the rules run on it.
 - **Books.** `strategies.BOOKS` names four: `v1` (TrendETF, FXCarryETF, CryptoTrend), `v1+ewmac`, `ewmac-for-trend` (EWMAC in TrendETF's place) and `beta+alpha` (ETFBeta, EWMAC). Every book is 1/N of its sleeves, static. `allocate.LIVE_BOOK` names the one the daemon runs.
-- **Allocator.** `portfolio-construction/` found nothing that beat 1/N across 14 ETFs at p < 0.10, so the plan's rule is that ERC across *sleeves* (skfolio `RiskBudgeting`, Ledoit-Wolf, three-year window, quarterly refit) has to beat 1/N out of sample before it goes live. It has not for any book (v1: 0.27 vs 0.28; beta+alpha: 0.86 vs 0.87), so the live allocator is equal weight.
+- **Allocator.** `portfolio-construction/` found nothing that beat 1/N across 14 ETFs at p < 0.10, so the plan's rule is that ERC across *sleeves* (skfolio `RiskBudgeting`, Ledoit-Wolf, three-year window, quarterly refit) has to beat 1/N out of sample before it goes live. It has not for any book (v1: 0.27 vs 0.28; beta+alpha: 0.86 vs 0.87), so the live allocator is equal weight. A cost-aware mean-variance allocator (`book/optimizer.py`, below) was run as a candidate on 2026-09-05 through the four-book untouched-window comparison and lost (0.66 vs 0.79 on the live book); `allocate.LIVE_ALLOCATOR = "rule"` keeps the ERC-or-1/N rule live.
 
 Not in the book: `funding-carry/` (needs a perp venue) and `vol-risk-premium/` (a daily-hedged option book is a separate daemon). No futures (PLAN risk #3).
 
@@ -38,7 +38,7 @@ Sleeves alone, kill off, buffered engine, whole panel:
 | v1 book, 1/3 each, static | 0.36 | 0.25 | +1.0% | 4.3% | -12.7% | 2004-07 | 3,051 |
 | **beta+alpha book, 1/2 each, static (live)** | 0.92 | **0.81** | +5.7% | 7.2% | -12.1% | 2003-06 | 30,820 |
 
-Book honesty (`book/reports/validation.md`, run 2026-09-04 04:54): live book PSR 1.00, **DSR 0.63** with n_trials = 56 (every configuration `validate.py` has run on the real panel, before and after the buffer moved into the engine, identical return streams counted once; 0.56 if the 20 placebo draws are counted too), MinBTL 8.2 years against 23.2 in hand, MinTRL 4.3 years. Those last three are what a 0.8 Sharpe over 23 years buys, and for a book whose core is 0.67 beta to its universe they are statements about the universe. The v1 book on the same engine: 0.25 net, PSR 0.88, DSR 0.02 at 47 trials (the count when it was the live book, from the run before this one). Cost stress on the live book: 2x costs 0.73, 4x 0.55. A one-bar signal delay does nothing (0.82; +5 bars 0.76), which is what a book that is mostly a buy-and-hold core looks like.
+Book honesty (`book/reports/validation.md`, run 2026-09-05 02:59): live book PSR 1.00, **DSR 0.63** with n_trials = 60 (every configuration `validate.py` has run on the real panel, before and after the buffer moved into the engine, identical return streams counted once; 0.57 if the 20 placebo draws are counted too), MinBTL 8.4 years against 23.2 in hand, MinTRL 4.3 years. Those last three are what a 0.8 Sharpe over 23 years buys, and for a book whose core is 0.67 beta to its universe they are statements about the universe. The v1 book on the same engine: 0.25 net, PSR 0.88, DSR 0.02 at 47 trials (the count when it was the live book, from the run before this one). Cost stress on the live book: 2x costs 0.73, 4x 0.55. A one-bar signal delay does nothing (0.82; +5 bars 0.76), which is what a book that is mostly a buy-and-hold core looks like.
 
 Two results from the falsification battery that matter more than any headline:
 
@@ -75,20 +75,39 @@ Against its universe on the window: alpha +2.8% a year, t 0.75, beta 0.04, bench
 
 ### Four books, one window
 
-All four at 1/N of their sleeves, kill off, buffered engine, full cost model, from 2005-06-09 (the first day every book is live). In-sample columns are the whole window; OOS is the untouched window. DSR uses the final run's trial count (56; the run that made the decision had 47, which gave 0.02 / 0.27 / 0.30 / 0.66). Every book is a logged trial.
+All four at 1/N of their sleeves, kill off, buffered engine, full cost model, from 2005-06-09 (the first day every book is live). In-sample columns are the whole window; OOS is the untouched window. DSR uses the final run's trial count (60; the run that made the decision had 47, which gave 0.02 / 0.27 / 0.30 / 0.66). Every book is a logged trial.
 
 | book | Sharpe gross | Sharpe net | DSR | ann. return | ann. vol | max drawdown | turnover / yr | OOS Sharpe | OOS max drawdown |
 |---|---|---|---|---|---|---|---|---|---|
 | (a) v1, 3 sleeves | 0.33 | 0.22 | 0.01 | +0.9% | 4.3% | -12.7% | 3.8x | 0.40 | -9.2% |
 | (b) v1 + EWMAC, 4 sleeves | 0.70 | 0.54 | 0.18 | +3.0% | 5.8% | -13.5% | 9.7x | 0.46 | -13.5% |
-| (c) EWMAC for TrendETF | 0.72 | 0.55 | 0.19 | +3.1% | 5.8% | -14.4% | 10.8x | 0.40 | -14.4% |
-| **(d) beta + alpha** | 0.88 | **0.76** | 0.53 | +5.4% | 7.3% | -12.1% | 10.5x | **0.79** | -11.7% |
+| (c) EWMAC for TrendETF | 0.72 | 0.55 | 0.20 | +3.1% | 5.8% | -14.4% | 10.8x | 0.40 | -14.4% |
+| **(d) beta + alpha** | 0.88 | **0.76** | 0.54 | +5.4% | 7.3% | -12.1% | 10.5x | **0.79** | -11.7% |
 
 **Rule, written before the run: the live book is the winner on the untouched window; if nothing beats (a) there, (a) stays.** (d) wins, 0.79 against 0.40, and beats (a) on drawdown too. ERC vs 1/N on (d)'s two sleeves, quarterly refits, out of sample: 0.86 vs 0.87, so 1/N. `allocate.LIVE_BOOK = "beta+alpha"`, weights ETFBeta 0.5 / EWMAC 0.5.
 
 What the choice means, stated plainly. (b) and (c) show that EWMAC adds 0.3 of in-sample Sharpe to the v1 book but almost nothing out of sample (0.46 and 0.40 against 0.40). (d) wins because of ETFBeta: the ETF universe held 1/N and vol-targeted scores 0.98 on the untouched window, which was a good four years to own everything. The book is a beta position with a trend overlay whose out-of-sample contribution is small and whose own promotion test failed. The DSR of 0.53 is the highest in this directory and it deflates a Sharpe that is mostly the market's; (a), (b) and (c) are all under 0.2, which is where a rule with no beta and this much selection lands. The untouched window is 4.7 years, and (d) was written after reading the full-panel attribution table, which includes that window: nothing was fit on it, but the idea of what to test came from a look that covered it. Anyone reading this as evidence of skill is reading it wrong; it is evidence that this ETF universe went up over 2022-2026 and that a rule-based book of it did not get in the way.
 
 With the live 25% kill on, ETFBeta would have been flattened on 2016-01-08 (the 2014-2016 commodity fall, inside a 1/N of 14 ETFs sized to 10% vol) and EWMAC never. Live, that parks half the book until it is restarted by hand; the backtests above run with the kill off.
+
+### Candidate allocator: cost-aware mean-variance (2026-09-05)
+
+`book/optimizer.py` is the third allocator, and it is a candidate, not live. It maximises mu'w - w'Sw / 2 - c'|w - w_prev| over long-only sleeve weights: mu is each sleeve's trailing three-year mean net return, S is the covariance (Ledoit-Wolf, or `../risk-model/risk_model.py::covariance` if that project exists at run time; it did not for this run), c is each sleeve's realised cost per unit of traded notional times its gross exposure, both from trades before the refit. Constraints: book vol at most 10%, gross and net at most 1.5, any one sleeve at most 0.75, and a turnover budget of 0.5 per refit; then a half-Kelly cap on the leverage of the chosen mix. Risk aversion 1 is the growth-optimal objective, so the Kelly, vol and gross caps are what size the book. A vol or Kelly cut that the budget would block is not budgeted, the same convention as the engine's buffer. Drawdown-scaled sizing is not repeated at the book level; it stays in the engine's overlay on every sleeve. Every parameter was written down before the run and none was tuned; the configuration is one trial per book.
+
+The comparison is `allocate.walk`'s: quarterly refits on a three-year window, weights held for the next quarter. Its realised stream also pays the move on the first day after each refit at the costs known then and, when the sleeve weights sum past 1, financing on the excess at the 3-month bill from the data lake (`lake.load("fred", ..., universe=["DTB3"])`) plus 50 bps. Each book's candidate stream is a logged trial in `trials.csv` and a run in a research registry under `reports/registry/` (`research/registry/experiments.py`, keyed on the parameters). Rule, written before the run: the candidate goes live only if its best book's Sharpe on the untouched window beats the best 1/N book's there; otherwise 1/N stays and the candidate is a documented trial.
+
+| book | walk Sharpe mvo | walk Sharpe 1/N | DSR | untouched Sharpe mvo | untouched Sharpe 1/N (engine) | mean leverage | turnover / refit | vol cap bound / refits |
+|---|---|---|---|---|---|---|---|---|
+| (a) v1 | 0.05 | 0.24 | 0.00 | **-0.44** | 0.40 | 0.67 | 0.24 | 1 / 86 |
+| (b) v1 + EWMAC | 0.45 | 0.52 | 0.09 | **-0.27** | 0.46 | 1.08 | 0.24 | 42 / 86 |
+| (c) EWMAC for TrendETF | 0.44 | 0.52 | 0.10 | **-0.26** | 0.40 | 0.91 | 0.17 | 1 / 82 |
+| (d) beta + alpha | 0.73 | 0.87 | 0.48 | **0.66** | **0.79** | 1.13 | 0.10 | 36 / 90 |
+
+**Not promoted.** The candidate's best book on the untouched window is (d) at 0.66 against 0.79 for the same book at 1/N, and on the three v1-based books it is negative where 1/N is 0.40 to 0.46. It also loses on the whole 22-year walk for every book (0.73 vs 0.87 on the live book, where ERC scored 0.86). `allocate.LIVE_ALLOCATOR = "rule"`, so the live weights are still ETFBeta 0.5 / EWMAC 0.5. The candidate's weight path for the live book is in `reports/mvo_weights.csv`: it sits at the 0.75 sleeve caps on both sleeves (1.5x, the gross cap) in a fifth of the 94 refits, has one sleeve at zero in 26 of them, and averages 1.08x. On the untouched window it cut ETFBeta from 0.75 to 0.08 by September 2022 and to zero at the end of that year, after the 2022 fall, and rebuilt it to 0.75 by March 2024, after the recovery; it cut EWMAC to zero from mid-2025 to the end of that year. The fit at the last date is ETFBeta 0.75 / EWMAC 0.59 (`reports/allocations.json`, under `candidate`).
+
+What the result says. A three-year mean of a 10%-vol sleeve has a standard error of about 5.8% a year, about the size of the sleeve means themselves (ETFBeta +5.3%, EWMAC +6.6%), so the tilts are mostly noise, and the noise has a sign: the trailing mean falls after a drawdown and rises after a recovery, so the rule sells what just lost and buys what just won, a quarter late. The cost penalty and the turnover budget did what they were built to do (turnover 0.10 per refit on the live book, the budget binding 7 times in 90, the vol cap 36 times, the Kelly cap never) and none of it helps a rule whose expected-return input is noise. The books with the carry sleeve lose more because the candidate also times the crypto sleeve on two to three years of its own history. This is the same thing `portfolio-construction/` found across instruments, now found across sleeves: with two to four return streams and this much estimation error, 1/N is hard to beat and the gap is not small.
+
+Two honesty notes. The untouched window was already read once, for the v3 book decision; this is its second read, on a rule fixed before the run, and the README's own limitation below applies: a promotion on it would have been weaker than v3's. And the live book's candidate walk was run once on the real panel before `validate.py`, as a smoke test of the code path, with the same parameters and the same result; it is the same trial, counted once.
 
 ## Signal vs beta
 
@@ -117,6 +136,7 @@ TrendETF's alpha is positive but not significant and its residual Sharpe sits un
 |---|---|---|
 | Simulator | `engine/` (own, 730 lines) | As-of `Bars` view that raises `LookAheadError`, next-open fills, commission + half spread + sqrt impact with a participation cap, per-strategy books, borrow and financing accrual, vol / gross / drawdown / kill overlay that also runs between rebalances, per-instrument position buffer on the final weights. `check.py` has 46 checks including a mutation test; the five buffer checks were mutation-tested (buffer off, breach override off, state-change override off: 6, 2 and 1 failures). |
 | Sleeve allocation | [skfolio 1.0.3](https://skfolio.org) | `RiskBudgeting` with `EmpiricalPrior(covariance_estimator=LedoitWolf())`. |
+| Candidate allocator | cvxpy 1.9.2 (already installed under skfolio), sklearn `LedoitWolf` | `book/optimizer.py`; the financing rate through `data-lake/lake.py`, the trial log through `research/registry/experiments.py`. |
 | Walk-forward, DSR, PSR, MinBTL, MinTRL | [purgedcv 0.1.5](https://pypi.org/project/purgedcv/) (pinned) | Cross-checked against the retired `archive/framework-metrics-honesty.py` on the best-of-100-random case: DSR 0.6855 vs 0.6848, PSR identical. |
 | Tearsheet | [quantstats 0.0.81](https://github.com/ranaroussi/quantstats) | `book/reports/tearsheet.html`, SPY benchmark passed as a Series. |
 | Broker and crypto bars | [alpaca-py 0.44.0](https://github.com/alpacahq/alpaca-py), `book/broker.py` | Paper endpoint only; crypto bars need no key. The layer's kill switch, limits, reconciliation, simulated account, L2 fill model and dormant live adapters are described under Broker layer below. |
@@ -133,7 +153,8 @@ All commands from `quant-projects/` with its venv (Python 3.14; do not install b
 .venv/bin/python3 framework/check.py                 # engine, 46 checks, offline, ~40 s
 .venv/bin/python3 framework/book/check.py            # sleeves, EWMAC, books, attribution, broker layer, L2 fills, daemon, offline
 .venv/bin/python3 -m framework.book.universe         # panel summary and hash
-.venv/bin/python3 -m framework.book.allocate         # ERC vs 1/N on the live book, writes reports/allocations.json
+.venv/bin/python3 -m framework.book.allocate         # ERC vs 1/N on the live book, writes reports/allocations.json (with the candidate's fit)
+.venv/bin/python3 -m framework.book.optimizer        # candidate allocator vs 1/N on the live book's sleeves, ~4 min
 .venv/bin/python3 -m framework.book.validate         # everything in validation.md, ~25 min (seven daily EWMAC runs)
 .venv/bin/python3 -m framework.book.daemon --dry-run # one session: targets and the Alpaca order list, nothing written
 .venv/bin/python3 -m framework.book.daemon           # the same, submitted and logged to reports/ledger.csv
@@ -231,7 +252,9 @@ Also:
 - The kill switch is off in the backtests. Live it is on (25%), and a killed sleeve stays flat until restarted by hand.
 - Ledger rows dated before 2026-09-04 are the v1 book; the 2026-09-03 row was also written before the rate fix below. They are left in place because the ledger is append-only. The first live-book run replays `beta+alpha` from `LIVE_START` and moves the paper account to it in one session.
 - Yahoo's daily bar is not always final at 16:45 ET; a bar that later changes shows up as a panel-hash change in the ledger, not as a corrected fill.
-- The untouched window has been read once now, for the decision above. It is spent: any further change to the book that is judged on it is in-sample.
+- The untouched window has been read twice now: once for the v3 book decision, once on 2026-09-05 for the candidate allocator, on a rule fixed before that run. It is spent: any further change to the book that is judged on it is in-sample.
+- The candidate allocator's comparison is on sleeve return streams recombined outside the engine, daily-rebalanced at no cost between refits; the engine's static 1/N drifts. The two agree to 0.07 of Sharpe on the untouched window for the live book (0.86 walk, 0.79 engine) and the rule compares against the engine's number. If the candidate ever went live it would run as a static allocation refit quarterly, like ERC would have, so the daily-rebalanced walk is an upper bound on it.
+- If `../risk-model/` appears, `optimizer.covariance` will use it and the candidate's numbers here no longer describe the code; rerun `validate.py` and that is a new trial.
 - The broker layer's limits are checked on the post-trade book once a day, when the daemon runs. Nothing watches the account intraday; a 3% daily loss is caught at 16:45 ET, not when it happens. That is what a once-a-session daemon can do.
 - The daily loss limit compares to the previous ledger row's equity, so a weekend or a missed run stretches "daily" to whatever the gap was.
 - Reconciliation reads weights, not shares, and its tolerance is per name; a small error on every name adds up to nothing it would catch.

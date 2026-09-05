@@ -1,0 +1,128 @@
+lake: 0 ETF rows written
+S&P panel 5850 sessions x 636 names, ETFs (5854, 14), factors through 2026-07-31
+untouched window 2021-12-31 to 2026-08-31, opened: True
+races done 14s
+winner on sp500 pre-window: pca; 12 trials logged
+
+etf
+        vol_pre   n_pre  leverage_median  leverage_max
+sample   0.0365  4154.0           2.1437        2.8566
+lw       0.0408  4154.0           1.6538        2.4619
+pca      0.0517  4154.0           1.5124        3.1756
+ff       0.0508  4154.0           1.1213        1.3118
+
+sp100
+        vol_pre   n_pre  leverage_median  leverage_max
+sample   0.1427  4154.0           3.6615        6.6051
+lw       0.1385  4154.0           3.2407        4.4798
+pca      0.1478  4154.0           2.9171        4.3973
+ff       0.1432  4154.0           2.5748        3.8924
+
+sp500
+        vol_pre   n_pre  leverage_median  leverage_max
+sample   0.1827  4154.0          14.4802       43.9879
+lw       0.1278  4154.0           7.2423       11.5643
+pca      0.1199  4154.0           4.4147        5.6626
+ff       0.1419  4154.0           3.3617        4.4654
+
+live book shadow as of 2026-09-04, risk as of 2026-09-03
+book vol 10.55% (pca), k=3, FF through 2026-07-31
+     weight     vol     mcr  contribution     pct
+DBA  0.1006  0.1260  0.0640        0.0064  0.0610
+DBC  0.0793  0.1847  0.0878        0.0070  0.0660
+EEM  0.0639  0.2191  0.1744        0.0111  0.1057
+EFA  0.1343  0.1636  0.1303        0.0175  0.1659
+FXB  0.2166  0.0700  0.0368        0.0080  0.0755
+FXE  0.1233  0.0716  0.0270        0.0033  0.0316
+FXY  0.0196  0.0986  0.0091        0.0002  0.0017
+GLD  0.0415  0.2402  0.1535        0.0064  0.0603
+IEF -0.0567  0.0546 -0.0002        0.0000  0.0001
+QQQ  0.0712  0.2188  0.1617        0.0115  0.1091
+SLV  0.0353  0.4790  0.3510        0.0124  0.1174
+SPY  0.1443  0.1660  0.1210        0.0175  0.1654
+TLT -0.0591  0.1158 -0.0008        0.0000  0.0005
+USO  0.0415  0.4129  0.1011        0.0042  0.0398
+             weight  contribution     pct
+bonds       -0.1157        0.0001  0.0006
+commodities  0.2982        0.0364  0.3445
+equities     0.4138        0.0576  0.5461
+fx           0.3596        0.0115  0.1088
+          exposure  factor_vol  contribution     pct
+Mkt-RF      0.4318      0.1694        0.0637  0.7121
+SMB        -0.0934      0.1013       -0.0008 -0.0086
+HML         0.0119      0.1193       -0.0005 -0.0055
+RMW        -0.1314      0.1120        0.0077  0.0858
+CMA         0.0455      0.0835       -0.0004 -0.0048
+Mom         0.0221      0.1767        0.0011  0.0125
+residual       NaN         NaN        0.0187  0.2086
+          eigenvalue  pct_universe     pct
+PC1           4.5348        0.3239  0.6653
+PC2           2.8840        0.2060  0.2489
+PC3           2.0660        0.1476  0.0192
+residual         NaN           NaN  0.0665
+{'parametric': {'var': np.float64(0.01546), 'es': np.float64(0.01772), 'sigma': 0.00665}, 'historical': {'var': 0.01649, 'es': 0.02433}, 'fhs': {'var': 0.01874, 'es': 0.02396}}
+{'sample': np.float64(0.01502), 'lw': np.float64(0.01489), 'pca': np.float64(0.01546), 'ff': np.float64(0.01312)}
+stress 2008-09: -36.84%, worst day -6.29% on 2008-09-29, max drawdown -35.52%, missing []
+stress 2020-03: -23.57%, worst day -7.15% on 2020-03-16, max drawdown -23.82%, missing []
+stress 2022: -5.45%, worst day -2.81% on 2022-09-23, max drawdown -17.52%, missing []
+VaR backtest 2011-02-02 to 2026-08-31, 3917 days, 17s
+coverage pre-window {'parametric': (0.0211, 0.0), 'historical': (0.0138, 0.056), 'fhs': (0.012, 0.304)}
+untouched window already spent; reading the stored result
+{
+ "etf": {
+  "sample": {
+   "vol": 0.045487419962469834,
+   "n": 1170
+  },
+  "lw": {
+   "vol": 0.04812615383166452,
+   "n": 1170
+  },
+  "pca": {
+   "vol": 0.060807350109953265,
+   "n": 1170
+  },
+  "ff": {
+   "vol": 0.06671408979485953,
+   "n": 1170
+  }
+ },
+ "sp100": {
+  "sample": {
+   "vol": 0.13290497306827231,
+   "n": 1170
+  },
+  "lw": {
+   "vol": 0.12749071292754063,
+   "n": 1170
+  },
+  "pca": {
+   "vol": 0.1360114928137136,
+   "n": 1170
+  },
+  "ff": {
+   "vol": 0.14681078088094524,
+   "n": 1170
+  }
+ },
+ "sp500": {
+  "sample": {
+   "vol": 0.3362586349034933,
+   "n": 1170
+  },
+  "lw": {
+   "vol": 0.1301852139888991,
+   "n": 1170
+  },
+  "pca": {
+   "vol": 0.11436470310793677,
+   "n": 1170
+  },
+  "ff": {
+   "vol": 0.1477067186624887,
+   "n": 1170
+  }
+ }
+}
+coverage on window {'parametric': (0.0162, 0.049), 'historical': (0.0111, 0.707), 'fhs': (0.0103, 0.93)}
+done in 17s -> reports
