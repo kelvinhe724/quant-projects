@@ -19,3 +19,5 @@ quantstats
 alpaca-py
 lxml
 pyarrow
+torch
+transformers

@@ -1,0 +1,71 @@
+source: data.binance.vision spot aggTrades; 604,800 seconds 2026-08-28 00:00:00+00:00 to 2026-09-03 23:59:59+00:00, hash 887ede0f45ece32a
+lake L2 stream holds 0.8 hours of BTCUSDT, below 6: backfilled from data.binance.vision spot aggTrades, 2026-08-28 to 2026-09-03
+untouched window 2026-09-02 00:00:00+00:00 to 2026-09-03 23:59:59+00:00, 172,800 seconds, not yet opened
+class shares by horizon (pre-window):
+         5      10     30
+ 0.0  0.821  0.784  0.735
+-1.0  0.090  0.109  0.135
+ 1.0  0.088  0.107  0.130
+
+fold 1: train 2026-08-28 00:00:00+00:00 to 2026-08-29 23:59:29+00:00, test 2026-08-30 00:00:00+00:00 to 2026-08-30 23:59:59+00:00
+    logit-imbalance fit on 155,493 rows in 0s
+    lightgbm fit on 155,493 rows in 2s
+    deeplob fit on 155,493 rows in 53s
+  picked deeplob h=30 tau=0.1 (val Sharpe -15.12, test -33.75); logit-imbalance h5 acc 0.874; lightgbm h5 acc 0.874; deeplob h5 acc 0.874
+
+fold 2: train 2026-08-28 00:00:00+00:00 to 2026-08-30 23:59:29+00:00, test 2026-08-31 00:00:00+00:00 to 2026-08-31 23:59:59+00:00
+    logit-imbalance fit on 233,253 rows in 0s
+    lightgbm fit on 233,253 rows in 19s
+    deeplob fit on 233,253 rows in 79s
+  picked lightgbm h=30 tau=0.3 (val Sharpe -4.01, test -3.48); logit-imbalance h5 acc 0.770; lightgbm h5 acc 0.769; deeplob h5 acc 0.771
+
+fold 3: train 2026-08-28 00:00:00+00:00 to 2026-08-31 23:59:29+00:00, test 2026-09-01 00:00:00+00:00 to 2026-09-01 23:59:59+00:00
+    logit-imbalance fit on 311,013 rows in 0s
+    lightgbm fit on 311,013 rows in 8s
+    deeplob fit on 311,013 rows in 94s
+  picked deeplob h=10 tau=0.3 (val Sharpe -4.16, test -5.04); logit-imbalance h5 acc 0.781; lightgbm h5 acc 0.781; deeplob h5 acc 0.782
+
+Walk-forward:
+
+                     train_end                test_start                  test_end                 picked  picked_val_sharpe  picked_test_sharpe  picked_test_bps  baseline_test_sharpe
+fold                                                                                                                                                                                   
+1    2026-08-29 23:59:29+00:00 2026-08-30 00:00:00+00:00 2026-08-30 23:59:59+00:00   deeplob h=30 tau=0.1            -15.119             -33.748        -3030.271               -53.202
+2    2026-08-30 23:59:29+00:00 2026-08-31 00:00:00+00:00 2026-08-31 23:59:59+00:00  lightgbm h=30 tau=0.3             -4.007              -3.481          -23.559               -92.231
+3    2026-08-31 23:59:29+00:00 2026-09-01 00:00:00+00:00 2026-09-01 23:59:59+00:00   deeplob h=10 tau=0.3             -4.163              -5.041          -27.411               -89.455
+
+selected stitched OOS: -3081.2 bps over 72.0 h, daily Sharpe -19.64, 3547 trades; chosen for the final window: deeplob h=30 tau=0.1
+
+stitched OOS classification (mean over folds):
+
+                         accuracy  f1_macro  majority        n
+model           horizon                                       
+deeplob         5           0.809     0.341     0.808  86400.0
+                10          0.767     0.334     0.766  86400.0
+                30          0.708     0.321     0.706  86400.0
+lightgbm        5           0.808     0.309     0.808  86400.0
+                10          0.766     0.302     0.766  86400.0
+                30          0.706     0.289     0.706  86400.0
+logit-imbalance 5           0.808     0.298     0.808  86400.0
+                10          0.766     0.289     0.766  86400.0
+                30          0.706     0.275     0.706  86400.0
+
+final fit on every pre-window second whose label ends before the window
+    logit-imbalance fit on 388,773 rows in 0s
+    lightgbm fit on 388,773 rows in 4s
+    deeplob fit on 388,773 rows in 117s
+
+untouched window opened now; result stored in /Users/kelvin/Documents/C.C. General Intelligence/quant-projects/deep-lob/reports/untouched.json
+
+Untouched window 2026-09-02 00:00:00+00:00 to 2026-09-03 23:59:59+00:00: deeplob h=30 tau=0.1: -17180.2 bps over 48.0 h (-8590.1 bps/day), daily Sharpe -85.36, 18781 trades at -0.915 bps, in market 8%; PSR 0.000, DSR 0.000 over 14 trials
+untouched classification:
+                      accuracy  f1_macro  majority         n
+logit-imbalance h=5      0.754     0.287     0.754  172795.0
+logit-imbalance h=10     0.702     0.275     0.702  172790.0
+logit-imbalance h=30     0.642     0.261     0.642  172770.0
+lightgbm h=5             0.754     0.287     0.754  172795.0
+lightgbm h=10            0.702     0.275     0.702  172790.0
+lightgbm h=30            0.642     0.261     0.642  172770.0
+deeplob h=5              0.755     0.323     0.754  172795.0
+deeplob h=10             0.704     0.317     0.702  172790.0
+deeplob h=30             0.642     0.315     0.642  172770.0
+Model 9e99b8a4aa46 saved; 17 trials in the registry; 388s

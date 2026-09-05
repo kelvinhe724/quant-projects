@@ -1,0 +1,775 @@
+{
+  "data": {
+    "symbol": "BTCUSDT",
+    "lake_rows": 3412,
+    "lake_hours": 0.9477777777777778,
+    "source": "data.binance.vision spot aggTrades",
+    "days": [
+      "2026-08-28",
+      "2026-08-29",
+      "2026-08-30",
+      "2026-08-31",
+      "2026-09-01",
+      "2026-09-02",
+      "2026-09-03"
+    ],
+    "levels": 0,
+    "backfilled": true,
+    "reason": "lake stream below 6 hours",
+    "seconds": 604800,
+    "start": "2026-08-28 00:00:00+00:00",
+    "end": "2026-09-03 23:59:59+00:00",
+    "hash": "887ede0f45ece32a",
+    "features": [
+      "ret_bps",
+      "buy_vol",
+      "sell_vol",
+      "n_trades",
+      "vwap_bps",
+      "bid_bps",
+      "ask_bps",
+      "flow_imb"
+    ],
+    "class_shares_pre": {
+      "5": {
+        "0.0": 0.8213541666666667,
+        "-1.0": 0.09036805555555555,
+        "1.0": 0.08827777777777777
+      },
+      "10": {
+        "0.0": 0.7844467592592592,
+        "-1.0": 0.10899305555555555,
+        "1.0": 0.10656018518518519
+      },
+      "30": {
+        "0.0": 0.7346226851851851,
+        "-1.0": 0.13521759259259258,
+        "1.0": 0.13015972222222222
+      }
+    },
+    "band_bps": {
+      "5": 1.118033988749895,
+      "10": 1.5811388300841898,
+      "30": 2.7386127875258306
+    },
+    "fee_bps": 1.0
+  },
+  "grid": [
+    {
+      "model": "logit-imbalance",
+      "horizon": 5,
+      "tau": 0.1
+    },
+    {
+      "model": "logit-imbalance",
+      "horizon": 5,
+      "tau": 0.3
+    },
+    {
+      "model": "logit-imbalance",
+      "horizon": 10,
+      "tau": 0.1
+    },
+    {
+      "model": "logit-imbalance",
+      "horizon": 10,
+      "tau": 0.3
+    },
+    {
+      "model": "logit-imbalance",
+      "horizon": 30,
+      "tau": 0.1
+    },
+    {
+      "model": "logit-imbalance",
+      "horizon": 30,
+      "tau": 0.3
+    },
+    {
+      "model": "lightgbm",
+      "horizon": 5,
+      "tau": 0.1
+    },
+    {
+      "model": "lightgbm",
+      "horizon": 5,
+      "tau": 0.3
+    },
+    {
+      "model": "lightgbm",
+      "horizon": 10,
+      "tau": 0.1
+    },
+    {
+      "model": "lightgbm",
+      "horizon": 10,
+      "tau": 0.3
+    },
+    {
+      "model": "lightgbm",
+      "horizon": 30,
+      "tau": 0.1
+    },
+    {
+      "model": "lightgbm",
+      "horizon": 30,
+      "tau": 0.3
+    },
+    {
+      "model": "deeplob",
+      "horizon": 5,
+      "tau": 0.1
+    },
+    {
+      "model": "deeplob",
+      "horizon": 5,
+      "tau": 0.3
+    },
+    {
+      "model": "deeplob",
+      "horizon": 10,
+      "tau": 0.1
+    },
+    {
+      "model": "deeplob",
+      "horizon": 10,
+      "tau": 0.3
+    },
+    {
+      "model": "deeplob",
+      "horizon": 30,
+      "tau": 0.1
+    },
+    {
+      "model": "deeplob",
+      "horizon": 30,
+      "tau": 0.3
+    }
+  ],
+  "baseline": {
+    "model": "deeplob",
+    "horizon": 10,
+    "tau": 0.1
+  },
+  "chosen": {
+    "model": "deeplob",
+    "horizon": 30,
+    "tau": 0.1
+  },
+  "walk_forward": {
+    "table": [
+      {
+        "fold": 1,
+        "train_start": "2026-08-28 00:00:00+00:00",
+        "train_end": "2026-08-29 23:59:29+00:00",
+        "test_start": "2026-08-30 00:00:00+00:00",
+        "test_end": "2026-08-30 23:59:59+00:00",
+        "picked": "deeplob h=30 tau=0.1",
+        "picked_val_sharpe": -15.118691430190264,
+        "picked_test_sharpe": -33.74799005865954,
+        "picked_test_bps": -3030.2705254115476,
+        "baseline_test_sharpe": -53.202250396344446
+      },
+      {
+        "fold": 2,
+        "train_start": "2026-08-28 00:00:00+00:00",
+        "train_end": "2026-08-30 23:59:29+00:00",
+        "test_start": "2026-08-31 00:00:00+00:00",
+        "test_end": "2026-08-31 23:59:59+00:00",
+        "picked": "lightgbm h=30 tau=0.3",
+        "picked_val_sharpe": -4.007118442761901,
+        "picked_test_sharpe": -3.4805334628290043,
+        "picked_test_bps": -23.559130685330416,
+        "baseline_test_sharpe": -92.23069245589383
+      },
+      {
+        "fold": 3,
+        "train_start": "2026-08-28 00:00:00+00:00",
+        "train_end": "2026-08-31 23:59:29+00:00",
+        "test_start": "2026-09-01 00:00:00+00:00",
+        "test_end": "2026-09-01 23:59:59+00:00",
+        "picked": "deeplob h=10 tau=0.3",
+        "picked_val_sharpe": -4.163222163891116,
+        "picked_test_sharpe": -5.0405489721048635,
+        "picked_test_bps": -27.411038320152215,
+        "baseline_test_sharpe": -89.45526851677835
+      }
+    ],
+    "selected": {
+      "total_bps": -3081.24069441703,
+      "gross_bps": 488.7593055829698,
+      "hours": 72.0,
+      "bps_per_day": -1027.0802314723435,
+      "sharpe_daily": -19.63636371442298,
+      "trades": 3547,
+      "bps_per_trade": -0.8686892287614971,
+      "in_market": 0.020057870370370372,
+      "n_obs": 259200
+    },
+    "variants": {
+      "logit-imbalance h=5 tau=0.1": {
+        "total_bps": 0.0,
+        "gross_bps": 0.0,
+        "hours": 72.0,
+        "bps_per_day": 0.0,
+        "sharpe_daily": NaN,
+        "trades": 0,
+        "bps_per_trade": NaN,
+        "in_market": 0.0,
+        "n_obs": 259200
+      },
+      "logit-imbalance h=5 tau=0.3": {
+        "total_bps": 0.0,
+        "gross_bps": 0.0,
+        "hours": 72.0,
+        "bps_per_day": 0.0,
+        "sharpe_daily": NaN,
+        "trades": 0,
+        "bps_per_trade": NaN,
+        "in_market": 0.0,
+        "n_obs": 259200
+      },
+      "logit-imbalance h=10 tau=0.1": {
+        "total_bps": 0.0,
+        "gross_bps": 0.0,
+        "hours": 72.0,
+        "bps_per_day": 0.0,
+        "sharpe_daily": NaN,
+        "trades": 0,
+        "bps_per_trade": NaN,
+        "in_market": 0.0,
+        "n_obs": 259200
+      },
+      "logit-imbalance h=10 tau=0.3": {
+        "total_bps": 0.0,
+        "gross_bps": 0.0,
+        "hours": 72.0,
+        "bps_per_day": 0.0,
+        "sharpe_daily": NaN,
+        "trades": 0,
+        "bps_per_trade": NaN,
+        "in_market": 0.0,
+        "n_obs": 259200
+      },
+      "logit-imbalance h=30 tau=0.1": {
+        "total_bps": 0.0,
+        "gross_bps": 0.0,
+        "hours": 72.0,
+        "bps_per_day": 0.0,
+        "sharpe_daily": NaN,
+        "trades": 0,
+        "bps_per_trade": NaN,
+        "in_market": 0.0,
+        "n_obs": 259200
+      },
+      "logit-imbalance h=30 tau=0.3": {
+        "total_bps": 0.0,
+        "gross_bps": 0.0,
+        "hours": 72.0,
+        "bps_per_day": 0.0,
+        "sharpe_daily": NaN,
+        "trades": 0,
+        "bps_per_trade": NaN,
+        "in_market": 0.0,
+        "n_obs": 259200
+      },
+      "lightgbm h=5 tau=0.1": {
+        "total_bps": -30565.272486356873,
+        "gross_bps": 3618.727513643127,
+        "hours": 72.0,
+        "bps_per_day": -10188.424162118958,
+        "sharpe_daily": -87.78456759042382,
+        "trades": 33499,
+        "bps_per_trade": -0.912423430142896,
+        "in_market": 0.11655478395061729,
+        "n_obs": 259200
+      },
+      "lightgbm h=5 tau=0.3": {
+        "total_bps": -727.9728900733728,
+        "gross_bps": 88.02710992662719,
+        "hours": 72.0,
+        "bps_per_day": -242.6576300244576,
+        "sharpe_daily": -13.596911775142585,
+        "trades": 815,
+        "bps_per_trade": -0.8932182700286783,
+        "in_market": 0.0016512345679012346,
+        "n_obs": 259200
+      },
+      "lightgbm h=10 tau=0.1": {
+        "total_bps": -32010.329902489404,
+        "gross_bps": 3617.670097510596,
+        "hours": 72.0,
+        "bps_per_day": -10670.109967496468,
+        "sharpe_daily": -90.76799263238163,
+        "trades": 34981,
+        "bps_per_trade": -0.9150776107741175,
+        "in_market": 0.12104938271604938,
+        "n_obs": 259200
+      },
+      "lightgbm h=10 tau=0.3": {
+        "total_bps": -417.2168973460509,
+        "gross_bps": 14.783102653949072,
+        "hours": 72.0,
+        "bps_per_day": -139.07229911535032,
+        "sharpe_daily": -10.328108323476952,
+        "trades": 432,
+        "bps_per_trade": -0.9657798549677105,
+        "in_market": 0.0008487654320987654,
+        "n_obs": 259200
+      },
+      "lightgbm h=30 tau=0.1": {
+        "total_bps": -24432.989969136783,
+        "gross_bps": 2143.0100308632173,
+        "hours": 72.0,
+        "bps_per_day": -8144.329989712261,
+        "sharpe_daily": -80.93162328771882,
+        "trades": 26433,
+        "bps_per_trade": -0.9243366235061016,
+        "in_market": 0.07792824074074074,
+        "n_obs": 259200
+      },
+      "lightgbm h=30 tau=0.3": {
+        "total_bps": -23.559130685330416,
+        "gross_bps": 10.440869314669584,
+        "hours": 72.0,
+        "bps_per_day": -7.853043561776805,
+        "sharpe_daily": -2.009400773065109,
+        "trades": 34,
+        "bps_per_trade": -0.6929156083920711,
+        "in_market": 6.944444444444444e-05,
+        "n_obs": 259200
+      },
+      "deeplob h=5 tau=0.1": {
+        "total_bps": -33808.24525855452,
+        "gross_bps": 5755.754741445482,
+        "hours": 72.0,
+        "bps_per_day": -11269.41508618484,
+        "sharpe_daily": -80.269975084584,
+        "trades": 37925,
+        "bps_per_trade": -0.8914501056968891,
+        "in_market": 0.22500385802469136,
+        "n_obs": 259200
+      },
+      "deeplob h=5 tau=0.3": {
+        "total_bps": -775.9022416488529,
+        "gross_bps": 82.09775835114715,
+        "hours": 72.0,
+        "bps_per_day": -258.63408054961764,
+        "sharpe_daily": -13.399133140086539,
+        "trades": 858,
+        "bps_per_trade": -0.904314966956705,
+        "in_market": 0.002052469135802469,
+        "n_obs": 259200
+      },
+      "deeplob h=10 tau=0.1": {
+        "total_bps": -32450.733703440525,
+        "gross_bps": 5651.266296559475,
+        "hours": 72.0,
+        "bps_per_day": -10816.911234480174,
+        "sharpe_daily": -79.53079689716581,
+        "trades": 36749,
+        "bps_per_trade": -0.8830371902212448,
+        "in_market": 0.22125385802469136,
+        "n_obs": 259200
+      },
+      "deeplob h=10 tau=0.3": {
+        "total_bps": -68.8183159446018,
+        "gross_bps": 9.181684055398193,
+        "hours": 72.0,
+        "bps_per_day": -22.939438648200603,
+        "sharpe_daily": -3.3461333300976874,
+        "trades": 78,
+        "bps_per_trade": -0.8822861018538694,
+        "in_market": 0.00015817901234567902,
+        "n_obs": 259200
+      },
+      "deeplob h=30 tau=0.1": {
+        "total_bps": -20560.964203221563,
+        "gross_bps": 3305.0357967784366,
+        "hours": 72.0,
+        "bps_per_day": -6853.654734407188,
+        "sharpe_daily": -62.31481216281547,
+        "trades": 23615,
+        "bps_per_trade": -0.8706739023172375,
+        "in_market": 0.13779706790123455,
+        "n_obs": 259200
+      },
+      "deeplob h=30 tau=0.3": {
+        "total_bps": -2.0,
+        "gross_bps": 0.0,
+        "hours": 72.0,
+        "bps_per_day": -0.6666666666666666,
+        "sharpe_daily": -0.8164981559703447,
+        "trades": 2,
+        "bps_per_trade": -1.0,
+        "in_market": 3.858024691358025e-06,
+        "n_obs": 259200
+      }
+    },
+    "classification": [
+      {
+        "model": "deeplob",
+        "horizon": 5,
+        "accuracy": 0.8091358024691359,
+        "f1_macro": 0.3410311808845474,
+        "majority": 0.8081481481481482,
+        "n": 86400.0
+      },
+      {
+        "model": "deeplob",
+        "horizon": 10,
+        "accuracy": 0.7672839506172839,
+        "f1_macro": 0.33404062077431723,
+        "majority": 0.7656712962962963,
+        "n": 86400.0
+      },
+      {
+        "model": "deeplob",
+        "horizon": 30,
+        "accuracy": 0.7078973765432099,
+        "f1_macro": 0.32143445592244774,
+        "majority": 0.7059375000000001,
+        "n": 86400.0
+      },
+      {
+        "model": "lightgbm",
+        "horizon": 5,
+        "accuracy": 0.8079783950617284,
+        "f1_macro": 0.30932200787084885,
+        "majority": 0.8081481481481482,
+        "n": 86400.0
+      },
+      {
+        "model": "lightgbm",
+        "horizon": 10,
+        "accuracy": 0.7656712962962963,
+        "f1_macro": 0.3017533815473598,
+        "majority": 0.7656712962962963,
+        "n": 86400.0
+      },
+      {
+        "model": "lightgbm",
+        "horizon": 30,
+        "accuracy": 0.7061651234567901,
+        "f1_macro": 0.28921990702773276,
+        "majority": 0.7059375000000001,
+        "n": 86400.0
+      },
+      {
+        "model": "logit-imbalance",
+        "horizon": 5,
+        "accuracy": 0.8081481481481482,
+        "f1_macro": 0.2977246756237876,
+        "majority": 0.8081481481481482,
+        "n": 86400.0
+      },
+      {
+        "model": "logit-imbalance",
+        "horizon": 10,
+        "accuracy": 0.7656712962962963,
+        "f1_macro": 0.2886651060344627,
+        "majority": 0.7656712962962963,
+        "n": 86400.0
+      },
+      {
+        "model": "logit-imbalance",
+        "horizon": 30,
+        "accuracy": 0.7059375000000001,
+        "f1_macro": 0.2751162693505196,
+        "majority": 0.7059375000000001,
+        "n": 86400.0
+      }
+    ]
+  },
+  "untouched": {
+    "start": "2026-09-02 00:00:00+00:00",
+    "end": "2026-09-03 23:59:59+00:00",
+    "opened_at": "2026-09-04T21:08:29",
+    "chosen": {
+      "model": "deeplob",
+      "horizon": 30,
+      "tau": 0.1
+    },
+    "headline": {
+      "total_bps": -17180.231290222368,
+      "gross_bps": 1637.7687097776325,
+      "hours": 48.0,
+      "bps_per_day": -8590.115645111184,
+      "sharpe_daily": -85.35737701755741,
+      "trades": 18781,
+      "bps_per_trade": -0.9147665880529454,
+      "in_market": 0.07913194444444445,
+      "n_obs": 172800
+    },
+    "dsr": {
+      "sharpe": -20.570271550492944,
+      "psr": 0.0,
+      "dsr": 0.0,
+      "n_trials": 14,
+      "var_sharpe": 0.12564449538352848,
+      "n_obs": 21442
+    },
+    "n_trials_before": 14,
+    "classification": {
+      "logit-imbalance h=5": {
+        "accuracy": 0.7541421916143407,
+        "f1_macro": 0.286613858032532,
+        "majority": 0.7541421916143407,
+        "n": 172795
+      },
+      "logit-imbalance h=10": {
+        "accuracy": 0.7016899126106835,
+        "f1_macro": 0.2748992466883194,
+        "majority": 0.7016899126106835,
+        "n": 172790
+      },
+      "logit-imbalance h=30": {
+        "accuracy": 0.6416912658447648,
+        "f1_macro": 0.26058138100022915,
+        "majority": 0.6416912658447648,
+        "n": 172770
+      },
+      "lightgbm h=5": {
+        "accuracy": 0.7541421916143407,
+        "f1_macro": 0.286613858032532,
+        "majority": 0.7541421916143407,
+        "n": 172795
+      },
+      "lightgbm h=10": {
+        "accuracy": 0.7016899126106835,
+        "f1_macro": 0.2748992466883194,
+        "majority": 0.7016899126106835,
+        "n": 172790
+      },
+      "lightgbm h=30": {
+        "accuracy": 0.6416912658447648,
+        "f1_macro": 0.26058138100022915,
+        "majority": 0.6416912658447648,
+        "n": 172770
+      },
+      "deeplob h=5": {
+        "accuracy": 0.7554443126247866,
+        "f1_macro": 0.3227369952445859,
+        "majority": 0.7541421916143407,
+        "n": 172795
+      },
+      "deeplob h=10": {
+        "accuracy": 0.704039585624168,
+        "f1_macro": 0.3171422980950124,
+        "majority": 0.7016899126106835,
+        "n": 172790
+      },
+      "deeplob h=30": {
+        "accuracy": 0.6424668634600914,
+        "f1_macro": 0.3153188491022715,
+        "majority": 0.6416912658447648,
+        "n": 172770
+      }
+    },
+    "pnl": {
+      "logit-imbalance h=5 tau=0.1": {
+        "total_bps": 0.0,
+        "gross_bps": 0.0,
+        "hours": 48.0,
+        "bps_per_day": 0.0,
+        "sharpe_daily": NaN,
+        "trades": 0,
+        "bps_per_trade": NaN,
+        "in_market": 0.0,
+        "n_obs": 172800
+      },
+      "logit-imbalance h=5 tau=0.3": {
+        "total_bps": 0.0,
+        "gross_bps": 0.0,
+        "hours": 48.0,
+        "bps_per_day": 0.0,
+        "sharpe_daily": NaN,
+        "trades": 0,
+        "bps_per_trade": NaN,
+        "in_market": 0.0,
+        "n_obs": 172800
+      },
+      "logit-imbalance h=10 tau=0.1": {
+        "total_bps": 0.0,
+        "gross_bps": 0.0,
+        "hours": 48.0,
+        "bps_per_day": 0.0,
+        "sharpe_daily": NaN,
+        "trades": 0,
+        "bps_per_trade": NaN,
+        "in_market": 0.0,
+        "n_obs": 172800
+      },
+      "logit-imbalance h=10 tau=0.3": {
+        "total_bps": 0.0,
+        "gross_bps": 0.0,
+        "hours": 48.0,
+        "bps_per_day": 0.0,
+        "sharpe_daily": NaN,
+        "trades": 0,
+        "bps_per_trade": NaN,
+        "in_market": 0.0,
+        "n_obs": 172800
+      },
+      "logit-imbalance h=30 tau=0.1": {
+        "total_bps": 0.0,
+        "gross_bps": 0.0,
+        "hours": 48.0,
+        "bps_per_day": 0.0,
+        "sharpe_daily": NaN,
+        "trades": 0,
+        "bps_per_trade": NaN,
+        "in_market": 0.0,
+        "n_obs": 172800
+      },
+      "logit-imbalance h=30 tau=0.3": {
+        "total_bps": 0.0,
+        "gross_bps": 0.0,
+        "hours": 48.0,
+        "bps_per_day": 0.0,
+        "sharpe_daily": NaN,
+        "trades": 0,
+        "bps_per_trade": NaN,
+        "in_market": 0.0,
+        "n_obs": 172800
+      },
+      "lightgbm h=5 tau=0.1": {
+        "total_bps": 0.0,
+        "gross_bps": 0.0,
+        "hours": 48.0,
+        "bps_per_day": 0.0,
+        "sharpe_daily": NaN,
+        "trades": 0,
+        "bps_per_trade": NaN,
+        "in_market": 0.0,
+        "n_obs": 172800
+      },
+      "lightgbm h=5 tau=0.3": {
+        "total_bps": 0.0,
+        "gross_bps": 0.0,
+        "hours": 48.0,
+        "bps_per_day": 0.0,
+        "sharpe_daily": NaN,
+        "trades": 0,
+        "bps_per_trade": NaN,
+        "in_market": 0.0,
+        "n_obs": 172800
+      },
+      "lightgbm h=10 tau=0.1": {
+        "total_bps": 0.0,
+        "gross_bps": 0.0,
+        "hours": 48.0,
+        "bps_per_day": 0.0,
+        "sharpe_daily": NaN,
+        "trades": 0,
+        "bps_per_trade": NaN,
+        "in_market": 0.0,
+        "n_obs": 172800
+      },
+      "lightgbm h=10 tau=0.3": {
+        "total_bps": 0.0,
+        "gross_bps": 0.0,
+        "hours": 48.0,
+        "bps_per_day": 0.0,
+        "sharpe_daily": NaN,
+        "trades": 0,
+        "bps_per_trade": NaN,
+        "in_market": 0.0,
+        "n_obs": 172800
+      },
+      "lightgbm h=30 tau=0.1": {
+        "total_bps": 0.0,
+        "gross_bps": 0.0,
+        "hours": 48.0,
+        "bps_per_day": 0.0,
+        "sharpe_daily": NaN,
+        "trades": 0,
+        "bps_per_trade": NaN,
+        "in_market": 0.0,
+        "n_obs": 172800
+      },
+      "lightgbm h=30 tau=0.3": {
+        "total_bps": 0.0,
+        "gross_bps": 0.0,
+        "hours": 48.0,
+        "bps_per_day": 0.0,
+        "sharpe_daily": NaN,
+        "trades": 0,
+        "bps_per_trade": NaN,
+        "in_market": 0.0,
+        "n_obs": 172800
+      },
+      "deeplob h=5 tau=0.1": {
+        "total_bps": -34209.55103381736,
+        "gross_bps": 5068.448966182637,
+        "hours": 48.0,
+        "bps_per_day": -17104.77551690868,
+        "sharpe_daily": -107.81475371747183,
+        "trades": 37907,
+        "bps_per_trade": -0.9024599950884366,
+        "in_market": 0.27523726851851854,
+        "n_obs": 172800
+      },
+      "deeplob h=5 tau=0.3": {
+        "total_bps": 0.0,
+        "gross_bps": 0.0,
+        "hours": 48.0,
+        "bps_per_day": 0.0,
+        "sharpe_daily": NaN,
+        "trades": 0,
+        "bps_per_trade": NaN,
+        "in_market": 0.0,
+        "n_obs": 172800
+      },
+      "deeplob h=10 tau=0.1": {
+        "total_bps": -32430.488362228192,
+        "gross_bps": 4871.511637771808,
+        "hours": 48.0,
+        "bps_per_day": -16215.244181114096,
+        "sharpe_daily": -104.91625347363843,
+        "trades": 36236,
+        "bps_per_trade": -0.8949798090911854,
+        "in_market": 0.28421875,
+        "n_obs": 172800
+      },
+      "deeplob h=10 tau=0.3": {
+        "total_bps": 0.0,
+        "gross_bps": 0.0,
+        "hours": 48.0,
+        "bps_per_day": 0.0,
+        "sharpe_daily": NaN,
+        "trades": 0,
+        "bps_per_trade": NaN,
+        "in_market": 0.0,
+        "n_obs": 172800
+      },
+      "deeplob h=30 tau=0.1": {
+        "total_bps": -17180.231290222368,
+        "gross_bps": 1637.7687097776325,
+        "hours": 48.0,
+        "bps_per_day": -8590.115645111184,
+        "sharpe_daily": -85.35737701755741,
+        "trades": 18781,
+        "bps_per_trade": -0.9147665880529454,
+        "in_market": 0.07913194444444445,
+        "n_obs": 172800
+      },
+      "deeplob h=30 tau=0.3": {
+        "total_bps": 0.0,
+        "gross_bps": 0.0,
+        "hours": 48.0,
+        "bps_per_day": 0.0,
+        "sharpe_daily": NaN,
+        "trades": 0,
+        "bps_per_trade": NaN,
+        "in_market": 0.0,
+        "n_obs": 172800
+      }
+    }
+  },
+  "n_trials": 17,
+  "n_runs_logged": 37,
+  "model_id": "9e99b8a4aa46",
+  "run_at": "2026-09-04T21:16:44",
+  "seconds_elapsed": 388
+}
