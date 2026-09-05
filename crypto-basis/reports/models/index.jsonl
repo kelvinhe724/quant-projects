@@ -1,0 +1,1 @@
+{"data_hash": "6010492ce2ce56ac", "file": "5b78134c526b.pkl", "id": "5b78134c526b", "meta": {"bar": "5min", "cost_bps": 17, "entry": 3.0, "exit": 0.5, "lags": {"z_12": 1, "z_288": 1, "z_48": 1}, "window": 288}, "n_train_rows": 217152, "name": "BasisMR", "oos_score": -25.340684033283573, "saved_at": "2026-09-05T02:10:11", "train_window": ["2024-01-01", "2026-01-23"]}

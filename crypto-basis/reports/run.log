@@ -1,0 +1,98 @@
+[     2s] 271585 bars, ['BTCUSDT', 'ETHUSDT'], 2024-01-01 00:00:00 to 2026-08-01 00:00:00
+[     2s] features built, peek audit passed
+[     2s] untouched window 2026-01-24 00:00:00 to 2026-08-01 00:00:00, 54433 bars, opened=False
+[     2s] basis tables written
+[   897s] walk-forward done, 7 trials logged
+[   995s] untouched window opened once
+[   995s] venue monitor done
+[   996s] done
+{
+ "chosen": {
+  "window": 288,
+  "entry": 3.0
+ },
+ "pre_window": {
+  "sharpe": -25.72365543306948,
+  "psr": 2.859091751983753e-162,
+  "dsr": 0.0,
+  "n_trials": 7,
+  "var_sharpe": 3.448050229056656,
+  "n_obs": 586,
+  "trades": 1418.0
+ },
+ "pre_window_gross": {
+  "sharpe": 4.48592993596389,
+  "psr": 0.9999915285279444,
+  "dsr": 1.2610554172091631e-266,
+  "n_trials": 7,
+  "var_sharpe": 3.448050229056656,
+  "n_obs": 586,
+  "per_trade_bps": 1.2484029212964962
+ },
+ "untouched": {
+  "taker": {
+   "sharpe": -25.340684033283573,
+   "psr": 2.0035326501899497e-70,
+   "dsr": 0.0,
+   "n_trials": 7,
+   "var_sharpe": 3.448050229056656,
+   "n_obs": 147,
+   "annual_return_365": -0.8747316277353974,
+   "max_drawdown": -0.6596948727923748
+  },
+  "maker": {
+   "sharpe": -25.2786807359091,
+   "psr": 1.2197607617859043e-70,
+   "dsr": 0.0,
+   "n_trials": 7,
+   "var_sharpe": 3.448050229056656,
+   "n_obs": 147,
+   "annual_return_365": -0.8181200769460688,
+   "max_drawdown": -0.5870411401170965
+  },
+  "vip": {
+   "sharpe": -24.541188171762,
+   "psr": 1.1866976662761853e-72,
+   "dsr": 0.0,
+   "n_trials": 7,
+   "var_sharpe": 3.448050229056656,
+   "n_obs": 147,
+   "annual_return_365": -0.408060183142517,
+   "max_drawdown": -0.238170180496446
+  },
+  "trades": 323.0,
+  "bars_in_position": 0.024378593867690555,
+  "chosen": {
+   "window": 288,
+   "entry": 3.0
+  }
+ },
+ "n_trials": 8,
+ "registry_entry": "e5b4be1b512157c1",
+ "walk_forward_oos_sharpe": -25.777792821472442
+}
+symbol         BTCUSDT  ETHUSDT
+threshold_bps                  
+1.0             0.2973   0.3072
+2.0             0.0583   0.0605
+5.0             0.0047   0.0052
+9.0             0.0008   0.0010
+10.0            0.0006   0.0007
+20.0            0.0001   0.0001
+28.0            0.0000   0.0001
+34.0            0.0000   0.0001
+50.0            0.0000   0.0000
+         episodes  given_back_1  given_back_12  given_back_48  given_back_288
+BTCUSDT      60.0         0.376          0.687          0.794           1.047
+ETHUSDT      94.0         0.404          0.606          0.827           1.022
+                       mean_bps  std_bps  ...  runs_over_cost  median_run_min
+BTC spot: OKX/Binance    0.3376   0.7354  ...             0.0             0.0
+BTC perp: OKX/Binance   -0.0610   0.7695  ...             0.0             0.0
+BTC OKX basis           -4.7418   0.7532  ...             0.0             0.0
+BTC Binance basis       -4.3423   0.7493  ...             0.0             0.0
+ETH spot: OKX/Binance    0.1095   0.7506  ...             0.0             0.0
+ETH perp: OKX/Binance   -0.0631   0.7801  ...             0.0             0.0
+ETH OKX basis           -4.8050   0.7086  ...             0.0             0.0
+ETH Binance basis       -4.6303   0.7485  ...             0.0             0.0
+
+[8 rows x 7 columns]
