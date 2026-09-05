@@ -10,6 +10,8 @@ project has an offline `check.py` that fits the same models to simulated data
 with planted parameters, so the code can be verified without a network
 connection.
 
+`REFUSALS.md` lists the results in this repo that did not survive their own tests, and why.
+
 ### Estimation
 
 | project | what it does | headline result |
