@@ -36,11 +36,6 @@ def show(title, frame):
     print(frame.to_string())
 
 
-def frame(results):
-    """Stack the per-session summary dicts into a DataFrame."""
-    return pd.DataFrame(results)
-
-
 def metrics(df):
     """Reduce one strategy's session-level results to the headline row."""
     pnl = df["pnl"]
@@ -75,7 +70,7 @@ def parts(df):
 
 
 def run_market(market, n_sessions=SESSIONS, seed=SEED):
-    return {m.name: frame(sim.run_sessions(m, market, n_sessions, seed=seed))
+    return {m.name: pd.DataFrame(sim.run_sessions(m, market, n_sessions, seed=seed))
             for m in makers()}
 
 
@@ -142,7 +137,7 @@ def sweep_param(pairs, label, market=None, n=SWEEP_SESSIONS):
     market = market or BASE
     rows = []
     for value, maker in pairs:
-        df = frame(sim.run_sessions(maker, market, n, seed=SEED))
+        df = pd.DataFrame(sim.run_sessions(maker, market, n, seed=SEED))
         rows.append({label: value, "mean P&L": df["pnl"].mean(),
                      "Sharpe": df["pnl"].mean() / df["pnl"].std(),
                      "inventory sd": df["inventory_std"].mean(),
@@ -157,7 +152,7 @@ def informed_sweep(fractions, n=SWEEP_SESSIONS):
         market = sim.Market(informed_frac=phi, informed_lag=BASE.informed_lag,
                             position_limit=BASE.position_limit)
         for maker in makers():
-            df = frame(sim.run_sessions(maker, market, n, seed=SEED))
+            df = pd.DataFrame(sim.run_sessions(maker, market, n, seed=SEED))
             rows.append({"informed_frac": phi, "strategy": maker.name,
                          "mean_pnl": df["pnl"].mean(),
                          "sharpe": df["pnl"].mean() / df["pnl"].std(),

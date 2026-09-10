@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 
 import data
-from backtest import COST_BPS, TRADING_DAYS, by_year, max_drawdown, monthly, run, summary
+from backtest import COST_BPS, TRADING_DAYS, by_year, held_weights, max_drawdown, monthly, run, summary
 from carry import N_LEG, carry_weights, differential, excess_returns, uip_regression
 
 REPORTS = data.REPORTS
@@ -109,7 +109,7 @@ def main():
     full.to_csv(os.path.join(REPORTS, "performance.csv"))
 
     accrual = rets - px.pct_change().reindex(columns=rets.columns).fillna(0.0)
-    held = w.reindex(rets.index).ffill().fillna(0.0).shift(1).fillna(0.0)
+    held = held_weights(w, rets.index)
     decomposition = {}
     for name, span in (("in-sample", IS), ("final test", TEST), ("full", (None, None))):
         sl = slice(span[0], span[1])
@@ -160,7 +160,7 @@ def autopsy(name, span, book, w, rets, px, rates):
     """Report what the book held going into a crisis and where the losses came from."""
     print(f"\n{name}: {span[0]} to {span[1]}")
     chunk = book.loc[span[0]:span[1]]
-    held = w.reindex(rets.index).ffill().shift(1).loc[span[0]:span[1]]
+    held = held_weights(w, rets.index).loc[span[0]:span[1]]
     contrib = (held * rets.loc[span[0]:span[1]]).sum()
     entering = w.loc[:span[0]].iloc[-1]
     print(f"  net return over the window {(1 + chunk['net']).prod() - 1:+.2%}, "

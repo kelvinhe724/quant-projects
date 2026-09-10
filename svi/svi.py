@@ -197,11 +197,8 @@ def fit_slice(k, w_mid, T, weights=None, w_bid=None, w_ask=None,
 
     best, best_val = None, np.inf
     for p0 in _starts(k, w_mid):
-        try:
-            res = minimize(objective, p0, method="SLSQP", bounds=bounds,
-                           constraints=cons, options={"maxiter": 400, "ftol": 1e-12})
-        except Exception:
-            continue
+        res = minimize(objective, p0, method="SLSQP", bounds=bounds,
+                       constraints=cons, options={"maxiter": 400, "ftol": 1e-12})
         if res.success and res.fun < best_val:
             best, best_val = res.x, res.fun
     if best is None:

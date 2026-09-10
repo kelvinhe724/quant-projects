@@ -140,7 +140,7 @@ class Client:
                 r = self.session.request(method, url, params=params,
                                          data=json.dumps(body) if body is not None else None,
                                          headers=headers, timeout=TIMEOUT)
-            except requests.RequestException as e:
+            except requests.RequestException:
                 if attempt == RETRIES - 1:
                     raise
                 time.sleep(0.5 * 2 ** attempt)

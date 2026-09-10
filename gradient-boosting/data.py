@@ -74,7 +74,7 @@ def load_uci():
     df = pd.read_csv(UCI_CSV) if os.path.exists(UCI_CSV) else _download_uci()
     df = df.rename(columns={"default payment next month": "TARGET",
                             "PAY_1": "PAY_0"})
-    df = df.drop(columns=[c for c in ["ID"] if c in df.columns])
+    df = df.drop(columns="ID", errors="ignore")
 
     # codes outside the documented range fall back to "other"/"unknown"
     df["SEX"] = df["SEX"].map(SEX_MAP).fillna("unknown")
@@ -176,5 +176,5 @@ def load():
     """Returns (df, source): UCI unless a Home Credit export is present."""
     if os.path.exists(KAGGLE_PATH):
         df = pd.read_csv(KAGGLE_PATH)
-        return df.drop(columns=[c for c in ["SK_ID_CURR"] if c in df.columns]), "kaggle"
+        return df.drop(columns="SK_ID_CURR", errors="ignore"), "kaggle"
     return load_uci(), "uci"

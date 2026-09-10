@@ -31,7 +31,7 @@ def inventory():
         mb = sum(os.path.getsize(lake.part_path(name, p)) for p in names) / 1e6
         keys = set()
         first = last = None
-        for p in (names if kind != "key" else names):
+        for p in names:
             sample = pd.read_parquet(lake.part_path(name, p), columns=[tcol, kcol]) if kind != "key" \
                 else pd.read_parquet(lake.part_path(name, p), columns=[tcol])
             if kind != "key":

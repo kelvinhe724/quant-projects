@@ -126,7 +126,7 @@ def _cached_bars(ticker, start, end, cache_dir, max_age_days=CACHE_MAX_AGE_DAYS)
     for path in glob.glob(os.path.join(cache_dir, f"{ticker}_*.csv")):
         try:
             df = pd.read_csv(path, index_col=0, parse_dates=True)
-        except Exception:
+        except (OSError, ValueError):  # unreadable or half-written file: not a candidate
             continue
         df = df.loc[(df.index >= pd.Timestamp(start)) & (df.index < pd.Timestamp(end))]
         if df.empty or not set(FIELDS) <= set(df.columns):

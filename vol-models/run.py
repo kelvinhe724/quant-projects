@@ -28,7 +28,7 @@ import lake
 import vol
 from framework.book import validate
 from framework.engine import sharpe
-from research.alpha import Untouched, UntouchedWindowUsed, backtest, positions, walk_forward
+from research.alpha import Untouched, UntouchedWindowUsed, walk_forward
 from research.alpha.base import month_ends, window_returns
 from research.features import Feature, FeatureStore, Raw
 from research.features.store import long_panel, panel_hash
@@ -177,7 +177,7 @@ def main():
     panel2 = store2.build(raw2, audit=True)
     close2 = index
 
-    wf_table, wf_oos, full = walk_forward(lambda **p: vol.Timer(**p), GRID, panel2.loc[pre], close2.loc[pre],
+    wf_table, wf_oos, full = walk_forward(vol.Timer, GRID, panel2.loc[pre], close2.loc[pre],
                                           FOLDS, TEST_SIZE, registry=registry, universe=["STRADDLE"])
     registry.record("Timer walk-forward", {"grid": GRID, "folds": FOLDS, "test_size": TEST_SIZE}, ["STRADDLE"],
                     (pre[0].date(), pre[-1].date()), wf_oos, tags={"stage": "walk_forward_oos"})
@@ -271,7 +271,7 @@ def main():
         pre_pooled[h]["qlike"].to_csv(os.path.join(REPORTS, f"dm_pooled_qlike_pre_h{h}.csv"))
         pre_by_name[h].to_csv(os.path.join(REPORTS, f"dm_vs_naive_by_name_pre_h{h}.csv"))
     wf_table.to_csv(os.path.join(REPORTS, "walk_forward.csv"))
-    pd.DataFrame({"straddle": pnl, **{k: v for k, v in full.items()}}).to_csv(os.path.join(REPORTS, "returns.csv"))
+    pd.DataFrame({"straddle": pnl, **full}).to_csv(os.path.join(REPORTS, "returns.csv"))
     charts(forecasts, targets, vix, cal, hold, end, pnl, full, chosen, pre_scores, result)
 
     r = result["trading"]

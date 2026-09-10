@@ -71,17 +71,6 @@ def summarise(pnl, label, stake=None):
     }
 
 
-def fair_odds(p):
-    """Odds a zero-margin book would quote for probabilities p."""
-    return 1.0 / np.asarray(p, dtype=float)
-
-
-def value_bets(p_true, odds, threshold=0.0):
-    """Mask of bets where the model probability beats the break-even probability."""
-    edge = np.asarray(p_true) * np.asarray(odds) - 1.0
-    return edge > threshold, edge
-
-
 def arbitrage(best_odds):
     """Detect matches where the best price on each outcome sums below one.
 

@@ -67,9 +67,11 @@ FIELDS = ["tick", "t_local", "exchange", "symbol", "bid", "ask", "latency_ms",
 
 def timed(fn, *args):
     t0 = time.time()
+    # one venue timing out, answering with an error payload, or dropping a field
+    # must not end the whole sampling session; anything else is a bug and raises
     try:
         out = fn(*args)
-    except Exception as e:
+    except (requests.RequestException, RuntimeError, LookupError, ValueError) as e:
         return None, t0, time.time(), repr(e)[:80]
     return out, t0, time.time(), ""
 

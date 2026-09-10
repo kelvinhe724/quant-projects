@@ -90,7 +90,7 @@ def settle(db, settings=None, log=print):
 
 
 def seconds(spec):
-    unit = {"s": 1, "m": 60, "h": 3600}.get(spec[-1], None)
+    unit = {"s": 1, "m": 60, "h": 3600}.get(spec[-1])
     return int(spec[:-1]) * unit if unit else int(spec)
 
 

@@ -162,10 +162,7 @@ for i, freq in enumerate(["hourly", "daily"]):
                               share_abs_gt20=(g.abs() > 20).mean(), ar1=g.autocorr(1),
                               half_life_periods=half_life(g)))
         g.to_csv(os.path.join(REPORTS, f"close_gap_{sym}_{freq}.csv"))
-        if freq == "hourly":
-            ax[i].plot(g.index, g, lw=0.6, label=sym)
-        else:
-            ax[i].plot(g.index, g, lw=0.6, label=sym)
+        ax[i].plot(g.index, g, lw=0.6, label=sym)
     ax[i].axhline(0, color="k", lw=0.5)
     ax[i].set_title(f"{freq} close gap, Coinbase minus Kraken, bps")
     ax[i].legend()

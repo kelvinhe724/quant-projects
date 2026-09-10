@@ -202,11 +202,6 @@ def rebalance_dates(index, start=None, end=None):
     return out[(out >= (start or out[0])) & (out <= (end or out[-1]))]
 
 
-def window(frame, start, end):
-    """Slice a time-indexed frame or series to [start, end]."""
-    return frame.loc[start:end]
-
-
 if __name__ == "__main__":
     px, rets, elig, sectors, bench = get_panel()
     print(f"{len(px.columns)} names, {px.index[0].date()} to {px.index[-1].date()}")

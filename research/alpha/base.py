@@ -15,6 +15,7 @@ import numpy as np
 import pandas as pd
 from purgedcv import WalkForwardSplit
 
+from framework.book.strategies import month_ends
 from framework.engine import Strategy, sharpe
 from research.features.store import Raw, cross_section, long_panel
 
@@ -35,11 +36,6 @@ class Alpha:
 
     def __str__(self):
         return self.name or type(self).__name__
-
-
-def month_ends(index):
-    days = pd.Series(index, index=index)
-    return pd.DatetimeIndex(sorted(days.groupby([index.year, index.month]).max()))
 
 
 def rebalance_dates(calendar, rebalance):

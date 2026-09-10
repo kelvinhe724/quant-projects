@@ -6,12 +6,7 @@ import pickle
 
 import pandas as pd
 
-
-def data_hash(frame):
-    """Fingerprint of a training frame: values, index, columns."""
-    h = hashlib.sha256(pd.util.hash_pandas_object(frame, index=True).to_numpy().tobytes())
-    h.update(",".join(map(str, frame.columns)).encode())
-    return h.hexdigest()[:16]
+from research.features.store import panel_hash as data_hash
 
 
 class ModelRegistry:

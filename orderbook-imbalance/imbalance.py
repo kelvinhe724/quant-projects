@@ -81,7 +81,7 @@ def backtest(imb, bid_px, ask_px, ts_ms, horizon_s, threshold, fee_bps=0.0):
     half-spread (aggressive entry, passive exit at mid), and the move less the full
     spread and fees (aggressive both ways).
     """
-    mid = (bid_px[:, 0] + ask_px[:, 0]) / 2
+    mid = mid_price(bid_px, ask_px)
     exit_at = forward_index(ts_ms, horizon_s)
     rows = []
     t, n = 0, len(imb)

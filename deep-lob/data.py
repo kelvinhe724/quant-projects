@@ -135,8 +135,3 @@ def load(source="auto", days=DAYS, symbol=SYMBOL):
     meta.update(source="data.binance.vision spot aggTrades", days=list(days), levels=0,
                 backfilled=True, reason=f"lake stream below {MIN_HOURS} hours")
     return frame, meta
-
-
-def features(frame):
-    """Every column but the price."""
-    return frame.drop(columns=["mid"])

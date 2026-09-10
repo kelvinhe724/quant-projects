@@ -130,7 +130,7 @@ def main():
     idx = np.arange(3)
     for j, (k, style) in enumerate(styles):
         axes[1].bar(idx + j * 0.27, means[k].values, 0.27, label=k,
-                    color=style if style != "0.7" else "0.7")
+                    color=style)
     axes[1].set_xticks(idx + 0.27)
     axes[1].set_xticklabels(["beta0", "beta1", "beta2"])
     axes[1].set_ylabel("mean |daily change|, bp")

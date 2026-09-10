@@ -179,7 +179,6 @@ def main():
 
     years = pd.DataFrame({"book": base.by_year()["return"], "overlay": ov.by_year()["return"]})
     years["avg_scale"] = scales[chosen].loc[cal].groupby(cal.year).mean()
-    years.to_csv(os.path.join(REPORTS, "by_year.csv"))
     daily = pd.DataFrame({f"p_high_K{k}": probs[k][k - 1] for k in STATES})
     daily["nowcast"] = nc
     for v, s in scales.items():

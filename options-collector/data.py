@@ -77,7 +77,8 @@ def bill_rate(date):
     try:
         h = yf.Ticker("^IRX").history(period="5d")["Close"].dropna()
         return float(h.iloc[-1]) / 100, h.index[-1].strftime("%Y-%m-%d"), "IRX"
-    except Exception:
+    except Exception as e:  # yfinance surfaces network and schema failures as anything
+        print(f"^IRX fallback failed: {type(e).__name__}: {e}", file=sys.stderr)
         return None, None, None
 
 
@@ -132,8 +133,8 @@ def market_caps(tickers):
     for t in tickers:
         try:
             out[t] = float(yf.Ticker(t).fast_info["marketCap"])
-        except Exception:
-            pass
+        except Exception as e:  # as in bill_rate: yfinance's failure types are not enumerable
+            print(f"{t}: no market cap ({type(e).__name__})", file=sys.stderr)
     return pd.Series(out, name="market_cap")
 
 

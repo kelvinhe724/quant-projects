@@ -88,8 +88,7 @@ def candidates(client, max_pages=MAX_PAGES):
     return len(listed), rows
 
 
-def score(rows, curve, k=0.25, bankroll=BANKROLL_FALLBACK, max_order=5.0,
-          max_open=50.0, min_edge=0.0):
+def score(rows, curve, k=0.25, bankroll=BANKROLL_FALLBACK, max_order=5.0, min_edge=0.0):
     """Side, edge after the spread, Kelly stake and contract count per market.
 
     Buying YES costs the ask; buying NO costs one minus the bid. That is the
@@ -166,14 +165,13 @@ def run(client=None, settings=None, bankroll=None, quiet=False):
     client = client or kalshi.Client("prod", settings)
     k = float(settings["KELLY_FRACTION"])
     max_order = float(settings["MAX_ORDER_DOLLARS"])
-    max_open = float(settings["MAX_OPEN_DOLLARS"])
     bankroll = bankroll or BANKROLL_FALLBACK
     curve = load_curve()
 
     n_listed, rows = candidates(client)
-    prelim = score(rows, curve, k, bankroll, max_order, max_open)
+    prelim = score(rows, curve, k, bankroll, max_order)
     booked = enrich_with_books(client, prelim)
-    ranked = score(booked, curve, k, bankroll, max_order, max_open)
+    ranked = score(booked, curve, k, bankroll, max_order)
     path = cache({
         "ts": datetime.now(timezone.utc).isoformat(),
         "env": client.env,

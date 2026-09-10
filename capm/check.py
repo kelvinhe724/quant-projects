@@ -18,38 +18,28 @@ def check(name, ok):
     checks.append(ok)
     print(("PASS  " if ok else "FAIL  ") + name)
 
-try:
-    r = fit_capm(stock, market)
-    check("fit_capm returns the four keys",
-          all(k in r for k in ("alpha_annual", "beta", "r2", "alpha_pvalue")))
-    check(f"beta close to the true {TRUE_BETA} (got {r['beta']:.3f})",
-          abs(r["beta"] - TRUE_BETA) < 0.1)
-    check(f"alpha near zero (got {r['alpha_annual']:.4f})",
-          abs(r["alpha_annual"]) < 0.05)
-    check(f"r2 sensible (got {r['r2']:.2f})", 0.3 < r["r2"] < 0.9)
-    check(f"alpha p-value says 'luck' (got {r['alpha_pvalue']:.2f})",
-          r["alpha_pvalue"] > 0.05)
-except NotImplementedError:
-    print("fit_capm not written yet")
+r = fit_capm(stock, market)
+check("fit_capm returns the four keys",
+      all(k in r for k in ("alpha_annual", "beta", "r2", "alpha_pvalue")))
+check(f"beta close to the true {TRUE_BETA} (got {r['beta']:.3f})",
+      abs(r["beta"] - TRUE_BETA) < 0.1)
+check(f"alpha near zero (got {r['alpha_annual']:.4f})",
+      abs(r["alpha_annual"]) < 0.05)
+check(f"r2 sensible (got {r['r2']:.2f})", 0.3 < r["r2"] < 0.9)
+check(f"alpha p-value says 'luck' (got {r['alpha_pvalue']:.2f})",
+      r["alpha_pvalue"] > 0.05)
 
-try:
-    # three tickers with known betas 0.5 < 1.4 < 2.0, so the sort is testable
-    df = fit_all(pd.DataFrame({"FAKE1": stock, "FAKE2": 0.5 * market,
-                               "FAKE3": 2.0 * market}), market)
-    check("fit_all: one row per ticker", len(df) == 3)
-    check("fit_all: sorted ascending by beta",
-          list(df["ticker"]) == ["FAKE2", "FAKE1", "FAKE3"])
-except NotImplementedError:
-    print("fit_all not written yet")
+# three tickers with known betas 0.5 < 1.4 < 2.0, so the sort is testable
+df = fit_all(pd.DataFrame({"FAKE1": stock, "FAKE2": 0.5 * market,
+                           "FAKE3": 2.0 * market}), market)
+check("fit_all: one row per ticker", len(df) == 3)
+check("fit_all: sorted ascending by beta",
+      list(df["ticker"]) == ["FAKE2", "FAKE1", "FAKE3"])
 
-try:
-    rb = rolling_beta(stock, market, window=60)
-    rb = rb.dropna()
-    check(f"rolling beta hovers near {TRUE_BETA} (mean {rb.mean():.2f})",
-          abs(rb.mean() - TRUE_BETA) < 0.15)
-    check("rolling beta actually moves around", rb.std() > 0.01)
-except NotImplementedError:
-    print("rolling_beta not written yet")
+rb = rolling_beta(stock, market, window=60).dropna()
+check(f"rolling beta hovers near {TRUE_BETA} (mean {rb.mean():.2f})",
+      abs(rb.mean() - TRUE_BETA) < 0.15)
+check("rolling beta actually moves around", rb.std() > 0.01)
 
 print()
 if checks and all(checks):

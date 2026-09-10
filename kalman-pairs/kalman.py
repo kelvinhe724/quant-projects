@@ -49,7 +49,7 @@ def kalman_filter(y, x, noise_ratio, obs_var, prior_var=1e6):
 
 
 def kalman_spread(log_a, log_b, noise_ratio, obs_var):
-    """Run the filter on a pair and return (spread, beta path) indexed like the inputs.
+    """Run the filter on a pair and return (spread, beta path, alpha path) indexed like the inputs.
 
     The spread is the one-step-ahead prediction error, so it measures how far today's
     price sits from where yesterday's hedge ratio said it should be. Using the

@@ -68,14 +68,14 @@ def eligible(R, date, window=WINDOW, min_live=MIN_LIVE):
 
 def fit(R, date, window=WINDOW, min_live=MIN_LIVE):
     """ERC and 1/N weights fit on the window ending at `date`, zero for sleeves not yet eligible."""
-    hist, start, eligible = globals()["eligible"](R, date, window, min_live)
+    hist, start, names = eligible(R, date, window, min_live)
     w_erc, w_eq = pd.Series(0.0, index=R.columns), pd.Series(0.0, index=R.columns)
-    if len(eligible) >= 2:
-        X = hist.loc[hist.index >= start[eligible].max(), eligible]
-        w_erc[eligible] = erc(X)
-        w_eq[eligible] = 1 / len(eligible)
-    elif eligible:
-        w_erc[eligible] = w_eq[eligible] = 1.0
+    if len(names) >= 2:
+        X = hist.loc[hist.index >= start[names].max(), names]
+        w_erc[names] = erc(X)
+        w_eq[names] = 1 / len(names)
+    elif names:
+        w_erc[names] = w_eq[names] = 1.0
     return w_erc, w_eq
 
 

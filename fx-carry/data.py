@@ -6,7 +6,6 @@ rising number always means the foreign currency strengthened.
 """
 import os
 
-import numpy as np
 import pandas as pd
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

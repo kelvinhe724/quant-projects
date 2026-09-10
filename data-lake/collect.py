@@ -9,7 +9,6 @@
     collect.py daily / hourly      what the launchd jobs run
 """
 import asyncio
-import gzip
 import html
 import io
 import json

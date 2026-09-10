@@ -100,9 +100,11 @@ def build(leagues=None, seasons=None, refresh=False):
     frames, missing = [], []
     for season in seasons:
         for league in leagues:
+            # a season the site never posted 404s; a few early files parse but
+            # lack the result or date columns
             try:
                 raw = read_raw(fetch(season, league, refresh))
-            except Exception as exc:
+            except (requests.RequestException, ValueError, KeyError) as exc:
                 missing.append((season, league, str(exc)[:60]))
                 continue
             frames.append(melt_quotes(raw, season, league))

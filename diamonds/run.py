@@ -249,19 +249,20 @@ save(pd.concat(nested, names=["model"]), "nested_cv.csv")
 
 heading("5. REPEATED-CV AND BOOTSTRAP STABILITY")
 
+
+def chosen_params(name):
+    """The one-SE choice for a tuned model, as estimator keyword arguments."""
+    return {k.replace("model__", ""): v for k, v in tuned[name][1].items()}
+
+
 STABILITY_MODELS = {
     "OLS full": log_pipeline(penalised("ridge", alpha=1e-9), CANDIDATE_TERMS),
     "OLS BIC": log_pipeline(penalised("ridge", alpha=1e-9), bic_terms),
-    "ridge": log_pipeline(penalised("ridge", **{k.replace("model__", ""): v
-                                                for k, v in tuned["ridge"][1].items()}),
-                          CANDIDATE_TERMS),
-    "lasso": log_pipeline(penalised("lasso", max_iter=20000,
-                                    **{k.replace("model__", ""): v
-                                       for k, v in tuned["lasso"][1].items()}),
+    "ridge": log_pipeline(penalised("ridge", **chosen_params("ridge")), CANDIDATE_TERMS),
+    "lasso": log_pipeline(penalised("lasso", max_iter=20000, **chosen_params("lasso")),
                           CANDIDATE_TERMS),
     "elastic net": log_pipeline(penalised("elastic_net", max_iter=20000,
-                                          **{k.replace("model__", ""): v
-                                             for k, v in tuned["elastic_net"][1].items()}),
+                                          **chosen_params("elastic_net")),
                                 CANDIDATE_TERMS),
 }
 
@@ -393,22 +394,22 @@ print("\n" + coefficient_table.round(4).to_string())
 print("\njoint tests:\n" + joint.round(4).to_string())
 
 quality_effect = []
-for grade_gap, label in [(1, "one grade")]:
-    for term, base in [("clarity_score", 4), ("color_score", 4), ("cut_score", 4)]:
-        if term not in locked_terms:
-            continue
-        square = f"{term}_sq"
-        interaction = {"clarity_score": "carat_x_clarity", "color_score": "carat_x_color",
-                       "cut_score": "carat_x_cut"}[term]
-        beta = dict(zip(locked_terms, robust_fit.params[1:]))
-        effect = beta[term] * grade_gap
-        if square in beta:
-            effect += beta[square] * ((base + grade_gap) ** 2 - base ** 2)
-        if interaction in beta:
-            effect += beta[interaction] * grade_gap * np.log(selection["carat"].median())
-        quality_effect.append({"term": term, "change": label,
-                               "log_price_effect": effect,
-                               "pct_price_effect": 100 * (np.exp(effect) - 1)})
+grade_gap, label = 1, "one grade"
+for term, base in [("clarity_score", 4), ("color_score", 4), ("cut_score", 4)]:
+    if term not in locked_terms:
+        continue
+    square = f"{term}_sq"
+    interaction = {"clarity_score": "carat_x_clarity", "color_score": "carat_x_color",
+                   "cut_score": "carat_x_cut"}[term]
+    beta = dict(zip(locked_terms, robust_fit.params[1:]))
+    effect = beta[term] * grade_gap
+    if square in beta:
+        effect += beta[square] * ((base + grade_gap) ** 2 - base ** 2)
+    if interaction in beta:
+        effect += beta[interaction] * grade_gap * np.log(selection["carat"].median())
+    quality_effect.append({"term": term, "change": label,
+                           "log_price_effect": effect,
+                           "pct_price_effect": 100 * (np.exp(effect) - 1)})
 quality_effect = save(pd.DataFrame(quality_effect).set_index("term"), "practical_effects.csv")
 carat_effect = dict(zip(locked_terms, robust_fit.params[1:]))
 elasticity = (carat_effect["log_carat"]

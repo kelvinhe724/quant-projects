@@ -8,15 +8,20 @@ import statsmodels.api as sm
 from data import SPECS
 
 
+def _paired(a, b):
+    """Inner-align two series and drop any date where either is missing."""
+    a, b = pd.Series(a).align(pd.Series(b), join="inner")
+    mask = a.notna() & b.notna()
+    return a[mask], b[mask]
+
+
 def ols_hac(y, x, lags=5):
     """Regress y on x with an intercept and Newey-West standard errors.
 
     Returns slope, its HAC standard error, intercept, R-squared, residual standard
     deviation, the Durbin-Watson statistic and the observation count.
     """
-    y, x = pd.Series(y).align(pd.Series(x), join="inner")
-    mask = y.notna() & x.notna()
-    y, x = y[mask], x[mask]
+    y, x = _paired(y, x)
     fit = sm.OLS(y.to_numpy(), sm.add_constant(x.to_numpy())).fit(
         cov_type="HAC", cov_kwds={"maxlags": lags})
     resid = fit.resid
@@ -49,17 +54,14 @@ def r2_matrix(returns):
 
 def min_var_ratio(pnl_target, pnl_hedge):
     """Minimum-variance hedge ratio in contract-P&L space, Cov(dVi, dVj) / Var(dVj)."""
-    a, b = pd.Series(pnl_target).align(pd.Series(pnl_hedge), join="inner")
-    mask = a.notna() & b.notna()
-    a, b = a[mask], b[mask]
+    a, b = _paired(pnl_target, pnl_hedge)
     return float(np.cov(a, b, ddof=1)[0, 1] / np.var(b, ddof=1))
 
 
 def effectiveness(pnl_target, pnl_hedge, h, n_target=1.0):
     """Variance reduction from holding n_target contracts of i against h*n_target of j."""
-    a, b = pd.Series(pnl_target).align(pd.Series(pnl_hedge), join="inner")
-    mask = a.notna() & b.notna()
-    a, b = a[mask] * n_target, b[mask]
+    a, b = _paired(pnl_target, pnl_hedge)
+    a = a * n_target
     hedged = a - h * b
     unhedged_var = float(np.var(a, ddof=1))
     if unhedged_var == 0:

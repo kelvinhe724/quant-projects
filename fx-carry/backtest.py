@@ -12,6 +12,11 @@ TRADING_DAYS = 252
 COST_BPS = 5.0
 
 
+def held_weights(weights, index):
+    """Daily weights actually held: the last rebalance carried forward, lagged one day."""
+    return weights.reindex(index).ffill().fillna(0.0).shift(1).fillna(0.0)
+
+
 def run(weights, returns, cost_bps=COST_BPS, base="USD"):
     """Score a target-weight panel, returning daily gross and net return series.
 
@@ -19,8 +24,7 @@ def run(weights, returns, cost_bps=COST_BPS, base="USD"):
     position in the base currency is the absence of a foreign position, so it
     is never charged.
     """
-    weights = weights.reindex(columns=returns.columns)
-    held = weights.reindex(returns.index).ffill().fillna(0.0).shift(1).fillna(0.0)
+    held = held_weights(weights.reindex(columns=returns.columns), returns.index)
     gross = (held * returns).sum(axis=1)
     foreign = held.drop(columns=base, errors="ignore")
     traded = foreign.diff().abs().sum(axis=1)

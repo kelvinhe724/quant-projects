@@ -64,8 +64,3 @@ class AvellanedaStoikov(Maker):
         reservation = price - inventory * self.gamma * variance
         spread = self.gamma * variance + (2.0 / self.gamma) * math.log(1.0 + self.gamma / kappa)
         return reservation - spread / 2.0, reservation + spread / 2.0
-
-
-def default_makers():
-    """Build the three strategies compared in run.py."""
-    return [Naive(), Skewed(), AvellanedaStoikov()]

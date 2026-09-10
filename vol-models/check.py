@@ -18,7 +18,6 @@ import pandas as pd
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import vol
 from research.features import FeatureStore, Raw
-from research.features.store import long_panel
 
 checks = []
 
