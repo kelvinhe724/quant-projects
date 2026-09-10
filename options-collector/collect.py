@@ -106,7 +106,14 @@ def main(argv=None):
           f"{m['rows']} rows, r={m['rate']}")
     if m["session"] == "intraday":
         print("snapshot taken before the close; quotes are intraday, not closing")
-    return 1 if m["missing"] else 0
+    # A few names the vendor would not serve is a bad day, not a failed run: the
+    # folder is written, the misses are on stderr, and a rerun fills the gaps.
+    # Only a majority miss means the vendor is down and the day is worthless.
+    if len(m["missing"]) > data.MISSING_ABORT_FRACTION * len(data.UNIVERSE):
+        print(f"{len(m['missing'])} of {len(data.UNIVERSE)} tickers missing "
+              f"({', '.join(m['missing'])}); the vendor looks down", file=sys.stderr)
+        return 1
+    return 0
 
 
 if __name__ == "__main__":

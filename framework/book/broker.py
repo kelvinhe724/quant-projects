@@ -28,7 +28,7 @@ import numpy as np
 import pandas as pd
 
 from framework.book import universe
-from framework.book.strategies import CAPITAL, book_config
+from framework.book.strategies import CAPITAL, LIVE_RULES, book_config
 from framework.engine import run
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -39,8 +39,6 @@ SIGNUP = "Alpaca paper accounts need only an email: https://app.alpaca.markets/s
 PAPER_HOST = "paper-api.alpaca.markets"
 LIVE_HOST = "api.alpaca.markets"
 PAPER_KEYS = ("ALPACA_PAPER_KEY", "ALPACA_PAPER_SECRET")
-MIN_ORDER = 25.0
-BUFFER = 0.10
 RECON_TOL = 0.05  # weight of equity, per instrument, before a discrepancy halts the book
 
 
@@ -107,16 +105,46 @@ def check_limits(targets, equity, ref_equity=None, limits=Limits()):
     return gross
 
 
-def expected_weights(prev_row):
-    """What the account should hold now, from the ledger row of the previous run.
+def expected_weights(prev_row, filled=None, equity=None):
+    """What the account should hold now, as weights of `equity` (default: the previous row's).
 
-    A name the previous run sent an order for should sit at that run's target;
-    everything else at what the account held then.
+    With `filled` -- {name: signed dollars the broker's own order records say
+    actually traded} -- the expectation is the previous run's book plus what
+    really filled, so a partial or a reject shows up as a discrepancy at once.
+    Without it (a simulated account, or rows written before order ids were
+    stored) it falls back to the previous run's targets, which assumes every
+    order filled in full.
     """
     held = json.loads(prev_row["positions"])
-    targets = json.loads(prev_row["targets"])
-    sent = {book_symbol(f["symbol"]) for f in json.loads(prev_row["fills"])}
-    return {**held, **{n: targets.get(n, 0.0) for n in sent}}
+    if filled is None:
+        targets = json.loads(prev_row["targets"])
+        sent = {book_symbol(f["symbol"]) for f in json.loads(prev_row["fills"])}
+        return {**held, **{n: targets.get(n, 0.0) for n in sent}}
+    prev_eq = float(prev_row["equity"])
+    eq = prev_eq if equity is None else float(equity)
+    value = {n: w * prev_eq for n, w in held.items()}
+    for n, d in filled.items():
+        value[n] = value.get(n, 0.0) + d
+    return {n: v / eq for n, v in value.items()}
+
+
+def mode_change(prev_row, mode, ack=False):
+    """A broker mode flip is a loud event, never a reason to skip reconciliation.
+
+    Two modes are two different accounts, so the previous row's positions say
+    nothing about this one's: the change halts. A human checks the account,
+    deletes the KILL file and reruns once with --ack-mode-change. Returns the
+    row to reconcile against, None once the change has been acknowledged.
+    """
+    if prev_row is None or str(prev_row.get("mode") or "") == mode:
+        return prev_row
+    was = prev_row.get("mode") or "?"
+    if not ack:
+        halt(f"broker mode changed {was} -> {mode} since {str(prev_row['date'])[:10]}; positions cannot be "
+             f"reconciled across two accounts. Check the account, delete the KILL file, rerun with "
+             f"--ack-mode-change")
+    print(f"MODE CHANGE {was} -> {mode}: no cross-account position check this run")
+    return None
 
 
 def discrepancies(held, expected, tol=RECON_TOL):
@@ -129,11 +157,14 @@ def discrepancies(held, expected, tol=RECON_TOL):
     return out
 
 
-def verify_positions(held, prev_row, tol=RECON_TOL):
-    """Reconcile the account against the ledger; halt if anything is off by more than tol."""
+def verify_positions(held, prev_row, filled=None, equity=None, tol=RECON_TOL):
+    """Reconcile the account against the ledger; halt if anything is off by more than tol.
+
+    `filled` is the broker's own record of what traded (see expected_weights).
+    """
     if prev_row is None:
         return {}
-    off = discrepancies(held, expected_weights(prev_row), tol)
+    off = discrepancies(held, expected_weights(prev_row, filled, equity), tol)
     if off:
         halt("position reconciliation failed: " + ", ".join(f"{n} held {h:+.4f} expected {e:+.4f}"
                                                             for n, (h, e) in off.items()))
@@ -194,21 +225,67 @@ def book_symbol(symbol):
     return symbol
 
 
-def order_record(o):
-    """The ledger's row for one order request: what the next run replays or reconciles."""
+def order_record(o, resp=None):
+    """The ledger's row for one order: the request, plus the broker's id for the response.
+
+    The id is the only handle the next run has on what the broker actually did
+    with the order; without it a partial, a reject and a bad fill are all
+    invisible. None in simulated mode, where nothing was sent.
+    """
     return {"symbol": o.symbol, "side": o.side.value, "qty": o.qty, "notional": o.notional,
-            "limit": getattr(o, "limit_price", None)}
+            "limit": getattr(o, "limit_price", None), "id": str(getattr(resp, "id", "")) or None}
 
 
-def build_orders(targets, equity, prices, held, limit_prices=None):
+# Alpaca order states that are not terminal: the order is still working.
+OPEN_STATUS = {"new", "accepted", "pending_new", "pending_replace", "pending_cancel", "pending_review",
+               "held", "accepted_for_bidding", "calculated", "partially_filled", "replaced", "stopped",
+               "suspended"}
+
+
+def order_outcome(o):
+    """One broker order record, classified: filled / partial / rejected / expired / canceled / open.
+
+    `filled_value` is signed dollars at the broker's own average fill price,
+    buys positive, so it can be added straight onto the previous book.
+    """
+    status = str(getattr(o.status, "value", o.status)).lower()
+    qty = float(getattr(o, "filled_qty", 0) or 0)
+    px = float(o.filled_avg_price) if getattr(o, "filled_avg_price", None) else 0.0
+    side = str(getattr(o.side, "value", o.side)).lower()
+    if status != "filled" and qty > 0:
+        status = "partial"       # terminal or not: some of it traded and the rest did not
+    elif status in OPEN_STATUS:
+        status = "open"          # queued for the next open, or still working
+    return {"id": str(o.id), "instrument": book_symbol(o.symbol), "side": side, "status": status,
+            "filled_qty": round(qty, 6), "filled_value": round((1.0 if side == "buy" else -1.0) * qty * px, 2),
+            "asked_qty": float(o.qty) if getattr(o, "qty", None) else None,
+            "asked_notional": float(o.notional) if getattr(o, "notional", None) else None}
+
+
+def filled_value(outcomes):
+    """{name: signed dollars actually filled}, summed over the broker's order records."""
+    out = {}
+    for o in outcomes:
+        out[o["instrument"]] = out.get(o["instrument"], 0.0) + o["filled_value"]
+    return out
+
+
+def unfilled(outcomes):
+    """The order records that did not fully fill: partials, rejects, expiries, still-open orders."""
+    return [o for o in outcomes if o["status"] != "filled"]
+
+
+def build_orders(targets, equity, prices, held, limit_prices=None, rules=LIVE_RULES):
     """Orders that move `held` ({name: (qty, market value)}) to `targets` (weights of `equity`).
 
-    Longs trade by notional so fractional shares are allowed; any short leg
-    trades whole shares, which Alpaca requires. A position that must change
-    sign is closed first and reopened by a second order. Moves below $25 or
-    below 10% of the target position are skipped, Carver's buffer. A name in
-    `limit_prices` goes as a limit order at that price; everything else is a
-    market order. Nothing here talks to a broker.
+    The shaping (buffer, $25 minimum, whole-share shorts, no short crypto) is
+    `rules.target_quantities`, the same object `book_config` hands the engine's
+    Executor, so the position this reaches is the position the backtest reached.
+    All this file adds is the wire format: a position that must change sign is
+    closed by a first order and reopened by a second, a short leg and a full
+    close go by quantity (a gap down cannot oversell a quantity), everything
+    else by notional so fractional shares are allowed. A name in `limit_prices`
+    goes as a limit order at that price. Nothing here talks to a broker.
     """
     from alpaca.trading.enums import OrderSide, TimeInForce
     from alpaca.trading.requests import LimitOrderRequest, MarketOrderRequest
@@ -227,36 +304,23 @@ def build_orders(targets, equity, prices, held, limit_prices=None):
         else:
             orders.append(MarketOrderRequest(symbol=alpaca_symbol(name), side=side, time_in_force=tif, **kw))
 
-    for name in sorted(set(targets) | set(held)):
-        px = prices.get(name, np.nan)
-        if not np.isfinite(px) or px <= 0:
+    have_qty = {n: float(q) for n, (q, _) in held.items()}
+    wanted = {**{n: 0.0 for n in have_qty}, **targets}  # a name no longer wanted has target zero
+    for name, tgt in sorted(rules.target_quantities(wanted, equity, prices, have_qty).items()):
+        px, qty = prices[name], have_qty.get(name, 0.0)
+        if tgt == qty:
             continue
-        want = targets.get(name, 0.0) * equity
-        if want < 0 and name in universe.CRYPTO:
-            want = 0.0  # unshortable: a short target flattens the coin, never leaves it long
-        qty, have = held.get(name, (0.0, 0.0))
-        if abs(want - have) < max(MIN_ORDER, BUFFER * abs(want)):
-            continue
-        if qty and np.sign(want) not in (0, np.sign(qty)):
+        if qty and np.sign(tgt) not in (0.0, np.sign(qty)):
             order(name, OrderSide.BUY if qty < 0 else OrderSide.SELL, qty=abs(qty))
-            qty = have = 0.0
-            if abs(want) < MIN_ORDER:
-                continue
-        if want >= 0 and qty >= 0:
-            delta = want - have
-            if delta > 0:
-                order(name, OrderSide.BUY, notional=delta)
-            elif want < MIN_ORDER and qty:
-                order(name, OrderSide.SELL, qty=qty)  # full close by quantity, so a gap down cannot oversell
-            elif -delta >= MIN_ORDER:
-                order(name, OrderSide.SELL, notional=-delta)
+            qty = 0.0
+        dq = tgt - qty
+        if not dq:
+            continue
+        side = OrderSide.BUY if dq > 0 else OrderSide.SELL
+        if tgt == 0.0 or tgt < 0 or qty < 0:
+            order(name, side, qty=abs(dq))
         else:
-            target_qty = -int(abs(want) // px)
-            dq = target_qty - qty
-            if dq < 0:
-                order(name, OrderSide.SELL, qty=int(-dq))
-            elif dq > 0:
-                order(name, OrderSide.BUY, qty=int(dq))
+            order(name, side, notional=abs(dq) * px)
     return orders
 
 
@@ -365,6 +429,10 @@ class _AlpacaAccount:
         """Submit in order. submit() has already cancelled what was queued."""
         return [self.client.submit_order(o) for o in orders]
 
+    def order_outcomes(self, records):
+        """Ask the broker what became of every order id the ledger stored. [] when there are none."""
+        return [order_outcome(self.client.get_order_by_id(r["id"])) for r in records or [] if r.get("id")]
+
 
 class AlpacaBroker(_AlpacaAccount):
     """Paper account when framework/.env has paper keys, SIMULATED account otherwise. Never live."""
@@ -391,6 +459,10 @@ class AlpacaBroker(_AlpacaAccount):
     def weights(self):
         eq = self.equity()
         return {n: v / eq for n, (_, v) in self.positions().items()}
+
+    def order_outcomes(self, records):
+        # ponytail: a simulated order has no broker record to poll; the replay is the record.
+        return super().order_outcomes(records) if self.mode == "paper" else []
 
     def reconcile(self, targets, equity, prices, held=None, limit_prices=None):
         """Orders that move the account to `targets`; see build_orders."""

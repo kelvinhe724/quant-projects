@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 
 from framework.book import universe
-from framework.engine import Strategy
+from framework.engine import BUFFER, MIN_ORDER, OrderRules, Strategy
 
 LOOKBACK = 12
 SKIP = 1
@@ -217,7 +217,11 @@ class ETFBeta(Strategy):
 
 
 CAPITAL = 100_000.0
-BUFFER = 0.10
+# BUFFER and MIN_ORDER are defined once, in engine/execution.py, and re-exported
+# here so `strategies.BUFFER` still resolves. LIVE_RULES is what the broker will
+# actually do with a target weight; the backtest runs behind the same object.
+LIVE_RULES = OrderRules(min_order=MIN_ORDER, buffer=BUFFER, whole_share_shorts=True,
+                        unshortable=tuple(universe.CRYPTO))
 
 # Candidate books, compared in validate.py; allocate.LIVE_BOOK names the one the daemon runs.
 BOOKS = {
@@ -240,13 +244,15 @@ def book_config(allocations=None, kill=True, cost_scale=1.0, capital=CAPITAL):
     year on shorts, on purpose harsher than Alpaca paper's NBBO fills. Each
     sleeve runs behind the same overlay: 10% vol target, 3x gross cap, half
     size past a 15% drawdown, flat past 25%, and a 10% position buffer on the
-    final weights. kill=False drops the kill for long backtests, where one
+    final weights. Execution runs behind LIVE_RULES, so the backtest reaches the
+    same positions the Alpaca bridge can reach: $25 minimum order, whole-share
+    shorts, no short crypto. kill=False drops the kill for long backtests, where one
     2008 breach would zero a sleeve forever; live, a kill is a human decision
     to restart.
     """
     from framework.engine import Config, CostModel, RiskConfig
 
-    return Config(capital=capital,
+    return Config(capital=capital, order_rules=LIVE_RULES,
                   costs=CostModel(commission_bps=5 * cost_scale, half_spread_bps=2 * cost_scale,
                                   impact_coef=0.1 * cost_scale),
                   borrow_bps=50 * cost_scale,

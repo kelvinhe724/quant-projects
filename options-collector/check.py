@@ -220,5 +220,67 @@ check("quotes last traded five days ago are all dropped by the cleaning pass",
 check("old-trade fraction is reported separately from the empty-quote fraction",
       surface.stale_stats(old)["old_trade_frac"] == 1.0 and not surface.stale_stats(old)["stale"])
 
+# ------------------------------------------------ vendor flakiness: retry and exit code
+import collect
+
+calls = []
+
+
+def flaky_once(ticker, now, r, max_days=data.MAX_DAYS):
+    calls.append(ticker)
+    if calls.count(ticker) == 1:
+        raise RuntimeError("curl (28) timed out")
+    return fake_chain(ticker, now, r)
+
+
+real_once = data._fetch_chain_once
+try:
+    data._fetch_chain_once = flaky_once
+    q = data.fetch_chain("SPY", NOW, R, tries=3, wait=0)
+    check("a transient chain fetch is retried, not recorded as a miss",
+          calls == ["SPY", "SPY"] and not q[0].empty)
+
+    calls.clear()
+
+    def always_fail(ticker, now, r, max_days=data.MAX_DAYS):
+        calls.append(ticker)
+        raise RuntimeError("curl (28) timed out")
+
+    data._fetch_chain_once = always_fail
+    try:
+        data.fetch_chain("SPY", NOW, R, tries=3, wait=0)
+        raised = False
+    except RuntimeError:
+        raised = True
+    check("a chain that never comes back still raises after the retries",
+          raised and len(calls) == 3)
+finally:
+    data._fetch_chain_once = real_once
+
+def fetch_missing(bad):
+    def _f(ticker, now, r, **kw):
+        if ticker in bad:
+            raise RuntimeError("vendor down")
+        return fake_chain(ticker, now, r)
+    return _f
+
+
+real_root, real_fetch, real_rate, real_caps = data.ROOT, data.fetch_chain, data.bill_rate, data.market_caps
+try:
+    data.bill_rate, data.market_caps = fake_rate, lambda n: pd.Series(dtype=float)
+    with tempfile.TemporaryDirectory() as tmp:
+        data.ROOT = Path(tmp) / "few"
+        data.fetch_chain = fetch_missing({"AAPL", "MSFT"})
+        check("two names missing out of thirteen does not fail the run",
+              collect.main(["run", "--date", DATE]) == 0)
+
+        data.ROOT = Path(tmp) / "many"
+        data.fetch_chain = fetch_missing(set(data.UNIVERSE[:10]))
+        check("ten names missing out of thirteen does fail the run",
+              collect.main(["run", "--date", DATE]) == 1)
+finally:
+    data.ROOT, data.fetch_chain, data.bill_rate, data.market_caps = real_root, real_fetch, real_rate, real_caps
+
+
 print(f"\n{sum(checks)}/{len(checks)} passed")
 raise SystemExit(0 if all(checks) else 1)

@@ -331,5 +331,85 @@ check("purgedcv walk-forward: test windows follow training and do not overlap",
       all(tr[-1] < te[0] for tr, te in folds)
       and all(folds[k][1][-1] < folds[k + 1][1][0] for k in range(len(folds) - 1)))
 
+print("\nVENDOR OUTAGE\n")
+import shutil
+import tempfile
+
+from framework.engine import data as engine_data
+
+TICKERS = ["AAA", "BBB", "CCC", "DDD"]
+tmp = tempfile.mkdtemp()
+yf_dir = os.path.join(tmp, "yf")
+os.makedirs(yf_dir)
+panel = synthetic(n_days=40, instruments=TICKERS, seed=7)
+START, END = "2010-01-01", "2010-03-01"
+for t in TICKERS:
+    df = pd.DataFrame({f: panel.field(f)[t] for f in ("open", "high", "low", "close", "volume")})
+    df.index = pd.bdate_range("2010-01-01", periods=len(df))
+    df.index.name = "date"
+    # cache written under a different date key, as a previous session would have left it
+    df.to_csv(os.path.join(yf_dir, f"{t}_2009-12-01_2010-02-26.csv"))
+
+real_download = engine_data._download
+
+
+def failing(bad):
+    def _dl(ticker, start, end, **kw):
+        if ticker in bad:
+            return None
+        df = pd.DataFrame({f: panel.field(f)[ticker] for f in ("open", "high", "low", "close", "volume")})
+        df.index = pd.bdate_range("2010-01-01", periods=len(df))
+        df.index.name = "date"
+        return df
+    return _dl
+
+
+try:
+    engine_data._download = failing({"BBB"})
+    bars = engine_data.load_yfinance(TICKERS, START, END, cache=tmp, max_age_days=10_000)
+    check("one flaky ticker falls back to cache and the panel stays full",
+          sorted(bars.instruments) == TICKERS and bars.close["BBB"].notna().any(),
+          f"{len(bars.instruments)} instruments")
+
+    engine_data._download = failing({"AAA", "BBB", "CCC"})
+    shutil.rmtree(yf_dir)  # drop the files the first check wrote
+    os.makedirs(yf_dir)
+    for t in TICKERS:
+        df = pd.DataFrame({f: panel.field(f)[t] for f in ("open", "high", "low", "close", "volume")})
+        df.index = pd.bdate_range("2010-01-01", periods=len(df))
+        df.index.name = "date"
+        df.to_csv(os.path.join(yf_dir, f"{t}_2009-12-01_2010-02-26.csv"))
+    try:
+        engine_data.load_yfinance(TICKERS, START, END, cache=tmp, max_age_days=10_000)
+        raised = False
+    except RuntimeError:
+        raised = True
+    check("most of the universe missing raises even though every ticker is cached", raised)
+
+    engine_data._download = failing({"BBB"})
+    shutil.rmtree(yf_dir)
+    os.makedirs(yf_dir)
+    try:
+        engine_data.load_yfinance(TICKERS, START, END, cache=tmp)
+        raised = False
+    except RuntimeError:
+        raised = True
+    check("a missing ticker with no cache at all raises", raised)
+
+    for t in TICKERS:
+        df = pd.DataFrame({f: panel.field(f)[t] for f in ("open", "high", "low", "close", "volume")})
+        df.index = pd.bdate_range("2010-01-01", periods=len(df))
+        df.index.name = "date"
+        df.to_csv(os.path.join(yf_dir, f"{t}_2009-12-01_2010-02-26.csv"))
+    try:
+        engine_data.load_yfinance(TICKERS, START, END, cache=tmp, max_age_days=1)
+        raised = False
+    except RuntimeError:
+        raised = True
+    check("cache staler than max_age_days is refused, not silently traded", raised)
+finally:
+    engine_data._download = real_download
+    shutil.rmtree(tmp, ignore_errors=True)
+
 print(f"\n{sum(checks)}/{len(checks)} checks passed")
 sys.exit(0 if all(checks) else 1)

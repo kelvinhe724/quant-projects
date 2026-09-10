@@ -21,10 +21,11 @@ import pandas as pd
 
 from framework.book import universe
 from framework.book.allocate import LIVE_BOOK, REPORTS, load_allocations
-from framework.book.broker import KILL, RECON_TOL, Limits, ShadowBroker, discrepancies, expected_weights
+from framework.book.broker import (KILL, RECON_TOL, Limits, ShadowBroker, discrepancies, expected_weights,
+                                   filled_value, unfilled)
 from framework.book.daemon import ET, HISTORY_YEARS, LEDGER, LIVE_START, last_session, previous_row, read_ledger
 from framework.book.strategies import CAPITAL, book_config, sleeves
-from framework.engine.data import CACHE
+from framework.engine.data import CACHE, SUBSTITUTED
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 CT = "America/Chicago"
@@ -36,8 +37,9 @@ LAKE_STATUS = os.path.join(ROOT, "data-lake", "reports", "status.json")
 DAEMON_LOG = os.path.join(REPORTS, "daemon.log")
 RISK = book_config().risk  # the overlay's own limits: 3x gross, half at 15% dd, kill at 25%
 LIMITS = Limits()          # the broker layer's hard limits: gross, per name, daily loss
-JOBS = ("com.kelvinhe.premia-book", "com.kelvinhe.kalshi-shadow", "com.kelvinhe.lake-daily",
-        "com.kelvinhe.lake-hourly", "com.kelvinhe.lake-crypto", "com.kelvinhe.options-collector")
+JOBS = ("com.kelvinhe.premia-book", "com.kelvinhe.desk-report", "com.kelvinhe.kalshi-shadow",
+        "com.kelvinhe.lake-daily", "com.kelvinhe.lake-hourly", "com.kelvinhe.lake-crypto",
+        "com.kelvinhe.options-collector")
 LAKE_STATUS_MAX_AGE_H = 3   # quality.py runs hourly
 VAR_DAYS = 250
 Z = {"95": 1.6449, "99": 2.3263}
@@ -244,7 +246,17 @@ def daemon_health(ledger, now=None, launchctl_text=None, log_path=DAEMON_LOG):
             "expected_session": expected.strftime("%Y-%m-%d"),
             "missed": due and expected.strftime("%Y-%m-%d") not in have,
             "log_mtime": pd.Timestamp(os.path.getmtime(log_path), unit="s", tz="UTC").tz_convert(ET).isoformat(timespec="seconds")
-            if os.path.exists(log_path) else None}
+            if os.path.exists(log_path) else None,
+            "substituted_bars": substituted_bars(log_path)}
+
+
+def substituted_bars(log_path=DAEMON_LOG, lines=400):
+    """Cached-bar substitutions the daemon logged in its most recent output."""
+    if not os.path.exists(log_path):
+        return []
+    with open(log_path, errors="replace") as fh:
+        tail = fh.readlines()[-lines:]
+    return [l.split(SUBSTITUTED + ": ", 1)[1].strip() for l in tail if SUBSTITUTED + ": " in l]
 
 
 def kill_status(path=KILL):
@@ -258,9 +270,10 @@ def kill_status(path=KILL):
 
 def reconciliation(ledger):
     """The broker layer's own check, rerun on the ledger: the account's last row against what the
-    row before it said it should hold (broker.expected_weights, RECON_TOL), plus the panel hash."""
+    row before it said it should hold, plus what the broker's own order records say actually
+    filled (broker.expected_weights, RECON_TOL), the unfilled orders, and the panel hash."""
     shadow = ledger[ledger.book == "shadow"].sort_values("date")
-    out = {"mismatches": [], "alpaca_rows": False, "panel_hash_changed": False, "tol": RECON_TOL}
+    out = {"mismatches": [], "unfilled": [], "alpaca_rows": False, "panel_hash_changed": False, "tol": RECON_TOL}
     if len(shadow) > 1:
         h = shadow.panel_hash.astype(str).tolist()
         out["panel_hash_changed"] = h[-1] != h[-2]
@@ -270,12 +283,20 @@ def reconciliation(ledger):
         return out
     last = alp.iloc[-1]
     out["alpaca_rows"] = True
-    out["mode"] = str(last.note).split(":")[0]
-    prev = previous_row(ledger, out["mode"], pd.Timestamp(last.date))
+    out["mode"] = str(last.get("mode") or "")
+    status = last.get("order_status")
+    outcomes = json.loads(status) if isinstance(status, str) and status.strip() else []
+    out["unfilled"] = unfilled(outcomes)
+    prev = previous_row(ledger, pd.Timestamp(last.date))
     if prev is None:
         return out
     out["against"] = str(prev["date"])[:10]
-    off = discrepancies(json.loads(last.positions), expected_weights(prev))
+    was = str(prev.get("mode") or "")
+    if was != out["mode"]:
+        out["mode_changed"] = (was, out["mode"])  # two accounts: their positions are not comparable
+        return out
+    off = discrepancies(json.loads(last.positions),
+                        expected_weights(prev, filled_value(outcomes) if outcomes else None, last.equity))
     out["mismatches"] = [{"instrument": n, "held": h, "expected": e} for n, (h, e) in off.items()]
     return out
 
@@ -301,6 +322,8 @@ def build_alerts(book, lake, health, recon, kalshi, now=None, kill=None):
             a.append({"kind": "drawdown", "msg": f"{k} drawdown {s['drawdown']:.1%}: past {RISK.dd_threshold:.0%}, running at half size"})
         if s["gross"] > RISK.max_gross * 1.001:
             a.append({"kind": "drawdown", "msg": f"{k} gross {s['gross']:.2f}x over the {RISK.max_gross:.0f}x cap"})
+    for msg in health.get("substituted_bars", []):
+        a.append({"kind": "feed", "msg": "premia-book traded on cached bars: " + msg})
     if health.get("missed"):
         a.append({"kind": "daemon", "msg": f"premia-book: session {health['expected_session']} not in the ledger "
                                           f"(last {health['last_session_logged']})"})
@@ -320,6 +343,13 @@ def build_alerts(book, lake, health, recon, kalshi, now=None, kill=None):
                                                      else lake.get("summary", "not ok"))})
     if lake.get("age_hours") is None or lake["age_hours"] > LAKE_STATUS_MAX_AGE_H:
         a.append({"kind": "feed", "msg": f"data lake: status.json is {f(lake.get('age_hours'), '.0f')}h old, quality job not running"})
+    for o in recon.get("unfilled", []):
+        asked = f"{o['asked_qty']}" if o.get("asked_qty") else f"${o.get('asked_notional')}"
+        a.append({"kind": "reconcile", "msg": f"order {o['status']}: {o['side']} {o['instrument']} filled "
+                                              f"{o['filled_qty']} of {asked} (broker id {o['id']})"})
+    if recon.get("mode_changed"):
+        a.append({"kind": "reconcile", "msg": "broker mode changed {} -> {}: positions were not reconciled "
+                                              "across the two accounts".format(*recon["mode_changed"])})
     if recon.get("mismatches"):
         names = ", ".join(m["instrument"] for m in recon["mismatches"])
         a.append({"kind": "reconcile", "msg": f"account off the ledger by more than {RECON_TOL:.0%} of equity: {names}"})
