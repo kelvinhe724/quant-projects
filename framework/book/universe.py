@@ -16,7 +16,8 @@ from pandas.tseries.holiday import (AbstractHolidayCalendar, GoodFriday, Holiday
                                     USThanksgivingDay, nearest_workday, sunday_to_monday)
 
 from framework.engine import Bars, load_fred, load_yfinance
-from framework.engine.data import CACHE, FIELDS, clean_prices
+from framework.engine.data import (CACHE, CACHE_MAX_AGE_DAYS, DOWNLOAD_TRIES, DOWNLOAD_WAIT,
+                                   FIELDS, SUBSTITUTED, _cached_bars, clean_prices)
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DATA_START = "2003-06-01"
@@ -41,10 +42,12 @@ FX_ETFS = {
     "FXF": ("CHF", "IR3TIB01CHM156N"),
 }
 USD_RATE = "IR3TIB01USM156N"
-# FRED stopped updating the OECD EUR and GBP series in 2026-01. These daily
-# policy / overnight rates (ECB deposit facility, SONIA) are averaged by month
-# and spliced on after the OECD series ends, so live ranks use current rates.
-RATE_FALLBACK = {"EUR": "ECBDFR", "GBP": "IUDSOIA"}
+# ponytail: no per-currency splice. OECD publishes these with a lag that differs
+# by currency, so load_rates truncates every column to the last month they all
+# have. A uniform lag is a ranking the carry sleeve can trust; a mixed vintage
+# (current EUR/GBP against three-month-old everything else) is not. Splicing in
+# each currency's own overnight rate (ESTR, SONIA, TONAR, RBA cash, CORRA,
+# SARON, EFFR) is the upgrade if this sleeve ever carries real weight.
 CRYPTO = ["BTC/USD", "ETH/USD"]
 BENCHMARK = "SPY"
 
@@ -78,8 +81,10 @@ def load_rates(cache=os.path.join(ROOT, "source-material", "fx-carry"), refresh=
     FRED dates month M's average at the first of M. It is only knowable after
     M ends, so each value is dated the first day of M+1 here. The research
     path reads the frozen fx-carry cache; refresh=True (the daemon) downloads
-    every series again into the engine's FRED cache. RATE_FALLBACK series
-    are spliced on after the OECD series' last print either way.
+    every series again into the engine's FRED cache.
+
+    Every column is cut back to the last month all currencies have, so one
+    cross-sectional rank is never a mix of vintages.
     """
     ids = {c: sid for c, sid in FX_ETFS.values()}
     ids["USD"] = USD_RATE
@@ -91,37 +96,76 @@ def load_rates(cache=os.path.join(ROOT, "source-material", "fx-carry"), refresh=
             raw = pd.read_csv(os.path.join(cache, f"{sid}.csv"), na_values=".", index_col=0, parse_dates=True)
             s = raw.iloc[:, 0].astype(float)
         s = s.dropna()
-        if ccy in RATE_FALLBACK:
-            monthly = load_fred(RATE_FALLBACK[ccy], refresh=refresh).dropna().resample("MS").mean()
-            s = pd.concat([s, monthly[monthly.index > s.index[-1]]])
         s.index = s.index + pd.DateOffset(months=1)
         out[ccy] = s
-    return pd.DataFrame(out)
+    df = pd.DataFrame(out)
+    return df.loc[:min(df[c].last_valid_index() for c in df)]
 
 
-def load_crypto(start=DATA_START, end=DATA_END, cache=os.path.join(CACHE, "alpaca")):
-    """Daily OHLCV per crypto pair from Alpaca, downloaded once into `cache`."""
-    os.makedirs(cache, exist_ok=True)
-    per = {}
-    for sym in CRYPTO:
-        path = os.path.join(cache, f"{sym.replace('/', '-')}_daily_{end}.csv")
-        if not os.path.exists(path):
-            from alpaca.data.historical import CryptoHistoricalDataClient
-            from alpaca.data.requests import CryptoBarsRequest
-            from alpaca.data.timeframe import TimeFrame
+def _alpaca_bars(sym, start, end, tries=DOWNLOAD_TRIES, wait=DOWNLOAD_WAIT):
+    """One pair's daily bars from Alpaca, retrying a transient failure. None when it never comes back."""
+    import time
 
-            req = CryptoBarsRequest(symbol_or_symbols=sym, timeframe=TimeFrame.Day,
-                                    start=pd.Timestamp(start), end=pd.Timestamp(end))
+    from alpaca.data.historical import CryptoHistoricalDataClient
+    from alpaca.data.requests import CryptoBarsRequest
+    from alpaca.data.timeframe import TimeFrame
+
+    req = CryptoBarsRequest(symbol_or_symbols=sym, timeframe=TimeFrame.Day,
+                            start=pd.Timestamp(start), end=pd.Timestamp(end))
+    for i in range(tries):
+        try:
             df = CryptoHistoricalDataClient().get_crypto_bars(req).df
+        except Exception as e:
+            print(f"alpaca error for {sym} (try {i + 1}/{tries}): {type(e).__name__}: {e}")
+            df = None
+        if df is not None:
             if isinstance(df.index, pd.MultiIndex):
                 df = df.droplevel(0)
-            if df.empty:
-                raise RuntimeError(f"no crypto bars for {sym}")
-            df = df[list(FIELDS)]
-            df.index = df.index.tz_convert(None).normalize()
-            df.index.name = "date"
+            if not df.empty:
+                df = df[list(FIELDS)]
+                df.index = df.index.tz_convert(None).normalize()
+                df.index.name = "date"
+                return df
+        if i + 1 < tries:
+            time.sleep(wait)
+    return None
+
+
+def load_crypto(start=DATA_START, end=DATA_END, cache=os.path.join(CACHE, "alpaca"),
+                max_age_days=CACHE_MAX_AGE_DAYS):
+    """Daily OHLCV per crypto pair from Alpaca, downloaded once into `cache`.
+
+    Same rule as load_yfinance: a pair Alpaca will not serve falls back to its
+    newest cached bars if those are within `max_age_days`, and says so loudly.
+    Raises when a missing pair has no usable cache, or when every pair is
+    missing, which means the vendor is down rather than one symbol being flaky.
+    """
+    os.makedirs(cache, exist_ok=True)
+    per, substituted, unusable = {}, [], []
+    for sym in CRYPTO:
+        stem = sym.replace("/", "-")
+        path = os.path.join(cache, f"{stem}_daily_{end}.csv")
+        if not os.path.exists(path):
+            df = _alpaca_bars(sym, start, end)
+            if df is None:
+                cached, age = _cached_bars(stem, start, end, cache, max_age_days)
+                if cached is None:
+                    unusable.append(sym)
+                    continue
+                print(f"{SUBSTITUTED}: {sym} unavailable from alpaca, using cached bars through "
+                      f"{cached.index[-1].date()} ({age} days old)")
+                substituted.append(sym)
+                per[sym] = cached
+                continue
             df.to_csv(path)
         per[sym] = pd.read_csv(path, index_col=0, parse_dates=True)
+    missing = substituted + unusable
+    # ponytail: two pairs, so "majority" is "all of them"; revisit if CRYPTO grows.
+    if len(missing) == len(CRYPTO):
+        raise RuntimeError(f"every crypto pair unavailable ({', '.join(sorted(missing))}); "
+                           f"alpaca looks down, not one flaky symbol")
+    if unusable:
+        raise RuntimeError(f"no crypto bars and no usable cache for {', '.join(unusable)}")
     return {f: pd.DataFrame({s: d[f] for s, d in per.items()}).sort_index() for f in FIELDS}
 
 

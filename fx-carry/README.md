@@ -52,6 +52,25 @@ should be read as precise. One other gap: the USD series has no April 2020
 observation, so that month's rank uses the March 2020 rate. USD was top-ranked
 either way.
 
+**One vintage for every leg.** OECD publishes with a lag and the lag differs by
+currency, so the honest ranking compares rates from one month even when that
+month is a quarter old. The two codebases handle it differently and neither is
+free: this project carries a rate forward for at most `MAX_STALE_MONTHS`, so a
+row can still mix a fresh AUD with a five-month-old EUR, and reports which
+months those are above; the framework's `book/universe.load_rates` truncates
+every column to the last month all seven currencies have, so its rows are one
+vintage and the panel simply ends earlier. The framework used to
+splice current ECB deposit and SONIA prints onto EUR and GBP only; that was
+removed on 2026-09-09 because it ranked live EUR and GBP against three-month-old
+JPY, AUD, CAD, CHF and USD, which biases the sort in the two spliced currencies'
+favour. A uniform lag on a monthly-rebalanced sleeve costs less than a mixed one.
+The bill is real: with EUR and GBP still stopping at 2026-01 on FRED, the whole
+framework panel now ranks on the January 2026 average, a 7-month lag rather than
+the 3-month one the other five currencies could support.
+The real upgrade, if this sleeve ever carries meaningful capital, is a per-
+currency overnight series for all of them — ESTR, SONIA, TONAR, RBA cash, CORRA,
+SARON, EFFR — spliced on the same rule, not for two currencies out of seven.
+
 ## Design
 
 | Window | Dates | Use |

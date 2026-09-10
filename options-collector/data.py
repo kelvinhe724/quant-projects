@@ -6,6 +6,8 @@ summaries live under source-material/options-collector/summary/. Both are
 gitignored by the repo-level source-material/ rule.
 """
 import json
+import sys
+import time
 from io import StringIO
 from pathlib import Path
 
@@ -25,6 +27,11 @@ NAMES = ["AAPL", "MSFT", "NVDA", "AMZN", "META", "GOOGL", "BRK-B", "JPM", "XOM",
 UNIVERSE = ETFS + NAMES
 
 MAX_DAYS = 400
+# Same rule as the framework engine: a transient vendor failure is retried before
+# the ticker is called missing, and one flaky name must not fail the whole run.
+FETCH_TRIES = 3
+FETCH_WAIT = 5.0
+MISSING_ABORT_FRACTION = 0.25
 MARKET_TZ = "America/New_York"
 CLOSE_HOUR = 16
 
@@ -74,7 +81,7 @@ def bill_rate(date):
         return None, None, None
 
 
-def fetch_chain(ticker, now, r, max_days=MAX_DAYS):
+def _fetch_chain_once(ticker, now, r, max_days=MAX_DAYS):
     """Download every listed expiry up to max_days out; one row per contract.
 
     Calls and puts are stacked with a `cp` flag. T is in years to the 4pm New
@@ -104,6 +111,19 @@ def fetch_chain(ticker, now, r, max_days=MAX_DAYS):
     q["spot"] = spot
     q["r"] = r
     return q[CHAIN_COLS], spot, hist.index[-1].strftime("%Y-%m-%d")
+
+
+def fetch_chain(ticker, now, r, max_days=MAX_DAYS, tries=FETCH_TRIES, wait=FETCH_WAIT):
+    """_fetch_chain_once with retries. Raises the last error when it never comes back."""
+    for i in range(tries):
+        try:
+            return _fetch_chain_once(ticker, now, r, max_days)
+        except Exception as e:
+            if i + 1 == tries:
+                raise
+            print(f"{ticker} fetch failed (try {i + 1}/{tries}): {type(e).__name__}: {e}",
+                  file=sys.stderr)
+            time.sleep(wait)
 
 
 def market_caps(tickers):

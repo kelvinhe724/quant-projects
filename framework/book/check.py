@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 from framework.book.strategies import (BOOKS, CryptoTrend, ETFBeta, FXCarryETF, TrendETF, carry_weights,
                                        month_ends)
 from framework.book.strategies import sleeves as book_sleeves
-from framework.engine import Bars, Config, CostModel, RiskConfig, run, synthetic
+from framework.engine import BUFFER, Bars, Config, CostModel, OrderRules, RiskConfig, run, synthetic
 
 checks = []
 
@@ -118,7 +118,7 @@ check("forecast scalar: fewer than 500 days gives NaN", np.isnan(forecast_scalar
 check("forecast cap: every combined forecast is within +/-20 and the cap binds somewhere on a planted trend",
       fc.abs().max().max() <= FORECAST_CAP and (fc.abs() == FORECAST_CAP).any().any())
 ew = EWMAC(classes={"UP": "a", "DOWN": "b", "FLAT": "c"})
-BUFFERED = Config(costs=COSTS.costs, risk=RiskConfig(buffer=0.10))
+BUFFERED = Config(costs=COSTS.costs, risk=RiskConfig(buffer=BUFFER))
 res_ew = run(ew, trending, config=BUFFERED)
 w_last = res_ew.weights.iloc[-1]
 check("EWMAC through the engine: long the uptrend, short the downtrend at the end of the sample",
@@ -161,8 +161,10 @@ import tempfile
 
 import framework.book.broker as broker_mod
 from framework.book.broker import (AlpacaBroker, AlpacaLive, Halted, IBKRBroker, KalshiLive, Limits, LiveDisabled,
-                                   ShadowBroker, SimulatedAccount, check_limits, expected_weights, live_token,
+                                   ShadowBroker, SimulatedAccount, check_limits, expected_weights, filled_value,
+                                   live_token, mode_change, order_outcome, order_record, unfilled,
                                    verify_positions)
+import framework.book.daemon as daemon_mod
 from framework.book.daemon import COLUMNS, append_ledger, last_session, previous_row, sim_rows
 from framework.book.strategies import CAPITAL
 from framework.book.universe import sessions
@@ -206,8 +208,86 @@ check("reconcile: a name with a limit price routes as a limit order, qty = notio
       and np.isclose(float(lim[0].qty), 50_000 / 495.0)
       and type(rc({"SPY": 0.5}, 100_000, prices, held={})[0]).__name__ == "MarketOrderRequest")
 
+print("\nONE ORDER MODEL, TWO PATHS\n")
+from framework.book.broker import book_symbol, build_orders
+from framework.book.strategies import LIVE_RULES
+from framework.engine.execution import Executor
+from framework.engine.portfolio import Portfolio
+
+
+class OneBar:
+    """The smallest bars view Executor needs: one fill price per name, no volume."""
+    volume = None
+
+    def __init__(self, prices, date):
+        self.frame = pd.DataFrame([prices], index=[date])
+
+    def field(self, _name):
+        return self.frame
+
+
+def backtest_end(weights, equity, prices, held, rules=LIVE_RULES):
+    """Where the BACKTEST path lands: Executor.execute, zero costs so only quantities matter."""
+    day = pd.Timestamp("2026-09-09")
+    book = Portfolio(equity - sum(q * prices[n] for n, q in held.items()))
+    book.positions, book.marks = dict(held), dict(prices)
+    Executor(rules=rules).execute(day, OneBar(prices, day), weights, book)
+    return {n: q for n, q in book.positions.items() if abs(q) > 1e-9}
+
+
+def live_end(weights, equity, prices, held):
+    """Where the LIVE path lands: build_orders, its requests replayed back onto `held`."""
+    out = dict(held)
+    for o in build_orders(weights, equity, prices, {n: (q, q * prices[n]) for n, q in held.items()}):
+        name = book_symbol(o.symbol)
+        dq = float(o.qty) if o.qty is not None else float(o.notional) / prices[name]
+        out[name] = out.get(name, 0.0) + (dq if o.side.value == "buy" else -dq)
+    return {n: q for n, q in out.items() if abs(q) > 1e-9}
+
+
+def same_book(weights, equity, prices, held, tol=0.02):
+    """True when both paths hold the same dollars of every name (notional rounds to cents)."""
+    a, b = backtest_end(weights, equity, prices, held), live_end(weights, equity, prices, held)
+    return all(abs(a.get(n, 0.0) - b.get(n, 0.0)) * prices[n] <= tol for n in set(a) | set(b)), a, b
+
+
+PX = {"SPY": 500.0, "FXE": 100.0, "GLD": 300.0, "BTC/USD": 50000.0, "IEF": 95.0,
+      "TLT": 90.0, "QQQ": 400.0, "EFA": 80.0, "VNQ": 33.33}
+HELD = {"SPY": 50.0, "GLD": 10.0, "BTC/USD": 0.2, "IEF": 95.0, "TLT": -100.0, "QQQ": 0.05, "EFA": 1.0}
+W = {"SPY": 0.5, "FXE": -0.1, "GLD": 0.0, "BTC/USD": -0.1, "IEF": 0.09, "TLT": 0.05,
+     "QQQ": 0.0001, "EFA": 0.0001, "VNQ": 0.02}
+ok, a, b = same_book(W, 100_000.0, PX, HELD)
+check("one order model: backtest and live reach the same book for one set of weights "
+      "(buy, whole-share short, flatten, unshortable crypto, buffer, sign flip, sub-$25)",
+      ok, f"backtest {sorted(a)} vs live {sorted(b)}")
+check("that set of weights exercises every rule: a buffered hold, a flatten, a whole-share short, "
+      "a flat coin and an untouched sub-$25 move",
+      np.isclose(a["IEF"], 95.0) and "GLD" not in a and "BTC/USD" not in a
+      and a["FXE"] == -100.0 and np.isclose(a["QQQ"], 0.05) and "EFA" not in a, str(a))
+unshaped = backtest_end(W, 100_000.0, PX, HELD, rules=OrderRules())
+check("closing the fork moved the backtest: with the rules off the engine reaches a book the broker cannot",
+      unshaped["BTC/USD"] < 0 and "BTC/USD" not in a          # a short the broker cannot place
+      and not np.isclose(unshaped["IEF"], a["IEF"])            # a move the buffer stops
+      and "EFA" in unshaped and "EFA" not in a,                # a position under the $25 minimum
+      f"unshaped {({k: round(v, 3) for k, v in unshaped.items()})}")
+
+rng_fuzz = np.random.default_rng(20260909)
+names = list(PX)
+bad = 0
+for _ in range(300):
+    px = {n: float(rng_fuzz.uniform(5, 600)) if n != "BTC/USD" else float(rng_fuzz.uniform(2e4, 8e4)) for n in names}
+    eq = float(rng_fuzz.uniform(2e4, 5e5))
+    w = {n: float(rng_fuzz.choice([0.0, 1.0], p=[0.25, 0.75]) * rng_fuzz.uniform(-0.3, 0.3)) for n in names}
+    h = {n: float(rng_fuzz.choice([0.0, 1.0], p=[0.4, 0.6]) * rng_fuzz.uniform(-0.3, 0.3)) * eq / px[n] for n in names}
+    h = {n: q for n, q in h.items() if abs(q) > 1e-9}
+    if not same_book(w, eq, px, h)[0]:
+        bad += 1
+check("one order model: 300 random (weights, equity, prices, held) draws land both paths on the same book",
+      bad == 0, f"{bad} disagreements")
+
+
 path = os.path.join(tempfile.mkdtemp(), "ledger.csv")
-row = dict(zip(COLUMNS, ["2026-09-02", "shadow", 100000.0, 0.5, "{}", "[]", "{}", "abc", "t", ""]))
+row = dict(zip(COLUMNS, ["2026-09-02", "shadow", 100000.0, 0.5, "{}", "[]", "{}", "abc", "t", "", None, ""]))
 append_ledger([row], path)
 append_ledger([row], path)
 n = append_ledger([dict(row, date="2026-09-03")], path)
@@ -276,7 +356,8 @@ def status_json(ok=True, stale=(), age_h=0.5):
 
 
 LC = "28729\t0\tcom.kelvinhe.lake-crypto\n-\t0\tcom.kelvinhe.premia-book\n-\t0\tcom.kelvinhe.kalshi-shadow\n" \
-     "-\t0\tcom.kelvinhe.lake-daily\n-\t0\tcom.kelvinhe.lake-hourly\n-\t0\tcom.kelvinhe.options-collector\n"
+     "-\t0\tcom.kelvinhe.lake-daily\n-\t0\tcom.kelvinhe.lake-hourly\n-\t0\tcom.kelvinhe.options-collector\n" \
+     "-\t0\tcom.kelvinhe.desk-report\n"
 good = ledger_rows([100000, 100500, 101000, 100800, 100900])
 book = report.book_summary(good)
 check("book summary: day P&L, since-start P&L and drawdown from the ledger's equity path",
@@ -530,6 +611,94 @@ check("end to end: the simulated account replayed from a row reconciles against 
       verify_positions(sim1.weights(), r1) == {})
 check("first run: nothing to reconcile against", verify_positions({"A": 0.5}, None) == {})
 
+# ---- reconciling against the broker's own order records, not against intent
+
+
+class FakeOrder:
+    def __init__(self, oid, symbol, side, status, filled_qty=0, filled_avg_price=None, qty=None, notional=None):
+        self.id, self.symbol, self.side, self.status = oid, symbol, side, status
+        self.filled_qty, self.filled_avg_price, self.qty, self.notional = filled_qty, filled_avg_price, qty, notional
+
+
+class FakeOrderClient:
+    """Only what order_outcomes touches: look an order up by the id the ledger stored."""
+
+    def __init__(self, orders):
+        self.orders = {o.id: o for o in orders}
+        self.asked = []
+
+    def get_order_by_id(self, oid):
+        self.asked.append(oid)
+        return self.orders[oid]
+
+
+def fake_broker(orders):
+    b = object.__new__(AlpacaBroker)
+    b.mode, b.client = "paper", FakeOrderClient(orders)
+    return b
+
+
+sent_rows = [{"symbol": "A", "side": "buy", "qty": None, "notional": 20000.0, "limit": None, "id": "o1"},
+             {"symbol": "B", "side": "sell", "qty": 50.0, "notional": None, "limit": None, "id": "o2"},
+             {"symbol": "C", "side": "buy", "qty": None, "notional": 5000.0, "limit": None, "id": "o3"}]
+prev2 = {"date": "2026-09-08", "equity": 100000.0, "mode": "paper",
+         "positions": json.dumps({"B": 0.20, "C": 0.05}),
+         "targets": json.dumps({"A": 0.20, "B": 0.0, "C": 0.10}),
+         "fills": json.dumps(sent_rows)}
+br = fake_broker([FakeOrder("o1", "A", "buy", "partially_filled", filled_qty=20, filled_avg_price=500.0, notional=20000.0),
+                  FakeOrder("o2", "B", "sell", "rejected", qty=50.0),
+                  FakeOrder("o3", "C", "buy", "filled", filled_qty=10, filled_avg_price=500.0, notional=5000.0)])
+outs = br.order_outcomes(sent_rows)
+check("order ids stored on the ledger row are polled at the broker and classified",
+      br.client.asked == ["o1", "o2", "o3"] and [o["status"] for o in outs] == ["partial", "rejected", "filled"],
+      str([o["status"] for o in outs]))
+check("a partial fill is valued at the broker's own average price, a reject at nothing",
+      [o["filled_value"] for o in outs] == [10000.0, 0.0, 5000.0], str([o["filled_value"] for o in outs]))
+check("unfilled() names exactly the orders that did not fully fill",
+      [(o["instrument"], o["status"]) for o in unfilled(outs)] == [("A", "partial"), ("B", "rejected")])
+actual = {"A": 0.10, "B": 0.20, "C": 0.10}   # half of A bought, B never sold, C filled
+check("PARTIAL FILL + REJECT: the account matches the broker's record, so reconciliation passes",
+      verify_positions(actual, prev2, filled_value(outs), 100000.0) == {}
+      and not os.path.exists(broker_mod.KILL))
+try:
+    verify_positions(actual, prev2)
+    check("PARTIAL FILL + REJECT: reconciling against intent instead would have false-halted", False)
+except Halted as e:
+    check("PARTIAL FILL + REJECT: reconciling against intent instead false-halts on A and B (the old blindness)",
+          "A held" in str(e) and "B held" in str(e))
+    os.remove(broker_mod.KILL)
+try:
+    verify_positions({"A": 0.20, "B": 0.0, "C": 0.10}, prev2, filled_value(outs), 100000.0)
+    check("PARTIAL FILL: an account that is NOT where the broker's fills put it halts", False)
+except Halted as e:
+    check("PARTIAL FILL: an account that is NOT where the broker's fills put it halts and names both legs",
+          "A held +0.2000 expected +0.1000" in str(e) and "B held +0.0000 expected +0.2000" in str(e), str(e))
+    os.remove(broker_mod.KILL)
+check("a simulated broker has no order records to poll, so it falls back to the target expectation",
+      sim.order_outcomes(sent_rows) == [])
+check("order_record carries the broker's id for the response, None when nothing was sent",
+      order_record(orders_ex := rc({"SPY": 0.5}, 100_000, prices, held={})[0],
+                   FakeOrder("xyz", "SPY", "buy", "new"))["id"] == "xyz"
+      and order_record(orders_ex)["id"] is None)
+
+# ---- a mode change is a loud halt, never a silently skipped check
+paper_prev = dict(prev2, mode="paper")
+sim_prev = dict(prev2, mode="simulated")
+check("MODE CHANGE: same mode reconciles against the previous row as usual",
+      mode_change(paper_prev, "paper") is paper_prev and mode_change(None, "paper") is None)
+try:
+    mode_change(sim_prev, "paper")
+    check("MODE CHANGE: a simulated -> paper flip halts instead of skipping reconciliation", False)
+except Halted as e:
+    check("MODE CHANGE: a simulated -> paper flip halts instead of skipping reconciliation, and says so",
+          "simulated -> paper" in str(e) and "ack-mode-change" in str(e)
+          and "mode changed" in open(broker_mod.KILL).read())
+    os.remove(broker_mod.KILL)
+check("MODE CHANGE: acknowledged by hand, the run goes on with no cross-account comparison",
+      mode_change(sim_prev, "paper", ack=True) is None and not os.path.exists(broker_mod.KILL))
+check("MODE CHANGE: a dry run reports it but never arms the kill switch for the live book",
+      "ack_mode_change or dry_run" in open(os.path.join(os.path.dirname(__file__), "daemon.py")).read())
+
 print("\nKILL SWITCH AND LIMITS\n")
 
 
@@ -704,13 +873,117 @@ q = queue([book, snap(1, [(100.0, 1.0)], [(101.0, 1.0)])], "sell", 1.0, 103.0)
 check("a sell that never trades stays unfilled with its full remainder", q["filled"] == 0 and q["remaining"] == 1.0)
 
 print("\nDAEMON HELPERS\n")
-led = pd.DataFrame([dict(zip(COLUMNS, ["2026-09-03", "shadow", 1.0, 0, "{}", "[]", "{}", "h", "t", "replay"])),
-                    dict(zip(COLUMNS, ["2026-09-03", "alpaca", 2.0, 0, "{}", "[]", "{}", "h", "t", "simulated: submitted"])),
-                    dict(zip(COLUMNS, ["2026-09-04", "alpaca", 3.0, 0, "{}", "[]", "{}", "h", "t", "paper: submitted"]))])
+def led_row(date, book, equity, mode, note):
+    return dict(zip(COLUMNS, [date, book, equity, 0, "{}", "[]", "{}", "h", "t", mode, None, note]))
+
+
+led = pd.DataFrame([led_row("2026-09-03", "shadow", 1.0, "", "replay"),
+                    led_row("2026-09-03", "alpaca", 2.0, "simulated", "misleading: note"),
+                    led_row("2026-09-04", "alpaca", 3.0, "paper", "submitted")])
 led["date"] = pd.to_datetime(led.date)
-check("sim_rows picks only simulated alpaca rows; previous_row picks the last row of the same mode before the session",
-      [r["equity"] for r in sim_rows(led)] == [2.0] and previous_row(led, "paper", "2026-09-05")["equity"] == 3.0
-      and previous_row(led, "paper", "2026-09-04") is None and previous_row(led, "simulated", "2026-09-05")["equity"] == 2.0)
+check("sim_rows keys on the mode column, not the note text",
+      [r["equity"] for r in sim_rows(led)] == [2.0])
+check("previous_row keys on (date, book) alone: it finds the last alpaca row whatever the note or the mode says",
+      previous_row(led, "2026-09-05")["equity"] == 3.0 and previous_row(led, "2026-09-04")["equity"] == 2.0
+      and previous_row(led, "2026-09-03") is None)
+
+mig = os.path.join(tempfile.mkdtemp(), "old-ledger.csv")
+OLD = ["date", "book", "equity", "gross", "positions", "fills", "targets", "panel_hash", "run_at", "note"]
+pd.DataFrame([dict(zip(OLD, ["2026-09-04", "alpaca", 4.0, 0, "{}", "[]", "{}", "h", "t", "simulated: submitted"]))],
+             columns=OLD).to_csv(mig, index=False)
+back = daemon_mod.read_ledger(mig)
+check("a ledger written before the mode column reads back with mode backfilled from the old note prefix",
+      list(back.columns) == COLUMNS and back["mode"].tolist() == ["simulated"])
+append_ledger([led_row("2026-09-08", "alpaca", 5.0, "paper", "submitted")], mig)
+again = pd.read_csv(mig)
+check("appending to it rewrites the header once so the new columns line up, and nothing is lost",
+      list(again.columns) == COLUMNS and again["mode"].tolist() == ["simulated", "paper"] and len(again) == 2)
+
+print("\nCRYPTO VENDOR OUTAGE\n")
+import shutil
+import tempfile
+
+from framework.book import universe as uni
+
+tmp = tempfile.mkdtemp()
+cpanel = synthetic(n_days=40, instruments=uni.CRYPTO, seed=11)
+CSTART, CEND = "2010-01-01", "2010-03-01"
+
+
+def write_crypto_cache(d):
+    for sym in uni.CRYPTO:
+        df = pd.DataFrame({f: cpanel.field(f)[sym] for f in
+                           ("open", "high", "low", "close", "volume")})
+        df.index = pd.bdate_range("2010-01-01", periods=len(df))
+        df.index.name = "date"
+        # a different date key, as a previous session would have left it
+        df.to_csv(os.path.join(d, f"{sym.replace('/', '-')}_daily_2010-02-26.csv"))
+
+
+real_alpaca = uni._alpaca_bars
+
+
+def failing_alpaca(bad):
+    def _f(sym, start, end, **kw):
+        if sym in bad:
+            return None
+        df = pd.DataFrame({f: cpanel.field(f)[sym] for f in
+                           ("open", "high", "low", "close", "volume")})
+        df.index = pd.bdate_range("2010-01-01", periods=len(df))
+        df.index.name = "date"
+        return df
+    return _f
+
+
+try:
+    uni._alpaca_bars = failing_alpaca({"BTC/USD"})
+    write_crypto_cache(tmp)
+    out = uni.load_crypto(CSTART, CEND, cache=tmp, max_age_days=10_000)
+    check("one flaky crypto pair falls back to cache and the panel stays full",
+          list(out["close"].columns) == uni.CRYPTO and out["close"]["BTC/USD"].notna().any(),
+          f"{list(out['close'].columns)}")
+
+    shutil.rmtree(tmp); os.makedirs(tmp)
+    write_crypto_cache(tmp)
+    uni._alpaca_bars = failing_alpaca(set(uni.CRYPTO))
+    try:
+        uni.load_crypto(CSTART, CEND, cache=tmp, max_age_days=10_000)
+        raised = False
+    except RuntimeError:
+        raised = True
+    check("every crypto pair missing raises even though both are cached", raised)
+
+    shutil.rmtree(tmp); os.makedirs(tmp)
+    uni._alpaca_bars = failing_alpaca({"BTC/USD"})
+    try:
+        uni.load_crypto(CSTART, CEND, cache=tmp)
+        raised = False
+    except RuntimeError:
+        raised = True
+    check("a missing crypto pair with no cache at all raises", raised)
+
+    write_crypto_cache(tmp)
+    try:
+        uni.load_crypto(CSTART, CEND, cache=tmp, max_age_days=1)
+        raised = False
+    except RuntimeError:
+        raised = True
+    check("crypto cache staler than max_age_days is refused, not silently traded", raised)
+finally:
+    uni._alpaca_bars = real_alpaca
+    shutil.rmtree(tmp, ignore_errors=True)
+
+
+# --- rate vintage ------------------------------------------------------------
+# One cross-sectional carry rank must compare rates from one month. Mixed
+# vintages (a current EUR against a three-month-old AUD) bias the sort.
+_rates = uni.load_rates()
+_ends = {c: _rates[c].last_valid_index() for c in _rates}
+check("every currency's rate series ends on the same month",
+      len(set(_ends.values())) == 1,
+      ", ".join(f"{c} {d.date()}" for c, d in _ends.items()))
+check("rate panel has no trailing all-NaN row", _rates.iloc[-1].notna().all())
+
 
 print(f"\n{sum(checks)}/{len(checks)} checks passed")
 sys.exit(0 if all(checks) else 1)

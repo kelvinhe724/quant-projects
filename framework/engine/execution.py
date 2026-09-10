@@ -1,15 +1,67 @@
-"""Fills at the next bar with an explicit cost model.
+"""Fills at the next bar with an explicit cost model, and the order-shaping rules.
 
 Cost per trade in bps of traded notional is commission + half spread + impact,
 where impact is k * sigma_daily * sqrt(participation) and participation is the
 trade's share of the instrument's trailing average daily dollar volume. Trades
 above `participation_cap` of that volume are cut to the cap and the remainder
 is left for the next day.
+
+`OrderRules.target_quantities` is the ONE implementation of what a broker will
+actually do with a target weight: the position buffer, the minimum order, whole
+shares on a short leg, and instruments that cannot be shorted at all. The
+backtest reaches it through `Executor.execute`; the live path reaches it through
+`book.broker.build_orders`. Both get the same end quantities for the same
+(weights, equity, prices, held), which is what `book/check.py` asserts. The
+default `OrderRules()` is every rule off, so the bare engine is unchanged.
 """
 from dataclasses import dataclass, field
 
 import numpy as np
 import pandas as pd
+
+
+BUFFER = 0.10     # Carver's position buffer, the single definition in the repo
+MIN_ORDER = 25.0  # smallest dollar move worth an order
+
+
+@dataclass(frozen=True)
+class OrderRules:
+    """What a broker does to a target weight before it becomes a position.
+
+    min_order          a move (and a target) below this many dollars is not sent
+    buffer             an instrument inside target x (1 +/- buffer) is left alone
+    whole_share_shorts a short leg rounds toward zero to whole shares
+    unshortable        names whose short target flattens instead of going short
+    """
+    min_order: float = 0.0
+    buffer: float = 0.0
+    whole_share_shorts: bool = False
+    unshortable: tuple = ()
+
+    def target_quantities(self, targets, equity, prices, held):
+        """{name: end quantity} for every name in `targets` with a usable price.
+
+        `held` is {name: quantity}. A name left alone by the buffer maps to what
+        it already holds, so a caller can diff against `held` and get nothing.
+        """
+        out = {}
+        for name, w in targets.items():
+            px = prices.get(name, np.nan)
+            if not np.isfinite(px) or px <= 0:
+                continue
+            have_qty = float(held.get(name, 0.0))
+            want = float(w) * equity
+            if want < 0 and name in self.unshortable:
+                want = 0.0
+            if abs(want - have_qty * px) < max(self.min_order, self.buffer * abs(want)):
+                out[name] = have_qty
+            elif abs(want) < self.min_order:
+                out[name] = 0.0
+            elif want < 0 and self.whole_share_shorts:
+                out[name] = -float(int(abs(want) // px))
+            else:
+                out[name] = want / px
+        return out
 
 
 @dataclass
@@ -48,11 +100,12 @@ class Trade:
 
 
 class Executor:
-    def __init__(self, costs=None, fill="open"):
+    def __init__(self, costs=None, fill="open", rules=None):
         if fill not in ("open", "close"):
             raise ValueError("fill must be 'open' or 'close'")
         self.costs = costs or CostModel()
         self.fill = fill
+        self.rules = rules or OrderRules()
 
     def fill_prices(self, bars, date):
         return bars.field(self.fill).loc[date]
@@ -78,19 +131,22 @@ class Executor:
     def execute(self, date, bars, targets, portfolio, strategy=""):
         """Trade toward `targets` (weights of current equity) at this bar's fill price.
 
-        Returns the trades done and the residual targets that were capped.
+        `self.rules` decides the end quantity for each name, so the position this
+        reaches is one the broker layer could also reach; see OrderRules. Returns
+        the trades done and the residual targets that were capped.
         """
         prices = self.fill_prices(bars, date)
         adv, sigma = self.liquidity(bars, date)
         equity = portfolio.equity
+        shaped = self.rules.target_quantities(targets, equity, prices, portfolio.positions)
         trades, residual = [], {}
         for name, w in targets.items():
             px = prices.get(name, np.nan)
             if not np.isfinite(px) or px <= 0:
                 residual[name] = w
                 continue
-            want = w * equity / px
-            qty = want - portfolio.positions.get(name, 0.0)
+            have = portfolio.positions.get(name, 0.0)
+            qty = shaped.get(name, have) - have
             if abs(qty) * px < 1e-9:
                 continue
             participation, capped = 0.0, False

@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 import numpy as np
 import pandas as pd
 
-from .execution import CostModel, Executor
+from .execution import CostModel, Executor, OrderRules
 from .metrics import TRADING_DAYS, by_year, drawdown, rolling_sharpe, summary
 from .portfolio import Portfolio
 from .risk import RiskConfig, RiskManager
@@ -26,6 +26,7 @@ class Config:
     earn_on_cash: bool = True
     risk: RiskConfig = None
     allocations: dict = None
+    order_rules: OrderRules = None
 
 
 class Results:
@@ -133,7 +134,7 @@ def run(strategies, bars, start=None, end=None, config=None):
     if len(days) == 0:
         raise ValueError("no bars in range")
     rate = bars.series(config.financing) if config.financing else None
-    executor = Executor(config.costs, config.fill)
+    executor = Executor(config.costs, config.fill, config.order_rules)
     alloc = config.allocations or {str(s): 1 / len(strategies) for s in strategies}
 
     books, all_trades = {}, []
