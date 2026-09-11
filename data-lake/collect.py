@@ -395,13 +395,16 @@ async def stream(venue, seconds, buf, state):
     async with websockets.connect(spec["url"], ssl=ctx, open_timeout=20, ping_interval=None) as ws:
         await ws.send(json.dumps(spec["sub"](CRYPTO_SYMBOLS)))
         state["venue"] = venue
-        last_sample = last_flush = last_ping = time.time()
+        last_sample = last_flush = last_ping = last_msg = time.time()
         while seconds is None or time.time() - state["t0"] < seconds:
             try:
                 raw = await asyncio.wait_for(ws.recv(), timeout=5)
                 parse_msg(venue, raw, books)
+                last_msg = time.time()
             except asyncio.TimeoutError:
-                raise ConnectionError("no message for 5s")
+                # a quiet book is not a dead socket: keep pinging, give up only after 30s of silence
+                if time.time() - last_msg > 30:
+                    raise ConnectionError("no message for 30s")
             t = time.time()
             if t - last_ping > 20:
                 await ws.send(json.dumps(spec["ping"]()) if venue == "bybit" else spec["ping"]())

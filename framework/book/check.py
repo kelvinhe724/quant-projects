@@ -412,7 +412,8 @@ rec_first = report.reconciliation(ledger_rows([100000, 100500], alpaca={"SPY": 0
 check("reconciliation: a first account row has nothing to reconcile against", rec_first["alpaca_rows"] and "against" not in rec_first)
 rec_h = report.reconciliation(ledger_rows([100000, 100500], hashes=["aaa", "bbb"]))
 a = report.build_alerts(book, lake_ok, health_ok, rec_h, {}, NOW)
-check("reconciliation: a moved panel hash is an alert", rec_h["panel_hash_changed"] and [x["kind"] for x in a] == ["reconcile"])
+check("reconciliation: a moved panel hash is recorded but is not an alert (yfinance jitters adjusted closes every pull)",
+      rec_h["panel_hash_changed"] and a == [])
 a = report.build_alerts(book, lake_ok, health_ok, rec, {}, NOW)
 check("alerts: reconciliation mismatch names the instrument", any(x["kind"] == "reconcile" and "TLT" in x["msg"] for x in a))
 

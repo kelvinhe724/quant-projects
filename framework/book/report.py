@@ -353,8 +353,8 @@ def build_alerts(book, lake, health, recon, kalshi, now=None, kill=None):
     if recon.get("mismatches"):
         names = ", ".join(m["instrument"] for m in recon["mismatches"])
         a.append({"kind": "reconcile", "msg": f"account off the ledger by more than {RECON_TOL:.0%} of equity: {names}"})
-    if recon.get("panel_hash_changed"):
-        a.append({"kind": "reconcile", "msg": f"panel hash moved {recon['panel_hash'][0]} -> {recon['panel_hash'][1]}: history rewritten, or the hash window changed"})
+    # a moved panel hash is not an alert: yfinance re-derives adjusted closes on every pull with ~1e-7
+    # jitter, so the hash moved on 5 of 5 sessions. It stays in the summary line for the eye.
     return a
 
 
