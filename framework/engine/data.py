@@ -194,10 +194,17 @@ def load_fred(series_id, cache=CACHE, refresh=False):
     path = os.path.join(cache, "fred", f"{series_id}.csv")
     if refresh or not os.path.exists(path):
         url = f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={series_id}"
-        r = requests.get(url, timeout=60)
-        r.raise_for_status()
-        with open(path, "w") as fh:
-            fh.write(r.text)
+        try:
+            r = requests.get(url, timeout=60)
+            r.raise_for_status()
+            with open(path, "w") as fh:
+                fh.write(r.text)
+        except requests.RequestException as e:
+            # FRED unreachable (four book sessions were lost to this on hotel wifi): the cached
+            # copy is a monthly series, a day stale is nothing; only a missing cache is fatal
+            if not os.path.exists(path):
+                raise
+            print(f"FRED {series_id} unreachable ({type(e).__name__}); using the cached copy")
     df = pd.read_csv(path, index_col=0, parse_dates=True, na_values=".")
     return df.iloc[:, 0].astype(float).rename(series_id)
 

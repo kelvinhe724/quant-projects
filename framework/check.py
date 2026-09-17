@@ -407,6 +407,23 @@ try:
     except RuntimeError:
         raised = True
     check("cache staler than max_age_days is refused, not silently traded", raised)
+
+    import requests as _rq
+    fred_dir = os.path.join(tmp, "fred")
+    os.makedirs(fred_dir, exist_ok=True)
+    pd.Series([1.0, 2.0], index=pd.to_datetime(["2026-01-01", "2026-02-01"]), name="X").to_csv(os.path.join(fred_dir, "X.csv"))
+    _get = _rq.get
+    _rq.get = lambda *a, **k: (_ for _ in ()).throw(_rq.ConnectionError("dns"))
+    try:
+        check("FRED unreachable with a cached copy falls back to the cache", len(engine_data.load_fred("X", cache=tmp, refresh=True)) == 2)
+        try:
+            engine_data.load_fred("Y", cache=tmp, refresh=True)
+            raised = False
+        except _rq.ConnectionError:
+            raised = True
+        check("FRED unreachable with no cached copy raises", raised)
+    finally:
+        _rq.get = _get
 finally:
     engine_data._download = real_download
     shutil.rmtree(tmp, ignore_errors=True)
