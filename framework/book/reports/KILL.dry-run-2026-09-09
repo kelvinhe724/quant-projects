@@ -1,0 +1,1 @@
+2026-09-09T14:33:42 broker mode changed simulated -> paper since 2026-09-04; positions cannot be reconciled across two accounts. Check the account, delete the KILL file, rerun with --ack-mode-change
