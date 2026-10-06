@@ -47,7 +47,15 @@ def vix_closes(start, end):
 def sessions(ticker, start="2026-09-01"):
     """{day: chain} for every snapshot session of `ticker`, plus SPY spot by day for the hedge."""
     end = str((pd.Timestamp.today() + pd.Timedelta(days=1)).date())
-    df = lake.load("options", start, end)
+    for i in range(6):                 # the collector may still be writing today's manifest; wait, don't crash
+        try:
+            df = lake.load("options", start, end)
+            break
+        except FileNotFoundError as e:
+            if i == 5:
+                raise
+            print(f"lake not ready ({e}); retry {i + 1}/5 in 5 min")
+            import time; time.sleep(300)
     df["day"] = pd.to_datetime(df.snapshot).dt.normalize()
     spy = df[df.ticker == "SPY"].groupby("day").spot.first()
     own = df[df.ticker == ticker]
