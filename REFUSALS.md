@@ -69,7 +69,7 @@ The rule, written into `framework/README.md` before any of these were run: a can
 
 | project | trials | DSR |
 |---|---|---|
-| `framework/` live book | **60** (every configuration `validate.py` ran on the real panel; `trials.csv` holds 188 rows, identical return streams counted once; 0.571 if the 20 placebo draws are counted too) | 0.632 |
+| `framework/` live book | **63** (every configuration `validate.py` ran on the real panel; `trials.csv` holds 228 rows, identical return streams counted once; 0.499 if the 20 placebo draws are counted too) | 0.632 |
 | `framework/` v1 book | 47 (the count when it was live) | 0.02 |
 | `regimes/` | 65 (11 of its own plus the book's 56, since the overlay sits on a book that was itself selected) | 0.87 bare / 0.71 overlay |
 | `kalshi-model/` | 20 | 0.001 |
@@ -81,7 +81,7 @@ The rule, written into `framework/README.md` before any of these were run: a can
 | `crypto-basis/` | 8 | 0.00 |
 | `research/` | 5 | 0.59 |
 
-**The plain statement.** A deflated Sharpe of 0.63 at 60 trials is not the same claim as a raw Sharpe of 0.81. The raw number says what one configuration did on one panel; the deflated number is the probability that the *selected* configuration's true Sharpe is above zero, given that 60 were tried and the variance of their daily Sharpes was 3.94e-04. The book's own README makes the harder version of the point: MinBTL is 8.4 years against 23.2 in hand, and for a book whose core is 0.67 beta to its universe, those are statements about the universe rather than about skill. Note one internal inconsistency I have not resolved: the root `README.md` still prints "DSR 0.63 over 56 trials" for the live book while `framework/README.md` and `validation.md` print 60. The 60 is current; the root table is stale.
+**The plain statement.** A deflated Sharpe of 0.56 at 63 trials (0.63 at 60 before the 2026-10-06 rerun on the shared order model) is not the same claim as a raw Sharpe of 0.81. The raw number says what one configuration did on one panel; the deflated number is the probability that the *selected* configuration's true Sharpe is above zero, given that 60 were tried and the variance of their daily Sharpes was 3.94e-04. The book's own README makes the harder version of the point: MinBTL is 8.4 years against 23.2 in hand, and for a book whose core is 0.67 beta to its universe, those are statements about the universe rather than about skill. Note one internal inconsistency I have not resolved: the root `README.md` still prints "DSR 0.63 over 56 trials" for the live book while `framework/README.md` and `validation.md` print 60. The 60 is current; the root table is stale.
 
 ---
 
