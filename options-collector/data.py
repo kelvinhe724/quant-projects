@@ -21,10 +21,13 @@ REPORTS = Path(__file__).resolve().parent / "reports"
 
 INDEX = "SPY"
 ETFS = ["SPY", "QQQ", "IWM"]
+# Mini-SPX, cash-settled: the instrument the VRP sleeve trades (vol-risk-premium/PREREG.md §2).
+# Added 2026-10-06; its first ten sessions set the spread number the pre-registration freezes.
+INDICES = ["^XSP"]
 # the ten largest SPY weights when the dispersion project was built, kept fixed
 # so the implied-correlation series is comparable day to day
 NAMES = ["AAPL", "MSFT", "NVDA", "AMZN", "META", "GOOGL", "BRK-B", "JPM", "XOM", "UNH"]
-UNIVERSE = ETFS + NAMES
+UNIVERSE = ETFS + INDICES + NAMES
 
 MAX_DAYS = 400
 # Same rule as the framework engine: a transient vendor failure is retried before
