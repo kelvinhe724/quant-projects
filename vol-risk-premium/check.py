@@ -143,5 +143,47 @@ check(f"metrics detects negative skew ({ml['skew']:.2f})", ml["skew"] < -3)
 check("trimming the worst 1% raises the Sharpe of a left-tailed series",
       ml["sharpe_ex_worst_1pct"] > ml["sharpe"])
 
+
+# --- prior.py: the pre-registered kill rules, sizing and lock (PREREG.md §3, §5, §6) ---
+import json, os, tempfile
+import prior
+
+days = pd.bdate_range("2020-01-01", periods=120)
+calm = pd.DataFrame({"spy": 300.0 + np.arange(120) * 0.01, "vix": 15.0}, index=days)
+calm["ret"] = np.log(calm["spy"]).diff().fillna(0)
+sim = simulate(calm, horizon=21, cost_bps=0.0, option_spread=0.0, iv_offset=0.0, offset=0)
+spike = calm.copy(); spike.loc[days[21], "vix"] = 35.0
+k = prior.kills(spike, simulate(spike, horizon=21, cost_bps=0.0, option_spread=0.0, offset=0))
+check("kill: a cycle whose entry day has VIX above 30 is never opened",
+      (k.loc[days[21]:days[41], "cycle"] == -1).all() and (k.loc[days[21]:days[41], "pnl"] == 0).all()
+      and (k.loc[days[0]:days[20], "cycle"] == 0).all())
+crash = calm.copy(); crash.loc[days[5]:, "spy"] = 300.0 * 0.80  # a 20% gap on day 5 of the first cycle
+cs = simulate(crash, horizon=21, cost_bps=0.0, option_spread=0.0, offset=0)
+kc = prior.kills(crash, cs)
+check("kill: a day worse than -10% of notional flattens the cycle, nothing booked after it",
+      cs.loc[days[5], "pnl"] <= prior.FLATTEN and (kc.loc[days[6]:days[21], "pnl"] == 0).all()
+      and kc.loc[days[5], "pnl"] == cs.loc[days[5], "pnl"])
+sz = prior.capped(calm, sim, account=35_000, cap=4, per_unit_account=7_500, target=0.15)
+check("sizing: units are whole contracts, fixed within a cycle, never above the cap",
+      (sz.units == sz.units.round()).all() and sz.units.max() <= 4
+      and all(g.units.nunique() == 1 for _, g in sz.join(sim.cycle).groupby("cycle")))
+sz1 = prior.capped(calm, sim, account=10_000, cap=4, per_unit_account=7_500, target=0.15)
+check("sizing: the account-per-unit rule binds before the cap (10k account -> at most 1 unit)", sz1.units.max() <= 1)
+tiny = prior.capped(calm, sim, account=35_000, cap=4, per_unit_account=7_500, target=0.0001)
+check("sizing: a vol target below one contract's vol sizes to zero, not to a fraction", (tiny.units == 0).all())
+with tempfile.TemporaryDirectory() as tmp:
+    old = prior.LOCK, prior.FROZEN, prior.REGISTRY
+    prior.LOCK, prior.FROZEN, prior.REGISTRY = (type(prior.LOCK)(tmp) / "u.json", type(prior.LOCK)(tmp) / "f.json",
+                                                type(prior.LOCK)(tmp) / "reg")
+    try:
+        check("prior: the spread is provisional until spread-frozen.json exists", prior.spread() == (prior.SPREAD_PROVISIONAL, False))
+        json.dump({"spread": 0.021}, open(prior.FROZEN, "w"))
+        check("prior: a frozen spread is read from the file", prior.spread() == (0.021, True))
+    finally:
+        prior.LOCK, prior.FROZEN, prior.REGISTRY = old
+lock = prior.Untouched(str(prior.LOCK))
+check("prior: the real untouched window is locked and has not been opened",
+      os.path.exists(prior.LOCK) and not lock.opened and lock.read()["start"] == "2023-04-28")
+
 print(f"\n{sum(checks)}/{len(checks)} passed")
 raise SystemExit(0 if all(checks) else 1)
