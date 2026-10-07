@@ -55,10 +55,15 @@ def log(msg):
 
 # equities
 
+# The book's ETFs and the option collector's IWM live in the lake too; they are not S&P members,
+# so without this they got the first backfill and nothing after it (13 of 14 stopped on 2026-09-04).
+ETFS = ["SPY", "QQQ", "IWM", "EFA", "EEM", "IEF", "TLT", "USO", "GLD", "SLV", "DBA", "DBC", "FXE", "FXY", "FXB"]
+
+
 def universe():
-    """Every name that was ever in the point-in-time panel, plus SPY."""
+    """Every name that was ever in the point-in-time panel, plus the desk's ETFs."""
     iv = lake.sp500_intervals()
-    return sorted(set(iv["ticker"]) | {"SPY"})
+    return sorted(set(iv["ticker"]) | set(ETFS))
 
 
 def equities(full=False):
@@ -343,7 +348,7 @@ VENUE = {
     "bybit": {"url": "wss://stream.bybit.com/v5/public/spot",
               "sub": lambda syms: {"op": "subscribe", "args": [f"orderbook.50.{s}" for s in syms]},
               "ping": lambda: {"op": "ping"}},
-    "okx": {"url": "wss://ws.okx.com:8443/ws/v5/public",
+    "okx": {"url": "wss://ws.okx.com/ws/v5/public",
             "sub": lambda syms: {"op": "subscribe", "args": [{"channel": "books", "instId": f"{s[:-4]}-USDT"} for s in syms]},
             "ping": lambda: "ping"},
 }
