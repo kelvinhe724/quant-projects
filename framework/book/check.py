@@ -701,6 +701,59 @@ check("MODE CHANGE: acknowledged by hand, the run goes on with no cross-account 
 check("MODE CHANGE: a dry run reports it but never arms the kill switch for the live book",
       "ack_mode_change or dry_run" in open(os.path.join(os.path.dirname(__file__), "daemon.py")).read())
 
+print("\nREFUSED MID-BATCH AND DRY-RUN KILL\n")
+
+
+class Refused(Exception):
+    """Stands in for alpaca.common.exceptions.APIError, which is an Exception and not a RuntimeError."""
+
+
+class RefusingClient:
+    """Accepts `ok` orders, then refuses the next, as Alpaca did on 2026-10-06. `cancel_fails` breaks the cleanup too."""
+
+    def __init__(self, ok, cancel_fails=False):
+        self.ok, self.cancel_fails, self.sent, self.cancelled = ok, cancel_fails, [], 0
+
+    def cancel_orders(self):
+        self.cancelled += 1
+        if self.cancel_fails and self.cancelled > 1:
+            raise ConnectionError("network down")
+
+    def submit_order(self, o):
+        if self.ok is not None and len(self.sent) == self.ok:
+            raise Refused("insufficient qty available for order")
+        self.sent.append(o)
+        return o
+
+
+_rb = AlpacaBroker("dummy-key", "dummy-secret")
+_rt = {"SPY": 0.3, "TLT": -0.1, "GLD": 0.2}
+_ro = rc(_rt, 100_000, {"SPY": 500.0, "TLT": 90.0, "GLD": 300.0}, held={})
+for _ok, _cf in ((0, False), (2, False), (2, True)):
+    _rb.client = RefusingClient(ok=_ok, cancel_fails=_cf)
+    try:
+        _rb.submit(_ro, _rt, 100_000)
+        check(f"refused after {_ok}: submit raises", False)
+    except Halted:
+        check(f"refused after {_ok}: a broker refusal is not a Halted", False)
+    except Exception as e:
+        check(f"refused after {_ok} of {len(_ro)}{', cancel also failing' if _cf else ''}: the broker's own error "
+              "propagates and the batch is cancelled once before and once after, so a rerun sends the whole set",
+              len(_ro) == 3 and isinstance(e, Refused) and _rb.client.cancelled == 2 and len(_rb.client.sent) == _ok, repr(e))
+_rb.client = RefusingClient(ok=None)
+check("a batch that goes out whole is sent in full and cancelled only before it, never after",
+      _rb.submit(_ro, _rt, 100_000) == _ro and _rb.client.cancelled == 1 and _rb.client.sent == _ro)
+_dsrc = open(os.path.join(os.path.dirname(__file__), "daemon.py")).read().split("def run_once")[1]
+_prev = {"date": "2026-08-31", "positions": json.dumps({"A": 0.10}), "fills": "[]", "targets": json.dumps({"A": 0.10})}
+try:
+    verify_positions({"A": 0.40}, _prev, None, 100_000, kill_path=os.devnull)
+    check("dry-run reconciliation: a mismatch still halts", False)
+except Halted:
+    check("dry-run reconciliation: a mismatch halts but writes no KILL file when given os.devnull",
+          not os.path.exists(broker_mod.KILL))
+check("dry-run reconciliation: the daemon passes os.devnull on a dry run and says no KILL was written",
+      "kill_path=os.devnull if dry_run else None" in _dsrc and "no KILL file written" in _dsrc)
+
 print("\nKILL SWITCH AND LIMITS\n")
 
 

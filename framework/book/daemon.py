@@ -170,7 +170,9 @@ def run_once(dry_run=False, session=None, now=None, ack_mode_change=False):
             asked = f"{o['asked_qty']}" if o["asked_qty"] else f"${o['asked_notional']}"
             print(f"  ORDER NOT FILLED  {o['instrument']:8s} {o['side']:4s} {o['status']:9s} "
                   f"filled {o['filled_qty']} of {asked}  id {o['id']}")
-        verify_positions(held_w, prev, filled_value(outcomes) if outcomes else None, equity)
+        # a dry run reports the halt it would make and never writes the KILL file (2026-10-07: one did, at 11:19)
+        verify_positions(held_w, prev, filled_value(outcomes) if outcomes else None, equity,
+                         kill_path=os.devnull if dry_run else None)
         print(f"{broker.mode} equity {equity:,.2f}, reconciled against the ledger row of "
               + (str(prev["date"])[:10] if prev else "nothing (first run in this mode)")
               + (" using the broker's own fills" if outcomes else " using its targets (no broker order ids)"))
@@ -181,7 +183,13 @@ def run_once(dry_run=False, session=None, now=None, ack_mode_change=False):
         sent = broker.submit(orders, targets, equity, prev["equity"] if prev else None) if not dry_run else orders
         records = [order_record(o, r) for o, r in zip(orders, sent)]
     except Halted as e:
-        print(f"HALTED: {e}\nKILL file written at {KILL}; the alpaca row for {day} is not written, delete the file and rerun")
+        if dry_run:
+            print(f"dry run would halt (no KILL file written): {e}")
+            if (day, "alpaca") in done:
+                print(f"  {day} is already in the ledger, so this compares against the row before it; "
+                      "fills since then show as mismatches")
+        else:
+            print(f"HALTED: {e}\nKILL file written at {KILL}; the alpaca row for {day} is not written, delete the file and rerun")
     if records is not None:
         rows.append({"date": day, "book": "alpaca", "equity": round(equity, 2),
                      "gross": round(sum(abs(v) for v in held_w.values()), 4),

@@ -53,6 +53,7 @@ class Halted(RuntimeError):
     """Trading is off: the KILL file exists or a limit wrote it."""
 
 
+
 class LiveDisabled(RuntimeError):
     """A live adapter was asked for without both locks open."""
 
@@ -157,7 +158,7 @@ def discrepancies(held, expected, tol=RECON_TOL):
     return out
 
 
-def verify_positions(held, prev_row, filled=None, equity=None, tol=RECON_TOL):
+def verify_positions(held, prev_row, filled=None, equity=None, tol=RECON_TOL, kill_path=None):
     """Reconcile the account against the ledger; halt if anything is off by more than tol.
 
     `filled` is the broker's own record of what traded (see expected_weights).
@@ -167,7 +168,7 @@ def verify_positions(held, prev_row, filled=None, equity=None, tol=RECON_TOL):
     off = discrepancies(held, expected_weights(prev_row, filled, equity), tol)
     if off:
         halt("position reconciliation failed: " + ", ".join(f"{n} held {h:+.4f} expected {e:+.4f}"
-                                                            for n, (h, e) in off.items()))
+                                                            for n, (h, e) in off.items()), kill_path)
     return off
 
 
@@ -425,7 +426,24 @@ class _AlpacaAccount:
 
     def _send(self, orders):
         """Submit in order. submit() has already cancelled what was queued."""
-        return [self.client.submit_order(o) for o in orders]
+        sent = []
+        for o in orders:
+            try:
+                sent.append(self.client.submit_order(o))
+            except Exception:
+                # All or nothing: an after-hours batch waits for the open, so pull back whatever went out
+                # and let a rerun send the whole set (2026-10-06: a refusal mid-batch left six orders live
+                # and unledgered). Best effort: if the cancel fails too, the original error still propagates
+                # and the accepted ids are printed for a human.
+                # ponytail: not covered, an order alpaca-py resent on a 504 (no client_order_id; fix with a
+                # per-run client_order_id) and a batch sent while the market is open (fix with a clock check).
+                print(f"send failed after {len(sent)} accepted: " + ", ".join(str(getattr(r, "id", r)) for r in sent))
+                try:
+                    self.client.cancel_orders()
+                except Exception as ce:
+                    print(f"cancel after the failed send also failed: {type(ce).__name__}: {ce}")
+                raise
+        return sent
 
     def order_outcomes(self, records):
         """Ask the broker what became of every order id the ledger stored. [] when there are none."""
