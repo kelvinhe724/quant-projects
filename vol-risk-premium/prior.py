@@ -38,8 +38,8 @@ HOLDOUT = 0.2                      # §5: last fifth, same rule as the book
 # §3 sizing. ACCOUNT is the ceiling Kelvin set; CAP and PER_UNIT_ACCOUNT are the signed numbers.
 # One XSP straddle is 100 x the index, about 100 x SPY: the notional per unit is MULTIPLIER x spot.
 ACCOUNT = 35_000.0
-CAP = 4
-PER_UNIT_ACCOUNT = 7_500.0
+CAP = 1                            # amended 2026-10-07, REFUSALS.md §4
+PER_UNIT_ACCOUNT = 35_000.0
 TARGET_VOL = 0.15
 VOL_DAYS = 63
 MULTIPLIER = 100

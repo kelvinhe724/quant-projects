@@ -85,6 +85,8 @@ The rule, written into `framework/README.md` before any of these were run: a can
 
 ---
 
+- **`vol-risk-premium/PREREG.md`, amended once before any window was opened (2026-10-07).** The signed §3 cap, "4 XSP straddles at $7,500 of account each", rested on XSP being 1/10 the size of SPY. It is 1/10 of SPX, so one contract is about 100 × spot ≈ $78k of notional and the cap was $313k on a $35k account. Amended to cap 1 at $35,000 of account per unit. The untouched window had not been opened and the spread was not yet frozen, so no result was known when the change was made; it is still a change to a signed document and is counted here.
+
 ## 5. Measured biases
 
 Survivorship was the largest unquantified caveat in every equity project here. `pit-universe/` exists to replace the caveat with a number, by rebuilding S&P 500 membership from Wikipedia change rows and 39 dated list snapshots (893 names, 2003-2026) and rerunning the same code on both universes with the same dates and costs.
