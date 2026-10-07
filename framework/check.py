@@ -428,5 +428,13 @@ finally:
     engine_data._download = real_download
     shutil.rmtree(tmp, ignore_errors=True)
 
+
+from framework.engine.execution import OrderRules as _OR
+_r = _OR(min_order=25.0, buffer=0.0, whole_share_shorts=True, two_session_flips=True)
+_flip = _r.target_quantities({"A": -0.10}, 100_000.0, {"A": 50.0}, {"A": 100.0})
+_next = _r.target_quantities({"A": -0.10}, 100_000.0, {"A": 50.0}, {"A": _flip["A"]})
+_one = _OR(min_order=25.0, buffer=0.0, whole_share_shorts=True).target_quantities({"A": -0.10}, 100_000.0, {"A": 50.0}, {"A": 100.0})
+check("order rules: with two_session_flips a sign flip closes this session and opens the other side next; off, it flips in one",
+      _flip["A"] == 0.0 and _next["A"] == -200.0 and _one["A"] == -200.0)
 print(f"\n{sum(checks)}/{len(checks)} checks passed")
 sys.exit(0 if all(checks) else 1)

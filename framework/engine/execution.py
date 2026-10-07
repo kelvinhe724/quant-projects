@@ -32,10 +32,12 @@ class OrderRules:
     buffer             an instrument inside target x (1 +/- buffer) is left alone
     whole_share_shorts a short leg rounds toward zero to whole shares
     unshortable        names whose short target flattens instead of going short
+    two_session_flips  a sign change closes this session and opens the other side next session
     """
     min_order: float = 0.0
     buffer: float = 0.0
     whole_share_shorts: bool = False
+    two_session_flips: bool = False   # close a sign flip this session, open the other side next session
     unshortable: tuple = ()
 
     def target_quantities(self, targets, equity, prices, held):
@@ -53,6 +55,12 @@ class OrderRules:
             want = float(w) * equity
             if want < 0 and name in self.unshortable:
                 want = 0.0
+            if self.two_session_flips and have_qty and want and np.sign(want) != np.sign(have_qty):
+                # A sign flip takes two sessions: close now, open the other side next session.
+                # A broker will not take both legs in one after-hours batch (the close still
+                # holds the shares), and the backtest must reach the book the broker can reach.
+                out[name] = 0.0
+                continue
             if abs(want - have_qty * px) < max(self.min_order, self.buffer * abs(want)):
                 out[name] = have_qty
             elif abs(want) < self.min_order:

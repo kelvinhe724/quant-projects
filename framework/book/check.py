@@ -200,7 +200,8 @@ check("reconcile: a position inside the 10% buffer is left alone",
       rc({"SPY": 0.5}, 100_000, prices, held={"SPY": (95.0, 47500.0)}) == [])
 check("reconcile: a move under $25 is skipped", rc({"SPY": 0.0001}, 100_000, prices, held={}) == [])
 flip = [(o.side.value, o.qty, o.notional) for o in rc({"FXE": 0.05}, 100_000, prices, held={"FXE": (-100.0, -10000.0)})]
-check("reconcile: a sign flip closes first, then opens", flip == [("buy", 100.0, None), ("buy", None, 5000.0)], str(flip))
+check("reconcile: a sign flip closes this session only; the other side opens next session",
+      flip == [("buy", 100.0, None)], str(flip))
 check("reconcile: crypto is never shorted", rc({"BTC/USD": -0.1}, 100_000, prices, held={}) == [])
 lim = rc({"SPY": 0.5}, 100_000, prices, held={}, limit_prices={"SPY": 495.0})
 check("reconcile: a name with a limit price routes as a limit order, qty = notional / limit, market elsewhere",

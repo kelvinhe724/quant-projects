@@ -220,7 +220,7 @@ CAPITAL = 100_000.0
 # BUFFER and MIN_ORDER are defined once, in engine/execution.py, and re-exported
 # here so `strategies.BUFFER` still resolves. LIVE_RULES is what the broker will
 # actually do with a target weight; the backtest runs behind the same object.
-LIVE_RULES = OrderRules(min_order=MIN_ORDER, buffer=BUFFER, whole_share_shorts=True,
+LIVE_RULES = OrderRules(min_order=MIN_ORDER, buffer=BUFFER, whole_share_shorts=True, two_session_flips=True,
                         unshortable=tuple(universe.CRYPTO))
 
 # Candidate books, compared in validate.py; allocate.LIVE_BOOK names the one the daemon runs.

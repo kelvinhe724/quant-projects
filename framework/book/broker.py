@@ -282,7 +282,8 @@ def build_orders(targets, equity, prices, held, limit_prices=None, rules=LIVE_RU
     `rules.target_quantities`, the same object `book_config` hands the engine's
     Executor, so the position this reaches is the position the backtest reached.
     All this file adds is the wire format: a position that must change sign is
-    closed by a first order and reopened by a second, a short leg and a full
+    closed this session and reopened the next (`target_quantities` decides that, so
+    the backtest does the same), a short leg and a full
     close go by quantity (a gap down cannot oversell a quantity), everything
     else by notional so fractional shares are allowed. A name in `limit_prices`
     goes as a limit order at that price. Nothing here talks to a broker.
@@ -310,9 +311,6 @@ def build_orders(targets, equity, prices, held, limit_prices=None, rules=LIVE_RU
         px, qty = prices[name], have_qty.get(name, 0.0)
         if tgt == qty:
             continue
-        if qty and np.sign(tgt) not in (0.0, np.sign(qty)):
-            order(name, OrderSide.BUY if qty < 0 else OrderSide.SELL, qty=abs(qty))
-            qty = 0.0
         dq = tgt - qty
         if not dq:
             continue
