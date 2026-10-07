@@ -1,0 +1,151 @@
+{
+  "prereg": {
+    "margin": 0.02,
+    "cancel_min": 60,
+    "adverse": 0.03,
+    "min_spread": 0.1,
+    "min_hours": 24,
+    "size": 1,
+    "model": "0ee881a512f0",
+    "fill": "recorded touches only, shadow.fill",
+    "fee": "maker 0.0175 x series multiplier, July 2026 schedule, 0 on series without maker fees"
+  },
+  "second_look": false,
+  "as_of": "2026-10-07 10:24:20.211132+00:00",
+  "model": {
+    "id": "0ee881a512f0",
+    "class": "BiasCurve"
+  },
+  "lake": {
+    "start": "2026-09-05 01:07:21+00:00",
+    "end": "2026-10-07 09:58:32+00:00",
+    "snapshots": 248,
+    "median_gap_min": 60.18333333333333,
+    "gaps_within_window": 2,
+    "books_per_snapshot": 156.0
+  },
+  "funnel": {
+    "rows": 1240000,
+    "binary_active_two_sided": 969659,
+    "spread_ge_10c": 513087,
+    "ge_24h_to_close": 479473,
+    "trained_category": 476297,
+    "closed_by_now": 343834,
+    "model_off_mid": 343834,
+    "price_ge_1c": 343834,
+    "rests_inside_book": 343834
+  },
+  "results": {
+    "candidates": 343834,
+    "observable": 15,
+    "fills": 2,
+    "fill_rate": 5.81676041345533e-06,
+    "fill_rate_observable": 0.13333333333333333,
+    "unsettled_fills": 0,
+    "pnl_usd": 0.48,
+    "staked_usd": 1.52,
+    "net_per_dollar": 0.3157894736842105,
+    "mean_payoff": 0.31784289925437836,
+    "t": 6.109999999999994,
+    "n_settled": 2,
+    "days": 1,
+    "daily_sharpe": NaN,
+    "kelly_f_mean": 0.10466682496564755
+  },
+  "coverage_next_book": {
+    "with_later_book": 6498,
+    "median_lag_min": 120.36666666666666,
+    "crossed_any_lag": 2178,
+    "crossed_within_75min": 497,
+    "crossed_within_120min": 542
+  },
+  "by_bucket": [
+    {
+      "bucket": ">20c",
+      "candidates": 294079,
+      "observable": 6,
+      "fills": 2,
+      "mean_payoff": 0.31784289925437836,
+      "t": 6.109999999999994
+    },
+    {
+      "bucket": "10-20c",
+      "candidates": 49755,
+      "observable": 9,
+      "fills": 0,
+      "mean_payoff": NaN,
+      "t": NaN
+    }
+  ],
+  "by_category": [
+    {
+      "category": "Sports",
+      "candidates": 324125,
+      "observable": 15,
+      "fills": 2,
+      "mean_payoff": 0.31784289925437836,
+      "t": 6.109999999999994
+    },
+    {
+      "category": "Financials",
+      "candidates": 10479,
+      "observable": 0,
+      "fills": 0,
+      "mean_payoff": NaN,
+      "t": NaN
+    },
+    {
+      "category": "Climate and Weather",
+      "candidates": 2780,
+      "observable": 0,
+      "fills": 0,
+      "mean_payoff": NaN,
+      "t": NaN
+    },
+    {
+      "category": "Mentions",
+      "candidates": 2269,
+      "observable": 0,
+      "fills": 0,
+      "mean_payoff": NaN,
+      "t": NaN
+    },
+    {
+      "category": "Commodities",
+      "candidates": 1657,
+      "observable": 0,
+      "fills": 0,
+      "mean_payoff": NaN,
+      "t": NaN
+    },
+    {
+      "category": "Entertainment",
+      "candidates": 1578,
+      "observable": 0,
+      "fills": 0,
+      "mean_payoff": NaN,
+      "t": NaN
+    },
+    {
+      "category": "Economics",
+      "candidates": 705,
+      "observable": 0,
+      "fills": 0,
+      "mean_payoff": NaN,
+      "t": NaN
+    },
+    {
+      "category": "Politics",
+      "candidates": 241,
+      "observable": 0,
+      "fills": 0,
+      "mean_payoff": NaN,
+      "t": NaN
+    }
+  ],
+  "registry": {
+    "id": "388960b21abf10e7",
+    "n_trials": 1
+  },
+  "verdict": "INSUFFICIENT FILLS: 2 fills < 300 required (PREREG \u00a75)"
+}

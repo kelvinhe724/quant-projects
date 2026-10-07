@@ -38,3 +38,6 @@ nlp-events/reports/backfill_done.txt
 vol-models/reports/forecasts.parquet
 # equity-xs: the pinned lake rows the lock is keyed to (94 MB), rebuilt from the lake on first run
 equity-xs/reports/snapshot/
+
+# 49 MB per-candidate replay; regenerate with kalshi-wide/replay.py (offline from the cached results.csv/series.csv)
+kalshi-wide/reports/replay.csv
