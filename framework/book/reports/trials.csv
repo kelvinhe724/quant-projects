@@ -227,3 +227,43 @@ run_at,name,params,sharpe_daily,n_obs
 2026-10-06T13:23:37,book,"{""alloc"": ""mvo"", ""book"": ""v1+ewmac"", ""buffer"": 0.1, ""financing_spread_bps"": 50.0, ""kelly"": 0.5, ""max_gross"": 1.5, ""max_net"": 1.5, ""max_sleeve"": 0.75, ""oos"": ""quarterly refit"", ""risk_aversion"": 1.0, ""target_vol"": 0.1, ""turnover"": 0.5}",0.030375406226828473,5263
 2026-10-06T13:23:37,book,"{""alloc"": ""mvo"", ""book"": ""ewmac-for-trend"", ""buffer"": 0.1, ""financing_spread_bps"": 50.0, ""kelly"": 0.5, ""max_gross"": 1.5, ""max_net"": 1.5, ""max_sleeve"": 0.75, ""oos"": ""quarterly refit"", ""risk_aversion"": 1.0, ""target_vol"": 0.1, ""turnover"": 0.5}",0.027396276560067535,5011
 2026-10-06T13:23:38,book,"{""alloc"": ""mvo"", ""book"": ""beta+alpha"", ""buffer"": 0.1, ""financing_spread_bps"": 50.0, ""kelly"": 0.5, ""max_gross"": 1.5, ""max_net"": 1.5, ""max_sleeve"": 0.75, ""oos"": ""quarterly refit"", ""risk_aversion"": 1.0, ""target_vol"": 0.1, ""turnover"": 0.5}",0.04603740409552671,5577
+2026-10-07T03:27:30,TrendETF,"{""alone"": true, ""buffer"": 0.1}",0.017888789279706007,5577
+2026-10-07T03:27:30,FXCarryETF,"{""alone"": true, ""buffer"": 0.1}",-0.010353480227348461,5072
+2026-10-07T03:27:30,CryptoTrend,"{""alone"": true, ""buffer"": 0.1}",0.005513687328194038,798
+2026-10-07T03:27:30,ETFBeta,"{""alone"": true, ""buffer"": 0.1}",0.0421294778194844,5849
+2026-10-07T03:27:30,EWMAC,"{""alone"": true, ""buffer"": 0.1}",0.04517734453794562,5340
+2026-10-07T03:27:36,TrendETF,"{""buffer"": 0.1, ""lookback"": 3, ""target"": 0.2}",0.013936455952113612,5765
+2026-10-07T03:27:41,TrendETF,"{""buffer"": 0.1, ""lookback"": 3, ""target"": 0.4}",0.013936455952113612,5765
+2026-10-07T03:27:46,TrendETF,"{""buffer"": 0.1, ""lookback"": 6, ""target"": 0.2}",0.001534587868521828,5681
+2026-10-07T03:27:51,TrendETF,"{""buffer"": 0.1, ""lookback"": 6, ""target"": 0.4}",0.001534587868521828,5681
+2026-10-07T03:27:57,TrendETF,"{""buffer"": 0.1, ""lookback"": 9, ""target"": 0.2}",0.02989288098498894,5639
+2026-10-07T03:28:02,TrendETF,"{""buffer"": 0.1, ""lookback"": 9, ""target"": 0.4}",0.02989288098498894,5639
+2026-10-07T03:28:07,TrendETF,"{""buffer"": 0.1, ""lookback"": 12, ""target"": 0.2}",0.017888789279706007,5577
+2026-10-07T03:28:13,TrendETF,"{""buffer"": 0.1, ""lookback"": 12, ""target"": 0.4}",0.017888789279706007,5577
+2026-10-07T03:31:47,book,"{""alloc"": ""erc"", ""book"": ""beta+alpha"", ""buffer"": 0.1, ""oos"": ""quarterly refit""}",0.05535460915444957,5577
+2026-10-07T03:31:47,book,"{""alloc"": ""equal"", ""book"": ""beta+alpha"", ""buffer"": 0.1, ""oos"": ""quarterly refit""}",0.056597198387050796,5577
+2026-10-07T03:35:36,TrendETF,"{""alone"": true, ""buffer"": 0.1, ""kill"": true}",0.017888789279706007,5577
+2026-10-07T03:35:36,FXCarryETF,"{""alone"": true, ""buffer"": 0.1, ""kill"": true}",-0.01969942501406881,1050
+2026-10-07T03:35:36,CryptoTrend,"{""alone"": true, ""buffer"": 0.1, ""kill"": true}",0.005513687328194038,798
+2026-10-07T03:35:36,ETFBeta,"{""alone"": true, ""buffer"": 0.1, ""kill"": true}",0.03696483159970419,3174
+2026-10-07T03:35:36,EWMAC,"{""alone"": true, ""buffer"": 0.1, ""kill"": true}",0.04517734453794562,5340
+2026-10-07T03:37:33,TrendETF,"{""buffer"": 0.1, ""signs"": ""long_only"", ""v"": 1}",0.03892644330646484,5577
+2026-10-07T03:41:05,book,"{""alloc"": ""equal"", ""book"": ""beta+alpha"", ""buffer"": 0.1, ""cost_scale"": 1.0}",0.05269028354585044,5849
+2026-10-07T03:44:36,book,"{""alloc"": ""equal"", ""book"": ""beta+alpha"", ""buffer"": 0.1, ""cost_scale"": 2.0}",0.04541586193277565,5849
+2026-10-07T03:48:03,book,"{""alloc"": ""equal"", ""book"": ""beta+alpha"", ""buffer"": 0.1, ""cost_scale"": 4.0}",0.03451062709748508,5849
+2026-10-07T03:51:29,book,"{""alloc"": ""equal"", ""book"": ""beta+alpha"", ""buffer"": 0.1, ""delay"": 1}",0.05150968058341012,5848
+2026-10-07T03:55:03,book,"{""alloc"": ""equal"", ""book"": ""beta+alpha"", ""buffer"": 0.1, ""delay"": 2}",0.050846769933824136,5847
+2026-10-07T03:58:38,book,"{""alloc"": ""equal"", ""book"": ""beta+alpha"", ""buffer"": 0.1, ""delay"": 5}",0.04742851280784744,5844
+2026-10-07T04:10:15,EWMAC,"{""buffer"": 0.1, ""speeds"": ""combined"", ""v"": 2}",0.04517734453794562,5340
+2026-10-07T04:10:15,EWMAC,"{""buffer"": 0.1, ""speeds"": ""16/64"", ""v"": 2}",0.033850295049151366,5340
+2026-10-07T04:10:15,EWMAC,"{""buffer"": 0.1, ""speeds"": ""32/128"", ""v"": 2}",0.04455658825627228,5340
+2026-10-07T04:10:15,EWMAC,"{""buffer"": 0.1, ""speeds"": ""64/256"", ""v"": 2}",0.04106090736271754,5340
+2026-10-07T04:10:16,EWMAC,"{""buffer"": 0.1, ""speeds"": ""combined"", ""v"": 2, ""window"": ""untouched""}",0.02620133518904525,1170
+2026-10-07T04:10:28,book,"{""alloc"": ""equal"", ""book"": ""v1"", ""buffer"": 0.1}",0.007685557717435563,5577
+2026-10-07T04:14:05,book,"{""alloc"": ""equal"", ""book"": ""v1+ewmac"", ""buffer"": 0.1}",0.03396884833123561,5577
+2026-10-07T04:17:35,book,"{""alloc"": ""equal"", ""book"": ""ewmac-for-trend"", ""buffer"": 0.1}",0.037249864759254576,5340
+2026-10-07T04:21:09,book,"{""alloc"": ""equal"", ""book"": ""beta+alpha"", ""buffer"": 0.1}",0.05269028354585044,5849
+2026-10-07T04:21:11,book,"{""alloc"": ""mvo"", ""book"": ""v1"", ""buffer"": 0.1, ""financing_spread_bps"": 50.0, ""kelly"": 0.5, ""max_gross"": 1.5, ""max_net"": 1.5, ""max_sleeve"": 0.75, ""oos"": ""quarterly refit"", ""risk_aversion"": 1.0, ""target_vol"": 0.1, ""turnover"": 0.5}",-0.012186413629310167,4017
+2026-10-07T04:21:12,book,"{""alloc"": ""mvo"", ""book"": ""v1+ewmac"", ""buffer"": 0.1, ""financing_spread_bps"": 50.0, ""kelly"": 0.5, ""max_gross"": 1.5, ""max_net"": 1.5, ""max_sleeve"": 0.75, ""oos"": ""quarterly refit"", ""risk_aversion"": 1.0, ""target_vol"": 0.1, ""turnover"": 0.5}",0.027636307792389805,5263
+2026-10-07T04:21:12,book,"{""alloc"": ""mvo"", ""book"": ""ewmac-for-trend"", ""buffer"": 0.1, ""financing_spread_bps"": 50.0, ""kelly"": 0.5, ""max_gross"": 1.5, ""max_net"": 1.5, ""max_sleeve"": 0.75, ""oos"": ""quarterly refit"", ""risk_aversion"": 1.0, ""target_vol"": 0.1, ""turnover"": 0.5}",0.02997333202107957,5011
+2026-10-07T04:21:13,book,"{""alloc"": ""mvo"", ""book"": ""beta+alpha"", ""buffer"": 0.1, ""financing_spread_bps"": 50.0, ""kelly"": 0.5, ""max_gross"": 1.5, ""max_net"": 1.5, ""max_sleeve"": 0.75, ""oos"": ""quarterly refit"", ""risk_aversion"": 1.0, ""target_vol"": 0.1, ""turnover"": 0.5}",0.04804210576967931,5577

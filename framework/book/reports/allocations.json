@@ -13,7 +13,7 @@
     "allocator": "mvo",
     "weights": {
       "ETFBeta": 0.75,
-      "EWMAC": 0.5871
+      "EWMAC": 0.5867
     },
     "params": {
       "risk_aversion": 1.0,
@@ -32,7 +32,7 @@
       "vol_bound": true,
       "kelly_scaled": false,
       "budget_dropped": false,
-      "leverage": 1.3371295730049462,
+      "leverage": 1.3367313935257723,
       "cov": "ledoit-wolf"
     }
   },
@@ -43,12 +43,12 @@
       "sharpe": 0.8787,
       "annual_return": 0.0616,
       "annual_vol": 0.0709,
-      "max_drawdown": -0.1073,
+      "max_drawdown": -0.1075,
       "start": "2004-07-01",
       "end": "2026-08-31"
     },
     "equal": {
-      "sharpe": 0.8984,
+      "sharpe": 0.8985,
       "annual_return": 0.0653,
       "annual_vol": 0.0734,
       "max_drawdown": -0.111,
