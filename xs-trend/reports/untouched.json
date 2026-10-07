@@ -3,7 +3,44 @@
   "end": "2026-08-31",
   "n_sessions": 1421,
   "data_hash": "5c1c077e83e5a9d1",
-  "opened_at": null,
-  "result": null,
-  "hash": "4a3bd014ddc44b80"
+  "opened_at": "2026-10-07T05:25:19",
+  "result": {
+    "pit": {
+      "sharpe": 0.9119284892657323,
+      "annual_return": 0.1358665239595569,
+      "annual_vol": 0.15247222814118283,
+      "max_drawdown": -0.18773333567992345,
+      "turnover_oneway": 3.4833764659111064,
+      "avg_names": 65.66361717100634,
+      "avg_gross": 0.882633572748635,
+      "cost_drag": 0.005929182392303599,
+      "pct_days_invested": 1.0,
+      "n_days": 1421,
+      "unlevered_sharpe": 0.8898871875918714
+    },
+    "dsr": {
+      "sharpe": 0.9119284892657323,
+      "psr": 0.984523260716372,
+      "dsr": 0.9537627239948068,
+      "n_trials": 9,
+      "var_sharpe": 6.925452107770981e-05,
+      "n_obs": 1421
+    },
+    "kill_dates": [],
+    "bh": {
+      "sharpe": 0.9561576951285854,
+      "annual_return": 0.14044273819047093,
+      "annual_vol": 0.14907498610765874,
+      "max_drawdown": -0.1842740689375486,
+      "turnover_oneway": 1.4059827766538815,
+      "avg_names": 100.0,
+      "avg_gross": 0.8831950987698015,
+      "cost_drag": 0.00239274413067016,
+      "pct_days_invested": 1.0,
+      "n_days": 1421,
+      "unlevered_sharpe": 0.9154103109044185
+    },
+    "clears": false
+  },
+  "hash": "eecd3ce7dbd652d8"
 }

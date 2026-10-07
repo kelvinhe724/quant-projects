@@ -12,7 +12,7 @@
     "end": "2026-08-31",
     "n_sessions": 1421,
     "data_hash": "5c1c077e83e5a9d1",
-    "opened_at": null
+    "opened_at": "2026-10-07T05:25:19"
   },
   "in_sample": {
     "pit_unlevered": {
@@ -161,12 +161,12 @@
   "dsr_in_sample": {
     "sharpe": 0.6173590302408459,
     "psr": 0.9917228346088389,
-    "dsr": 0.9587392428623152,
-    "n_trials": 8,
-    "var_sharpe": 5.393919608168909e-05,
+    "dsr": 0.933452448880055,
+    "n_trials": 10,
+    "var_sharpe": 8.500026181803029e-05,
     "n_obs": 3905
   },
-  "n_trials": 8,
+  "n_trials": 10,
   "missing": {
     "pit": {
       "held": 21,
