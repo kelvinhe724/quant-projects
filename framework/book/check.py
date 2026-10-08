@@ -185,12 +185,12 @@ check("AlpacaBroker with keys is in paper mode, passes the host check and is on 
       and getattr(dummy.client._base_url, "value", "") == f"https://{broker_mod.PAPER_HOST}")
 
 rc = object.__new__(AlpacaBroker).reconcile
-prices = {"SPY": 500.0, "FXE": 100.0, "BTC/USD": 50000.0, "GLD": 300.0}
-orders = rc({"SPY": 0.5, "FXE": -0.1, "BTC/USD": 0.1}, 100_000, prices,
+prices = {"SPY": 500.0, "FXA": 100.0, "BTC/USD": 50000.0, "GLD": 300.0}
+orders = rc({"SPY": 0.5, "FXA": -0.1, "BTC/USD": 0.1}, 100_000, prices,
             held={"SPY": (50.0, 25000.0), "GLD": (10.0, 3000.0)})
 got = [(o.symbol, o.side.value, o.qty, o.notional, o.time_in_force.value) for o in orders]
 check("reconcile: buy the long by notional, short whole shares, close what is not a target by quantity, crypto GTC",
-      got == [("BTCUSD", "buy", None, 10000.0, "gtc"), ("FXE", "sell", 100, None, "day"),
+      got == [("BTCUSD", "buy", None, 10000.0, "gtc"), ("FXA", "sell", 100, None, "day"),
               ("GLD", "sell", 10.0, None, "day"), ("SPY", "buy", None, 25000.0, "day")], str(got))
 trim = [(o.side.value, o.qty, o.notional) for o in rc({"SPY": 0.2}, 100_000, prices, held={"SPY": (50.0, 25000.0)})]
 check("reconcile: a partial trim sells by notional", trim == [("sell", None, 5000.0)], str(trim))
@@ -199,7 +199,7 @@ check("reconcile: a short target on a held coin sells it to flat", flat == [("BT
 check("reconcile: a position inside the 10% buffer is left alone",
       rc({"SPY": 0.5}, 100_000, prices, held={"SPY": (95.0, 47500.0)}) == [])
 check("reconcile: a move under $25 is skipped", rc({"SPY": 0.0001}, 100_000, prices, held={}) == [])
-flip = [(o.side.value, o.qty, o.notional) for o in rc({"FXE": 0.05}, 100_000, prices, held={"FXE": (-100.0, -10000.0)})]
+flip = [(o.side.value, o.qty, o.notional) for o in rc({"FXA": 0.05}, 100_000, prices, held={"FXA": (-100.0, -10000.0)})]
 check("reconcile: a sign flip closes this session only; the other side opens next session",
       flip == [("buy", 100.0, None)], str(flip))
 check("reconcile: crypto is never shorted", rc({"BTC/USD": -0.1}, 100_000, prices, held={}) == [])
@@ -252,10 +252,10 @@ def same_book(weights, equity, prices, held, tol=0.02):
     return all(abs(a.get(n, 0.0) - b.get(n, 0.0)) * prices[n] <= tol for n in set(a) | set(b)), a, b
 
 
-PX = {"SPY": 500.0, "FXE": 100.0, "GLD": 300.0, "BTC/USD": 50000.0, "IEF": 95.0,
+PX = {"SPY": 500.0, "FXA": 100.0, "GLD": 300.0, "BTC/USD": 50000.0, "IEF": 95.0,
       "TLT": 90.0, "QQQ": 400.0, "EFA": 80.0, "VNQ": 33.33}
 HELD = {"SPY": 50.0, "GLD": 10.0, "BTC/USD": 0.2, "IEF": 95.0, "TLT": -100.0, "QQQ": 0.05, "EFA": 1.0}
-W = {"SPY": 0.5, "FXE": -0.1, "GLD": 0.0, "BTC/USD": -0.1, "IEF": 0.09, "TLT": 0.05,
+W = {"SPY": 0.5, "FXA": -0.1, "GLD": 0.0, "BTC/USD": -0.1, "IEF": 0.09, "TLT": 0.05,
      "QQQ": 0.0001, "EFA": 0.0001, "VNQ": 0.02}
 ok, a, b = same_book(W, 100_000.0, PX, HELD)
 check("one order model: backtest and live reach the same book for one set of weights "
@@ -264,7 +264,7 @@ check("one order model: backtest and live reach the same book for one set of wei
 check("that set of weights exercises every rule: a buffered hold, a flatten, a whole-share short, "
       "a flat coin and an untouched sub-$25 move",
       np.isclose(a["IEF"], 95.0) and "GLD" not in a and "BTC/USD" not in a
-      and a["FXE"] == -100.0 and np.isclose(a["QQQ"], 0.05) and "EFA" not in a, str(a))
+      and a["FXA"] == -100.0 and np.isclose(a["QQQ"], 0.05) and "EFA" not in a, str(a))
 unshaped = backtest_end(W, 100_000.0, PX, HELD, rules=OrderRules())
 check("closing the fork moved the backtest: with the rules off the engine reaches a book the broker cannot",
       unshaped["BTC/USD"] < 0 and "BTC/USD" not in a          # a short the broker cannot place
@@ -700,6 +700,11 @@ check("MODE CHANGE: acknowledged by hand, the run goes on with no cross-account 
       mode_change(sim_prev, "paper", ack=True) is None and not os.path.exists(broker_mod.KILL))
 check("MODE CHANGE: a dry run reports it but never arms the kill switch for the live book",
       "ack_mode_change or dry_run" in open(os.path.join(os.path.dirname(__file__), "daemon.py")).read())
+
+from framework.book.strategies import LIVE_RULES, NO_SHORT_ETFS
+_ns = LIVE_RULES.target_quantities({"FXE": -0.14, "TLT": -0.10}, 100_000.0, {"FXE": 110.0, "TLT": 90.0}, {})
+check("no-short ETFs: a short target on a name the broker will not short (FXE) flattens; a shortable one (TLT) still shorts",
+      set(NO_SHORT_ETFS) == {"FXB", "FXE", "FXY", "USO"} and _ns["FXE"] == 0.0 and _ns["TLT"] < 0, str(_ns))
 
 print("\nREFUSED MID-BATCH AND DRY-RUN KILL\n")
 

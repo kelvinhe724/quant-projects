@@ -220,8 +220,13 @@ CAPITAL = 100_000.0
 # BUFFER and MIN_ORDER are defined once, in engine/execution.py, and re-exported
 # here so `strategies.BUFFER` still resolves. LIVE_RULES is what the broker will
 # actually do with a target weight; the backtest runs behind the same object.
+# Names the broker will not let this account short, read from Alpaca's asset flags on 2026-10-07
+# (shortable=False): a short target on one of these flattens instead, in the backtest and live alike.
+# The first FXE short the book ever sent was refused and stopped the 2026-10-07 session.
+# ponytail: a static list; if Alpaca changes a flag the run fails loudly at submit, update this and refit.
+NO_SHORT_ETFS = ("FXB", "FXE", "FXY", "USO")
 LIVE_RULES = OrderRules(min_order=MIN_ORDER, buffer=BUFFER, whole_share_shorts=True, two_session_flips=True,
-                        unshortable=tuple(universe.CRYPTO))
+                        unshortable=tuple(universe.CRYPTO) + NO_SHORT_ETFS)
 
 # Candidate books, compared in validate.py; allocate.LIVE_BOOK names the one the daemon runs.
 BOOKS = {
