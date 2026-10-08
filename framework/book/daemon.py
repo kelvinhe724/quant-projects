@@ -19,6 +19,7 @@ retried once a human deletes the file.
 
 Run: ../../.venv/bin/python3 -m framework.book.daemon [--dry-run]
 """
+import glob
 import json
 import os
 import sys
@@ -30,6 +31,7 @@ from framework.book.allocate import LIVE_BOOK, REPORTS, load_allocations
 from framework.book.broker import (KILL, AlpacaBroker, Halted, ShadowBroker, filled_value, killed, mode_change,
                                    order_record, unfilled, verify_positions)
 from framework.book.strategies import sleeves
+from framework.engine import data as engine_data
 from framework.book.universe import sessions
 
 LIVE_START = "2026-08-31"
@@ -56,6 +58,30 @@ def live_bars(session):
     newest = rates.apply(lambda s: s.last_valid_index() - pd.DateOffset(months=1))
     print("rates: newest month " + ", ".join(f"{c} {d:%Y-%m}" for c, d in newest.items()))
     return universe.load_bars(str(start), str((session + pd.Timedelta(days=1)).date()), rates)
+
+
+REFUSED = 3  # exit status when the session's bar never arrived: launchd and healthchecks must see it
+
+
+def set_aside_day_cache(session, cache_dir=None):
+    """Move the day's cached bar files out of the loader's way so a reload downloads again.
+
+    The cache key is {ticker}_{start}_{end}.csv; a file written while the vendor had no bar
+    for the session yet is reused by every later run that day (2026-10-08: the 15:45 fire
+    found no 10-08 bar, cached 10-07 as newest, and would have refused all evening). Files are
+    moved to stale/, never deleted.
+    """
+    cache_dir = os.path.join(engine_data.CACHE, "yf") if cache_dir is None else cache_dir
+    start = str((session - pd.DateOffset(years=HISTORY_YEARS)).date())
+    end = str((session + pd.Timedelta(days=1)).date())
+    stale = os.path.join(cache_dir, "stale")
+    moved = []
+    for path in glob.glob(os.path.join(cache_dir, f"*_{start}_{end}.csv")):
+        os.makedirs(stale, exist_ok=True)
+        dest = os.path.join(stale, os.path.basename(path))
+        os.replace(path, dest)
+        moved.append(dest)
+    return moved
 
 
 def read_ledger(path=LEDGER):
@@ -130,8 +156,13 @@ def run_once(dry_run=False, session=None, now=None, ack_mode_change=False):
         return []
     bars = live_bars(session)
     if bars.asof != session:
+        # the vendor often posts the day's bar some minutes after the fire: set the cache aside, try once more
+        moved = set_aside_day_cache(session)
+        print(f"newest bar is {bars.asof.date()}, not {session.date()}: set {len(moved)} cached files aside, reloading")
+        bars = live_bars(session)
+    if bars.asof != session:
         print(f"refused: newest bar is {bars.asof.date()}, last NYSE session is {session.date()}")
-        return None
+        raise SystemExit(REFUSED)
     if session < last:
         print(f"catch-up run for {session.date()}; last session is {last.date()}")
 

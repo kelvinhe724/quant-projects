@@ -724,6 +724,24 @@ _ns = LIVE_RULES.target_quantities({"FXE": -0.14, "TLT": -0.10}, 100_000.0, {"FX
 check("no-short ETFs: a short target on a name the broker will not short (FXE) flattens; a shortable one (TLT) still shorts",
       set(NO_SHORT_ETFS) == {"FXB", "FXE", "FXY", "USO"} and _ns["FXE"] == 0.0 and _ns["TLT"] < 0, str(_ns))
 
+print("\nSTALE BAR: SET THE CACHE ASIDE, RELOAD ONCE, THEN REFUSE LOUDLY\n")
+from framework.book import daemon as daemon_mod
+with tempfile.TemporaryDirectory() as _cd:
+    _sess = pd.Timestamp("2026-10-08")
+    _start = str((_sess - pd.DateOffset(years=daemon_mod.HISTORY_YEARS)).date()); _end = "2026-10-09"
+    for t in ("SPY", "TLT"):
+        open(os.path.join(_cd, f"{t}_{_start}_{_end}.csv"), "w").write("date,close\n2026-10-07,1\n")
+    open(os.path.join(_cd, f"SPY_{_start}_2026-10-08.csv"), "w").write("other day\n")
+    _moved = daemon_mod.set_aside_day_cache(_sess, cache_dir=_cd)
+    check("stale bar: only the session's own cache files are moved to stale/, nothing is deleted",
+          len(_moved) == 2 and all(os.path.exists(m) and "/stale/" in m for m in _moved)
+          and os.path.exists(os.path.join(_cd, f"SPY_{_start}_2026-10-08.csv"))
+          and not os.path.exists(os.path.join(_cd, f"SPY_{_start}_{_end}.csv")), str(_moved))
+_dsrc2 = open(os.path.join(os.path.dirname(__file__), "daemon.py")).read().split("def run_once")[1]
+check("stale bar: the daemon sets the cache aside and reloads once, then exits nonzero (REFUSED) instead of returning 0",
+      _dsrc2.count("bars = live_bars(session)") == 2 and "set_aside_day_cache(session)" in _dsrc2
+      and "raise SystemExit(REFUSED)" in _dsrc2 and daemon_mod.REFUSED != 0)
+
 print("\nREFUSED MID-BATCH AND DRY-RUN KILL\n")
 
 
