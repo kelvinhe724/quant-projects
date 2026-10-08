@@ -160,7 +160,7 @@ import json
 import tempfile
 
 import framework.book.broker as broker_mod
-from framework.book.broker import (AlpacaBroker, AlpacaLive, Halted, IBKRBroker, KalshiLive, Limits, LiveDisabled,
+from framework.book.broker import (AlpacaBroker, AlpacaLive, Halted, IBKRBroker, Limits, LiveDisabled,
                                    ShadowBroker, SimulatedAccount, check_limits, expected_weights, filled_value,
                                    live_token, mode_change, order_outcome, order_record, unfilled,
                                    verify_positions)
@@ -358,7 +358,25 @@ def status_json(ok=True, stale=(), age_h=0.5):
 
 LC = "28729\t0\tcom.kelvinhe.lake-crypto\n-\t0\tcom.kelvinhe.premia-book\n-\t0\tcom.kelvinhe.kalshi-shadow\n" \
      "-\t0\tcom.kelvinhe.lake-daily\n-\t0\tcom.kelvinhe.lake-hourly\n-\t0\tcom.kelvinhe.options-collector\n" \
-     "-\t0\tcom.kelvinhe.desk-report\n"
+     "-\t0\tcom.kelvinhe.desk-report\n-\t0\tcom.kelvinhe.vrp-forward\n-\t0\tcom.kelvinhe.desk-sweep\n"
+LC_RESTART = LC.replace("28729\t0\tcom.kelvinhe.lake-crypto", "31001\t-15\tcom.kelvinhe.lake-crypto") \
+                .replace("-\t0\tcom.kelvinhe.vrp-forward", "-\t1\tcom.kelvinhe.vrp-forward")
+_hj = report.launchd_jobs(LC_RESTART)
+_ha = [x["msg"] for x in report.build_alerts({"equity": 1.0, "sleeves": {}, "drawdown": 0.0, "gross": 0.0},
+                                              {"ok": True}, {"jobs": _hj}, {}, {"last_mark": NOW.isoformat()}, NOW)
+       if x["kind"] == "daemon"]
+check("launchd alerts: a KeepAlive job's -15 with a live pid is a restart, not an alert; vrp-forward and desk-sweep are watched and a 1 alerts",
+      "com.kelvinhe.vrp-forward" in _hj and "com.kelvinhe.desk-sweep" in _hj
+      and _ha == ["com.kelvinhe.vrp-forward last exit status 1"], str(_ha))
+_hb = [x["msg"] for x in report.build_alerts({"equity": 1.0, "sleeves": {}, "drawdown": 0.0, "gross": 0.0}, {"ok": True},
+                                              {"jobs": report.launchd_jobs(LC.replace("28729\t0\tcom.kelvinhe.lake-crypto", "31001\t1\tcom.kelvinhe.lake-crypto"))},
+                                              {}, {"last_mark": NOW.isoformat()}, NOW) if x["kind"] == "daemon"]
+check("launchd alerts: a KeepAlive job crash-looping (positive status, live pid) still alerts",
+      _hb == ["com.kelvinhe.lake-crypto last exit status 1"], str(_hb))
+_hc = [x["msg"] for x in report.build_alerts({"equity": 1.0, "sleeves": {}, "drawdown": 0.0, "gross": 0.0}, {"ok": True},
+                                              {"jobs": {"error": "TimeoutExpired: launchctl"}}, {}, {"last_mark": NOW.isoformat()}, NOW)
+       if x["kind"] == "daemon"]
+check("launchd alerts: a failed launchctl call is one alert, not a crashed report", _hc == ["launchctl list unavailable: TimeoutExpired: launchctl"], str(_hc))
 good = ledger_rows([100000, 100500, 101000, 100800, 100900])
 book = report.book_summary(good)
 check("book summary: day P&L, since-start P&L and drawdown from the ledger's equity path",
@@ -845,8 +863,7 @@ def env(text):
 
 LIVE_KEYS = "ALPACA_LIVE_KEY=live-secret-key\nALPACA_LIVE_SECRET=live-secret\n"
 adapters = {"AlpacaLive": lambda c: AlpacaLive(confirm=c, today=today),
-            "IBKRBroker": lambda c: IBKRBroker(confirm=c, today=today),
-            "KalshiLive": lambda c: KalshiLive(confirm=c, today=today)}
+            "IBKRBroker": lambda c: IBKRBroker(confirm=c, today=today)}
 cases = [("no LIVE_ENABLED in .env, token given", LIVE_KEYS, live_token(today)),
          ("LIVE_ENABLED=true, no token", "LIVE_ENABLED=true\n" + LIVE_KEYS, None),
          ("LIVE_ENABLED=true, yesterday's token", "LIVE_ENABLED=true\n" + LIVE_KEYS, live_token(today - pd.Timedelta(days=1))),
@@ -884,12 +901,8 @@ try:
 except ImportError as e:
     check("IBKRBroker with both locks open gets past the gate and stops at the missing ib_insync (not installed)",
           "ib_insync" in str(e))
-try:
-    KalshiLive(confirm=live_token(today), today=today)
-    check("KalshiLive with both locks open stops at kalshi-desk's own LIVE_TRADING lock", False, "constructed")
-except (LiveDisabled, RuntimeError) as e:
-    check("KalshiLive with both locks open stops at kalshi-desk's own LIVE_TRADING lock or missing prod key",
-          "LIVE_TRADING" in str(e) or "key" in str(e).lower())
+check("there is no Kalshi live adapter in the broker layer: kalshi-desk/live.py is the one production path",
+      not hasattr(broker_mod, "KalshiLive"))
 broker_mod.read_env = real_read_env
 os.remove(broker_mod.ENV)
 check("read_env only returns the keys asked for", real_read_env(("X",), os.path.join(TMP, "none.env")) == {})

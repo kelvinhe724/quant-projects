@@ -39,7 +39,8 @@ RISK = book_config().risk  # the overlay's own limits: 3x gross, half at 15% dd,
 LIMITS = Limits()          # the broker layer's hard limits: gross, per name, daily loss
 JOBS = ("com.kelvinhe.premia-book", "com.kelvinhe.desk-report", "com.kelvinhe.kalshi-shadow",
         "com.kelvinhe.lake-daily", "com.kelvinhe.lake-hourly", "com.kelvinhe.lake-crypto",
-        "com.kelvinhe.options-collector")
+        "com.kelvinhe.options-collector", "com.kelvinhe.vrp-forward", "com.kelvinhe.desk-sweep")
+KEEPALIVE = ("com.kelvinhe.lake-crypto",)  # launchd restarts it; a signal exit (<0) with a live pid is a restart
 LAKE_STATUS_MAX_AGE_H = 3   # quality.py runs hourly
 VAR_DAYS = 250
 Z = {"95": 1.6449, "99": 2.3263}
@@ -327,10 +328,15 @@ def build_alerts(book, lake, health, recon, kalshi, now=None, kill=None):
     if health.get("missed"):
         a.append({"kind": "daemon", "msg": f"premia-book: session {health['expected_session']} not in the ledger "
                                           f"(last {health['last_session_logged']})"})
-    for label, j in health.get("jobs", {}).items():
+    jobs = health.get("jobs", {})
+    if "error" in jobs:  # launchctl itself failed: one alert, not a crashed report
+        a.append({"kind": "daemon", "msg": f"launchctl list unavailable: {jobs['error']}"})
+        jobs = {}
+    for label, j in jobs.items():
         if j.get("loaded") is False:
             a.append({"kind": "daemon", "msg": f"{label} is not loaded in launchd"})
-        elif j.get("status"):
+        elif j.get("status") and not (label in KEEPALIVE and j.get("pid") and j["status"] < 0):
+            # a positive status with a live pid is a crash loop and still alerts
             a.append({"kind": "daemon", "msg": f"{label} last exit status {j['status']}"})
     if kalshi.get("last_mark"):
         age = (now - pd.Timestamp(kalshi["last_mark"]).tz_convert("UTC")).total_seconds() / 3600

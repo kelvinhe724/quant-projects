@@ -12,7 +12,7 @@ Safety lives here, not in the strategy:
     deletes it.
   * Limits (max gross, max per name, max daily loss) are checked on the
     post-trade book before anything is sent.
-  * Live adapters (AlpacaLive, IBKRBroker, KalshiLive) are dormant: they
+  * Live adapters (AlpacaLive, IBKRBroker) are dormant: they
     raise before any live key is read unless framework/.env has
     LIVE_ENABLED=true AND the caller passes today's confirmation token.
     The daemon never constructs them.
@@ -583,36 +583,3 @@ class IBKRBroker:
             order = ib_insync.LimitOrder(side, qty, float(lim)) if lim else ib_insync.MarketOrder(side, qty)
             out.append(self.ib.placeOrder(ib_insync.Stock(o.symbol, "SMART", "USD"), order))
         return out
-
-
-class KalshiLive:
-    """Production Kalshi through kalshi-desk's client. Dormant: three locks, since the desk has its own."""
-
-    def __init__(self, confirm=None, today=None, limits=None):
-        live_gate(confirm, today)
-        desk = os.path.join(os.path.dirname(ROOT), "kalshi-desk")
-        if desk not in sys.path:
-            sys.path.insert(0, desk)
-        import kalshi
-
-        settings = kalshi.load_env()
-        if settings.get("LIVE_TRADING", "false").strip().lower() != "true":
-            raise LiveDisabled("kalshi-desk/.env LIVE_TRADING is not true")
-        self.client, self.limits, self.mode = kalshi.Client("prod", settings), limits or Limits(), "live"
-        if not self.client.has_key():
-            raise RuntimeError(kalshi.setup_hint("prod"))
-
-    def equity(self):
-        return float(self.client.balance().get("balance", 0)) / 100.0
-
-    def positions(self):
-        return {p["ticker"]: (float(p.get("position", 0)), float(p.get("market_exposure", 0)) / 100.0)
-                for p in self.client.positions().get("market_positions", [])}
-
-    def submit(self, orders, targets=None, equity=None, ref_equity=None):
-        """`orders` are dicts {ticker, side, price, count}; GTC limits through the desk's client."""
-        if killed():
-            raise Halted(f"KILL file present at {KILL}")
-        if orders or targets is not None:
-            check_limits(targets, equity, ref_equity, self.limits)
-        return [self.client.place_order(o["ticker"], o["side"], o["price"], o["count"]) for o in orders]

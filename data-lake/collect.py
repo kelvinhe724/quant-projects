@@ -106,6 +106,8 @@ def equities(full=False):
             got += 1
         log(f"equities {min(i + 100, len(tickers))}/{len(tickers)}")
     log(f"equities: {got} tickers with rows since {start}, {rows} rows in touched parts")
+    if tickers and not got:
+        raise RuntimeError(f"equities: yfinance returned nothing for {len(tickers)} tickers since {start}")
     return got
 
 
@@ -453,6 +455,19 @@ def quality():
     return q.main()
 
 
+def bundle(*steps):
+    """Run every step, then quality; return 1 if any step failed, so launchd and healthchecks see it."""
+    failed = []
+    for step in steps:
+        try:
+            step()
+        except Exception as e:
+            log(f"{step.__name__} failed: {type(e).__name__}: {e}")
+            failed.append(step.__name__)
+    quality()
+    return 1 if failed else 0
+
+
 if __name__ == "__main__":
     args = sys.argv[1:]
     cmd = args[0] if args else "daily"
@@ -471,18 +486,9 @@ if __name__ == "__main__":
     elif cmd == "crypto":
         crypto(seconds=opt.get("seconds"))
     elif cmd == "daily":
-        for step in (equities, fred, edgar, archive):
-            try:
-                step()
-            except Exception as e:
-                log(f"{step.__name__} failed: {type(e).__name__}: {e}")
-        quality()
+        sys.exit(bundle(equities, fred, edgar, archive))
     elif cmd == "hourly":
-        try:
-            kalshi()
-        except Exception as e:
-            log(f"kalshi failed: {type(e).__name__}: {e}")
-        quality()
+        sys.exit(bundle(kalshi))
     else:
         print(__doc__)
         sys.exit(2)

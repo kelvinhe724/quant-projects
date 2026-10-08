@@ -164,6 +164,19 @@ def main():
     finally:
         lake.STORE, lake.INTERVALS, lake.REPORTS = real_store, real_intervals, real_reports
         shutil.rmtree(tmp, ignore_errors=True)
+    _q = collect.quality
+    collect.quality = lambda: None
+    try:
+        ok_rc = collect.bundle(lambda: None)
+        def boom():
+            raise RuntimeError("vendor down")
+        bad_rc = collect.bundle(lambda: None, boom, lambda: None)
+    finally:
+        collect.quality = _q
+    if not (ok_rc == 0 and bad_rc == 1):
+        FAILS.append(f"bundle exit codes: ok {ok_rc}, failing step {bad_rc}")
+    else:
+        print("  ok  a bundle exits 0 when every step ran and 1 when one failed, after quality()")
     print(f"\n{len(FAILS)} failures" if FAILS else "\nall checks passed")
     sys.exit(1 if FAILS else 0)
 
