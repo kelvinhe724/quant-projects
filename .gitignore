@@ -41,3 +41,4 @@ equity-xs/reports/snapshot/
 
 # 49 MB per-candidate replay; regenerate with kalshi-wide/replay.py (offline from the cached results.csv/series.csv)
 kalshi-wide/reports/replay.csv
+.claude/state/

@@ -1,0 +1,71 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|NotebookEdit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "'/Users/kelvin/Documents/C.C. General Intelligence/.claude/hooks/verify-mark.py'",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "'/Users/kelvin/Documents/C.C. General Intelligence/.claude/hooks/verify-mark.py'",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|NotebookEdit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "'/Users/kelvin/Documents/C.C. General Intelligence/.claude/hooks/verify-mark.py'",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "'/Users/kelvin/Documents/C.C. General Intelligence/.claude/hooks/verify-mark.py'",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "'/Users/kelvin/Documents/C.C. General Intelligence/.claude/hooks/verify-mark.py'",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "'/Users/kelvin/Documents/C.C. General Intelligence/.claude/hooks/verify-gate.py'",
+            "timeout": 300
+          }
+        ]
+      }
+    ]
+  }
+}
