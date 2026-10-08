@@ -40,6 +40,11 @@ class OrderRules:
     two_session_flips: bool = False   # close a sign flip this session, open the other side next session
     unshortable: tuple = ()
 
+    def flips(self, name, w, have_qty):
+        """True when target weight `w` reverses the held quantity and flips take two sessions."""
+        want = 0.0 if (w < 0 and name in self.unshortable) else w
+        return bool(self.two_session_flips and have_qty and want and np.sign(want) != np.sign(have_qty))
+
     def target_quantities(self, targets, equity, prices, held):
         """{name: end quantity} for every name in `targets` with a usable price.
 
@@ -55,7 +60,7 @@ class OrderRules:
             want = float(w) * equity
             if want < 0 and name in self.unshortable:
                 want = 0.0
-            if self.two_session_flips and have_qty and want and np.sign(want) != np.sign(have_qty):
+            if self.flips(name, w, have_qty):
                 # A sign flip takes two sessions: close now, open the other side next session.
                 # A broker will not take both legs in one after-hours batch (the close still
                 # holds the shares), and the backtest must reach the book the broker can reach.
@@ -154,6 +159,8 @@ class Executor:
                 residual[name] = w
                 continue
             have = portfolio.positions.get(name, 0.0)
+            if self.rules.flips(name, w, have):
+                residual[name] = w  # the close goes now; the other side is queued for the next bar, as live does
             qty = shaped.get(name, have) - have
             if abs(qty) * px < 1e-9:
                 continue

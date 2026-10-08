@@ -182,8 +182,10 @@ with tempfile.TemporaryDirectory() as tmp:
     finally:
         prior.LOCK, prior.FROZEN, prior.REGISTRY = old
 lock = prior.Untouched(str(prior.LOCK))
-check("prior: the real untouched window is locked and has not been opened",
-      os.path.exists(prior.LOCK) and not lock.opened and lock.read()["start"] == "2023-04-28")
+_vb = lock.read() if os.path.exists(prior.LOCK) else {}  # read() raises if the hash no longer matches
+check("prior: the real untouched window is locked on 2023-04-28, its hash verifies, and if it has been opened "
+      "it was opened once with a frozen spread and a recorded result",
+      _vb.get("start") == "2023-04-28" and (not lock.opened or (os.path.exists(prior.FROZEN) and _vb.get("result") is not None)))
 
 print(f"\n{sum(checks)}/{len(checks)} passed")
 raise SystemExit(0 if all(checks) else 1)

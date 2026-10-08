@@ -436,5 +436,20 @@ _next = _r.target_quantities({"A": -0.10}, 100_000.0, {"A": 50.0}, {"A": _flip["
 _one = _OR(min_order=25.0, buffer=0.0, whole_share_shorts=True).target_quantities({"A": -0.10}, 100_000.0, {"A": 50.0}, {"A": 100.0})
 check("order rules: with two_session_flips a sign flip closes this session and opens the other side next; off, it flips in one",
       _flip["A"] == 0.0 and _next["A"] == -200.0 and _one["A"] == -200.0)
+
+class _FlipOnce(Strategy):
+    """Long A from day 0, short A from day 10, silent otherwise: a monthly sleeve's shape."""
+
+    def on_bar(self, asof, bars):
+        n = len(bars.index) - 1
+        return {"A": 0.5} if n == 0 else {"A": -0.5} if n == 10 else None
+
+
+_fb = synthetic(n_days=40, instruments=("A",), seed=3)
+_fr = run([_FlipOnce()], _fb, config=Config(order_rules=_OR(min_order=25.0, buffer=0.0, whole_share_shorts=True,
+                                                              two_session_flips=True)))
+_fw = _fr.books[str(_FlipOnce())]["weights"]["A"]
+check("engine: a flip from a sleeve that is silent afterwards closes on the next bar and opens the other side on the one after",
+      _fw.iloc[11] == 0.0 and _fw.iloc[12] < 0 and _fw.iloc[9] > 0, f"{_fw.iloc[9]:+.3f} {_fw.iloc[11]:+.3f} {_fw.iloc[12]:+.3f}")
 print(f"\n{sum(checks)}/{len(checks)} checks passed")
 sys.exit(0 if all(checks) else 1)

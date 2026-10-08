@@ -135,9 +135,12 @@ check("the drawdown-kill diagnostic dates the first crossing of each episode",
 # --- the lock ---------------------------------------------------------------------------------------
 lock = prior.Untouched(prior.LOCK)
 body = lock.read() if os.path.exists(prior.LOCK) else {}
-check(f"the untouched window is locked at {body.get('start')} -> {body.get('end')} and has NOT been opened",
-      body.get("start") == "2021-01-04" and body.get("end") == prior.PANEL_END and body.get("opened_at") is None
-      and body.get("result") is None and not lock.opened)
+# Opened once on 2026-10-07 and refused (REFUSALS.md section 1); the lock must stay intact and say so.
+check(f"the untouched window {body.get('start')} -> {body.get('end')} is intact (hash verifies), was opened once, "
+      "and records the refusal: sleeve below the equal-weight basket",
+      body.get("start") == "2021-01-04" and body.get("end") == prior.PANEL_END and lock.opened
+      and body.get("result", {}).get("clears") is False
+      and body["result"]["pit"]["sharpe"] < body["result"]["bh"]["sharpe"])
 
 print(f"\n{sum(checks)}/{len(checks)} passed")
 raise SystemExit(0 if checks and all(checks) else 1)
