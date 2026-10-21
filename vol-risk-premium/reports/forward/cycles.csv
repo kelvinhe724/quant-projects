@@ -1,0 +1,2 @@
+start,expiry,strike,spot,units,entry_bid,entry_mid,spread_pct,iv,vix,monthly,status
+2026-10-06,2026-11-02,780.0,781.8900146484375,1,20.14,20.565,0.0413323608071964,0.1213009013366698,15.010000228881836,False,open

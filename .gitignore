@@ -42,3 +42,8 @@ equity-xs/reports/snapshot/
 # 49 MB per-candidate replay; regenerate with kalshi-wide/replay.py (offline from the cached results.csv/series.csv)
 kalshi-wide/reports/replay.csv
 .claude/state/
+# vol-risk-premium forward track: dry-run folder and the launchd log are local; marks.csv and cycles.csv are the gate's evidence and ARE tracked
+vol-risk-premium/reports/forward-dry/
+vol-risk-premium/reports/forward/launchd.log
+# agent worktrees (nested checkouts)
+.claude/worktrees/
