@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>com.kelvinhe.lake-kalshi-books</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/bin/zsh</string>
+		<string>-f</string>
+		<string>/Users/kelvin/.config/healthchecks/hc-run.sh</string>
+		<string>lake-kalshi-books</string>
+		<string>/Users/kelvin/C2-General-Intelligence-Mk2/quant-projects/.venv/bin/python3</string>
+		<string>collect.py</string>
+		<string>kalshi-books</string>
+	</array>
+	<key>RunAtLoad</key>
+	<false/>
+	<key>StandardErrorPath</key>
+	<string>/Users/kelvin/C2-General-Intelligence-Mk2/quant-projects/data-lake/reports/launchd.log</string>
+	<key>StandardOutPath</key>
+	<string>/Users/kelvin/C2-General-Intelligence-Mk2/quant-projects/data-lake/reports/launchd.log</string>
+	<key>StartInterval</key>
+	<integer>300</integer>
+	<key>WorkingDirectory</key>
+	<string>/Users/kelvin/C2-General-Intelligence-Mk2/quant-projects/data-lake</string>
+</dict>
+</plist>

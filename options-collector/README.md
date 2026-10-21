@@ -3,8 +3,9 @@
 The volatility-risk-premium and dispersion projects both ended on the same
 limitation: the backtest needs the implied vol that was quoted on each past
 day, and free sources only have today. OptionMetrics sells that history. This
-folder is the other route: snapshot the full chain every trading day after the
-close, derive a clean surface from it with my own solver, and let it accumulate.
+folder is the other route: snapshot the full chain every trading day (after the
+close, and since October twice more during the session), derive a clean surface
+from the closing one with my own solver, and let it accumulate.
 
 Thirteen underlyings: SPY, QQQ, IWM and the ten largest SPY weights (AAPL,
 MSFT, NVDA, AMZN, META, GOOGL, BRK-B, JPM, XOM, UNH), which is the dispersion
@@ -24,20 +25,40 @@ in this repo is):
 <date>/weights.csv      market cap per single name, for the basket weights
 <date>/manifest.json    snapshot time, session (close or intraday), what was
                         collected, what failed
+<date>/open/            the same file set again, for the open snapshot
+<date>/midday/          and for the midday one
 summary/<date>.csv           one row per underlying per expiry
 summary/<date>_horizons.csv  one row per underlying at 30, 60, 90 days,
                              plus the basket implied correlation on the SPY row
 ```
 
-Storage on 2026-09-04: 5.6 MB raw per day (36,406 quotes), 41 KB of summary.
-A year is roughly 1.4 GB raw, which is the price of never having to recollect
-when a cleaning rule changes.
+**Three snapshots a day.** `close` (15:35 Chicago) is the original layout and
+the day folder itself, so everything that read the collector before sessions
+existed is unchanged: the summaries, `run.py`, `data.load_day(date)` and
+`lake.load("options")` all mean the close session. `open` (10:00 Chicago) and
+`midday` (12:30) write the same file set into `<date>/open/` and
+`<date>/midday/`. Each session folder is complete on its own (its own rates,
+weights, underlying and manifest) and the write-once rule below holds per
+session. In the manifest, `session` is `open` or `midday` for those folders;
+for the close folder it is `close`, or `intraday` if someone ran it before 4pm
+New York. Read the others with `data.load_day(date, "open")`,
+`data.list_days("open")` or `lake.load("options", session="midday")`. A day
+with only open and midday folders is not a close day yet and is not listed by
+default. The extra sessions are collected raw and are not summarised. An
+`open` or `midday` run after the cash close is refused (exit 1): launchd runs a
+missed job when the Mac wakes, and a 5pm chain must not be filed as the open.
 
-Nothing is ever overwritten. A rerun on a date that already has a ticker file
-skips it, files are opened in mode `x` so even a race cannot clobber one, and
-a download that fails is recorded in the manifest as missing rather than
-filled in from anywhere else. The manifest is the only file that is rewritten,
-and it is derived from what is on disk.
+Storage on 2026-09-04: 5.6 MB raw per day (36,406 quotes), 41 KB of summary.
+By October a complete close day is 6 to 7.7 MB (14 tickers, about 44,000
+quotes), and open and midday add about the same each: roughly 14 MB a day more,
+so a year is about 1.5 GB raw for the close alone and 5 GB with all three. That
+is the price of never having to recollect when a cleaning rule changes.
+
+Nothing is ever overwritten. A rerun on a date and session that already has a
+ticker file skips it, files are opened in mode `x` so even a race cannot
+clobber one, and a download that fails is recorded in the manifest as missing
+rather than filled in from anywhere else. The manifest is the only file that
+is rewritten, and it is derived from what is on disk.
 
 ## Summary schema
 
@@ -188,41 +209,63 @@ reweighted, and the `weights_from` column says whose market caps were used.
 ## Files
 
 - `data.py` universe, storage layout, chain fetch, FRED rate with a Yahoo ^IRX fallback
-- `collect.py` the daily snapshot; `collect.py run --daily` or `--date YYYY-MM-DD`
+- `collect.py` the snapshot; `collect.py run --daily` or `--date YYYY-MM-DD`, and
+  `--session open|midday|close` (default close)
 - `surface.py` cleaning, own vols, ATM, 25-delta skew, horizons, implied correlation, summary files
-- `check.py` 40 offline checks on a planted smile: idempotency, solver round-trip, schema, stale detection
+- `check.py` 60 offline checks on a planted smile: idempotency, solver round-trip, schema, stale detection,
+  three sessions in one day, close as the default reader, the old single-file layout
 - `run.py` summarises every collected day, prints the latest, writes `reports/`
-- `com.kelvinhe.options-collector.plist` launchd job, written but not loaded; it
-  carries this machine's absolute paths so it stays local and gitignored
+- `com.kelvinhe.options-collector.plist` launchd job (close), loaded; `com.kelvinhe.options-collector-open.plist`
+  and `-midday.plist` the other two, written but not loaded. They carry this machine's absolute paths, so
+  they stay local and gitignored
 
 ## How to run
 
 ```
 ../.venv/bin/python3 check.py
 ../.venv/bin/python3 collect.py run --daily
+../.venv/bin/python3 collect.py run --daily --session midday
 ../.venv/bin/python3 run.py
 ```
 
-To schedule it, weekdays at 15:35 Chicago (16:35 New York):
+To schedule the close, weekdays at 15:35 Chicago (16:35 New York):
 
 ```
 cp com.kelvinhe.options-collector.plist ~/Library/LaunchAgents/
 launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.kelvinhe.options-collector.plist
 ```
 
-`launchctl bootout gui/$(id -u)/com.kelvinhe.options-collector` stops it.
-Output goes to `reports/launchd.log`. The job runs `collect.py` then `run.py`,
-both idempotent, so a second trigger on the same day is harmless. Market
-holidays produce a folder whose quotes match the prior close; the
-`underlying.csv` `close_date` column shows which day the prices belong to.
+The open and midday sessions, weekdays at 10:00 and 12:30 Chicago (11:00 and
+13:30 New York), install the same way, once this folder's `collect.py` with
+`--session` is the one on disk (the plists call the main checkout):
+
+```
+cp com.kelvinhe.options-collector-open.plist com.kelvinhe.options-collector-midday.plist ~/Library/LaunchAgents/
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.kelvinhe.options-collector-open.plist
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.kelvinhe.options-collector-midday.plist
+```
+
+`launchctl bootout gui/$(id -u)/com.kelvinhe.options-collector` stops the close
+job; the others are `...-open` and `...-midday`. Output goes to
+`reports/launchd.log`. The close job runs `collect.py` then `run.py`, both
+idempotent, so a second trigger on the same day is harmless; the other two only
+collect. Their healthchecks slugs are `options-collector-open` and
+`options-collector-midday`. Market holidays produce a folder whose quotes match
+the prior close; the `underlying.csv` `close_date` column shows which day the
+prices belong to.
 
 ## Limitations
 
-**One snapshot a day, from Yahoo.** No intraday history, no exchange
-timestamps, and a vendor whose book is visibly incomplete early in the session.
-The 16:35 schedule is a guess at when the closing quotes have settled; if the
-first week of `close` manifests show large empty-quote fractions the time
-should move later.
+**Three snapshots a day, from Yahoo.** No exchange timestamps, and a vendor
+whose book is visibly incomplete early in the session. The 16:35 schedule for
+the close is a guess at when the closing quotes have settled; if the first week
+of `close` manifests show large empty-quote fractions the time should move
+later. The `snapshot` column is the job's start time for every ticker, and a
+slow run is slow: on 2026-10-20 the close job took until 17:26 and kept four of
+fourteen names after Yahoo returned no price data. An intraday run that drags
+for an hour is no longer a point-in-time chain, so read an open or midday
+manifest's `snapshot_utc` against the files' modification times before leaning
+on it.
 
 **Single names are thin after cleaning.** The trade-recency and volume filters
 are right for a surface fit and harsh for a daily series. XOM kept 3 expiries

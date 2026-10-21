@@ -29,6 +29,7 @@ DATASETS = {
     "fred": ("date", "series", "key", "1B"),
     "kalshi_markets": ("ts", "ticker", "date", "1h"),
     "kalshi_books": ("ts", "ticker", "date", "1h"),
+    "kalshi_books_5m": ("ts", "ticker", "hour", "5min"),
     "edgar_8k": ("filed", "ticker", "date", "1B"),
     "crypto_l2": ("ts", "symbol", "hour", "1s"),
     "crypto_klines_1m": ("ts", "symbol", "month", "1min"),
@@ -117,15 +118,22 @@ def in_universe(df, tcol, kcol, intervals):
     return d.loc[sorted(hit)]
 
 
-def _load_options(start, end, universe):
-    """Chains from the options collector, through its own loader."""
-    sys.path.insert(0, OPTIONS_DIR)
+def _options():
+    """The options collector's own data module: it owns the raw layout, so the lake reads through it."""
+    if OPTIONS_DIR not in sys.path:
+        sys.path.insert(0, OPTIONS_DIR)
     import data as opt  # noqa: E402
+    return opt
+
+
+def _load_options(start, end, universe, session="close"):
+    """Chains from the options collector, through its own loader."""
+    opt = _options()
     frames = []
-    for day in opt.list_days():
+    for day in opt.list_days(session):
         if (start and day < str(pd.Timestamp(start).date())) or (end and day > str(pd.Timestamp(end).date())):
             continue
-        chains, _ = opt.load_day(day)
+        chains, _ = opt.load_day(day, session)
         for t, df in chains.items():
             if universe is None or t in universe:
                 frames.append(df.assign(ticker=t))
@@ -148,11 +156,12 @@ def _align(bound, tz):
     return b.tz_localize("UTC") if b.tz is None else b.tz_convert("UTC")
 
 
-def load(dataset, start=None, end=None, universe=None, as_of=None):
+def load(dataset, start=None, end=None, universe=None, as_of=None, session="close"):
     """Return rows of `dataset` with start <= time <= end.
 
     universe: list of keys, or "sp500" for the point-in-time S&P 500 on each row's date.
     as_of: no row with a time after this instant is returned, whatever end says.
+    session: options only, which of the day's snapshots: "close" (default), "open" or "midday".
     """
     if dataset not in DATASETS:
         raise KeyError(f"unknown dataset {dataset!r}; known: {datasets()}")
@@ -160,7 +169,9 @@ def load(dataset, start=None, end=None, universe=None, as_of=None):
     # parts to open: the tighter of end and as_of (as naive so mixed tz-awareness cannot raise)
     sel_end = end if as_of is None else (as_of if end is None else min(_naive(end), _naive(as_of)))
     if kind == "external":
-        df = _load_options(start, sel_end, None if universe == "sp500" else universe)
+        df = _load_options(start, sel_end, None if universe == "sp500" else universe, session)
+    elif session != "close":
+        raise ValueError(f"session= applies to the options dataset, not {dataset!r}")
     else:
         names = _select(dataset, start, sel_end, universe)
         frames = [pd.read_parquet(part_path(dataset, n)) for n in names]

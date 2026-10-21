@@ -1,9 +1,12 @@
 """Offline checks on a planted vol surface: idempotent storage, the IV solver
-round-trips known prices, the summary schema is fixed, and a dead chain is flagged.
+round-trips known prices, the summary schema is fixed, a dead chain is flagged,
+and three sessions a day coexist with close as the default.
 
 Run: python3 check.py
 """
 import hashlib
+import json
+import shutil
 import tempfile
 from pathlib import Path
 
@@ -64,7 +67,7 @@ def fake_caps(names):
 
 def digest(folder):
     return {p.name: hashlib.md5(p.read_bytes()).hexdigest()
-            for p in Path(folder).iterdir() if p.name != "manifest.json"}
+            for p in Path(folder).iterdir() if p.is_file() and p.name != "manifest.json"}
 
 
 tmp = Path(tempfile.mkdtemp())
@@ -280,6 +283,113 @@ try:
               collect.main(["run", "--date", DATE]) == 1)
 finally:
     data.ROOT, data.fetch_chain, data.bill_rate, data.market_caps = real_root, real_fetch, real_rate, real_caps
+
+# ------------------------------------------------ sessions: open, midday and close share a day
+print("\nSESSIONS\n")
+
+OPEN_AT = pd.Timestamp("2026-09-04 15:00:00", tz="UTC")     # 11:00 New York
+MIDDAY_AT = pd.Timestamp("2026-09-04 17:30:00", tz="UTC")   # 13:30 New York
+AT = {"open": OPEN_AT, "midday": MIDDAY_AT, "close": NOW}
+SPOT = {"open": 101.0, "midday": 102.0, "close": 103.0}
+
+
+def spot_fetch(spot):
+    return lambda ticker, now, r: fake_chain(ticker, now, r, spot=spot)
+
+
+def _raises(fn, exc):
+    try:
+        fn()
+    except exc:
+        return True
+    return False
+
+
+real_root, real_summary = data.ROOT, data.SUMMARY
+try:
+    sroot = Path(tempfile.mkdtemp())
+    data.ROOT, data.SUMMARY = sroot / "raw", sroot / "summary"
+    ms = {k: collect_day(DATE, AT[k], fetch=spot_fetch(SPOT[k]), rate=fake_rate, caps=fake_caps, session=k)
+          for k in ("open", "midday", "close")}
+    check("three sessions in one day each write a full set",
+          all(m["written_this_run"] == data.UNIVERSE and not m["missing"] for m in ms.values()))
+    check("each session loads its own chain (spots 101, 102, 103)",
+          all(data.load_day(DATE, k)[0]["SPY"]["spot"].iloc[0] == SPOT[k] for k in SPOT))
+    check("manifests say open, midday, and close for the closing run",
+          [data.load_day(DATE, k)[1]["session"] for k in ("open", "midday", "close")] == ["open", "midday", "close"])
+    check("close is the default reader",
+          data.load_day(DATE)[0]["SPY"]["spot"].iloc[0] == 103.0 and data.load_day(DATE)[1]["session"] == "close")
+    check("close keeps the original layout: the day folder holds its files, open and midday sit in subfolders",
+          sorted(p.name for p in data.day_dir(DATE).iterdir() if p.is_file())
+          == sorted([f"{t}.csv" for t in data.UNIVERSE] + ["rates.csv", "underlying.csv", "weights.csv", "manifest.json"])
+          and sorted(p.name for p in data.day_dir(DATE).iterdir() if p.is_dir()) == ["midday", "open"])
+    before = {k: digest(data.session_dir(DATE, k)) for k in SPOT}
+    calls = []
+
+    def counting_spot(ticker, now, r):
+        calls.append(ticker)
+        return fake_chain(ticker, now, r, spot=999.0)
+
+    again = {k: collect_day(DATE, AT[k], fetch=counting_spot, rate=fake_rate, caps=fake_caps, session=k) for k in SPOT}
+    check("a rerun of any session fetches nothing and writes nothing (write-once per session)",
+          calls == [] and all(m["written_this_run"] == [] for m in again.values()))
+    check("every session's files are byte-identical after the rerun",
+          {k: digest(data.session_dir(DATE, k)) for k in SPOT} == before)
+    check("an unknown session is refused", all(_raises(lambda: data.session_dir(DATE, bad), ValueError)
+                                                  for bad in ("noon", "intraday", "")))
+
+    # a day with only an open snapshot is not a close day: readers that loop over list_days() must not crash on it
+    ODAY = "2026-09-10"
+    collect_day(ODAY, OPEN_AT + pd.Timedelta(days=6), fetch=fake_chain, rate=fake_rate, caps=fake_caps, session="open")
+    check("an open-only day is listed for open and not for close",
+          ODAY in data.list_days("open") and ODAY not in data.list_days() and DATE in data.list_days())
+    check("every default-listed day loads (no half-written close day to trip over)",
+          all(data.load_day(d)[1]["session"] == "close" for d in data.list_days()))
+
+    # the old single-file layout: what the collector wrote before sessions existed
+    OLD = "2026-08-31"
+    data.day_dir(OLD).mkdir()
+    for t in ("SPY", "QQQ"):
+        fake_chain(t, NOW, R)[0].to_csv(data.day_dir(OLD) / f"{t}.csv", index=False)
+    pd.DataFrame([{"date": OLD, "series": "DTB3", "rate": R, "observation_date": OLD}]).to_csv(
+        data.day_dir(OLD) / "rates.csv", index=False)
+    pd.DataFrame({"market_cap": [1e12 * (i + 1) for i in range(len(data.NAMES))]}, index=data.NAMES).to_csv(
+        data.day_dir(OLD) / "weights.csv")
+    (data.day_dir(OLD) / "manifest.json").write_text(json.dumps(
+        {"date": OLD, "snapshot_utc": "2026-08-31T21:05:00Z", "session": "close", "rate": R,
+         "collected": ["QQQ", "SPY"], "written_this_run": ["SPY", "QQQ"], "skipped_existing": [],
+         "missing": [], "rows": 2}))
+    ochains, omanifest = data.load_day(OLD)
+    check("the old single-file layout still loads by default", OLD in data.list_days() and sorted(ochains) == ["QQQ", "SPY"]
+          and omanifest["session"] == "close")
+    check("and still summarises (the close path never looked in a subfolder)",
+          set(surface.summarise_day(OLD)[0]["ticker"]) == {"QQQ", "SPY"})
+    check("an old-layout day has no open or midday",
+          OLD not in data.list_days("open") and OLD not in data.list_days("midday"))
+
+    # the command line: --session picks the folder, a late open is refused
+    def fake_fetch_all(ticker, now, r, **kw):
+        return fake_chain(ticker, now, r)
+
+    real_fetch, real_rate, real_caps = data.fetch_chain, data.bill_rate, data.market_caps
+    try:
+        data.fetch_chain, data.bill_rate, data.market_caps = fake_fetch_all, fake_rate, lambda n: pd.Series(dtype=float)
+        data.ROOT = sroot / "cli"
+        rc = collect.main(["run", "--date", DATE, "--session", "midday"], now=MIDDAY_AT)
+        check("run --session midday writes the midday folder and exits 0",
+              rc == 0 and data.list_days("midday") == [DATE] and data.list_days() == [])
+        rc = collect.main(["run", "--date", DATE], now=NOW)
+        check("run without --session is the close session, as the launchd job runs it",
+              rc == 0 and data.list_days() == [DATE])
+        data.ROOT = sroot / "late"
+        rc = collect.main(["run", "--date", DATE, "--session", "open"], now=NOW)
+        check("an open run after the close is refused (a missed launchd job must not file a 5pm chain as the open)",
+              rc == 1 and data.list_days("open") == [])
+    finally:
+        data.fetch_chain, data.bill_rate, data.market_caps = real_fetch, real_rate, real_caps
+finally:
+    data.ROOT, data.SUMMARY = real_root, real_summary
+    shutil.rmtree(sroot, ignore_errors=True)
 
 
 print(f"\n{sum(checks)}/{len(checks)} passed")

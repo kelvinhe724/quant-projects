@@ -1,9 +1,12 @@
 """Universe, storage layout, and the three fetches: option chains, closes, the bill rate.
 
 Raw snapshots live under source-material/options-collector/<date>/, one CSV per
-ticker plus underlying.csv, rates.csv, weights.csv and manifest.json. Derived
-summaries live under source-material/options-collector/summary/. Both are
-gitignored by the repo-level source-material/ rule.
+ticker plus underlying.csv, rates.csv, weights.csv and manifest.json. That is
+the `close` session. `open` and `midday` write the same file set into
+<date>/open/ and <date>/midday/, so a day holds three snapshots and none
+overwrites another. Derived summaries live under
+source-material/options-collector/summary/ (close only). Both are gitignored by
+the repo-level source-material/ rule.
 """
 import json
 import sys
@@ -28,6 +31,9 @@ INDICES = ["^XSP"]
 # so the implied-correlation series is comparable day to day
 NAMES = ["AAPL", "MSFT", "NVDA", "AMZN", "META", "GOOGL", "BRK-B", "JPM", "XOM", "UNH"]
 UNIVERSE = ETFS + INDICES + NAMES
+
+# close is the original layout (the day folder itself), so every reader defaults to it
+SESSIONS = ("open", "midday", "close")
 
 MAX_DAYS = 400
 # Same rule as the framework engine: a transient vendor failure is retried before
@@ -58,6 +64,13 @@ def session(now):
 
 def day_dir(date):
     return ROOT / date
+
+
+def session_dir(date, session="close"):
+    """Where one session's files live: the day folder for close, a subfolder of it for the others."""
+    if session not in SESSIONS:
+        raise ValueError(f"session must be one of {SESSIONS}, got {session!r}")
+    return day_dir(date) if session == "close" else day_dir(date) / session
 
 
 def bill_rate(date):
@@ -141,16 +154,21 @@ def market_caps(tickers):
     return pd.Series(out, name="market_cap")
 
 
-def list_days():
-    """Dates with a raw snapshot folder, oldest first."""
+def list_days(session="close"):
+    """Dates with a raw snapshot folder for `session`, oldest first.
+
+    A folder counts once it holds a file, so a day that only has open/midday
+    subfolders is not yet a close day (its close run has not started).
+    """
     if not ROOT.exists():
         return []
-    return sorted(p.name for p in ROOT.iterdir() if p.is_dir() and p.name[:2] == "20")
+    return sorted(p.name for p in ROOT.iterdir() if p.is_dir() and p.name[:2] == "20"
+                  and any(f.is_file() for f in session_dir(p.name, session).glob("*")))
 
 
-def load_day(date):
-    """Return (chains by ticker, manifest dict) for one collected date."""
-    d = day_dir(date)
+def load_day(date, session="close"):
+    """Return (chains by ticker, manifest dict) for one session of one collected date."""
+    d = session_dir(date, session)
     manifest = json.loads((d / "manifest.json").read_text())
     chains = {}
     for t in manifest["collected"]:
@@ -180,7 +198,8 @@ def load_weights(date):
 
 if __name__ == "__main__":
     print(f"storage root: {ROOT}")
-    print(f"days collected: {len(list_days())}")
+    print(f"days collected: {len(list_days())}  (days per session: "
+          + ", ".join(f"{s} {len(list_days(s))}" for s in SESSIONS) + ")")
     for d in list_days()[-5:]:
         m = json.loads((day_dir(d) / "manifest.json").read_text())
         print(f"  {d}  {m['session']:9s} {len(m['collected'])} tickers  "

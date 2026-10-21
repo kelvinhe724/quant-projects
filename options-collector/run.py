@@ -24,7 +24,7 @@ def show(title, frame):
 
 
 def folder_bytes(path):
-    return sum(p.stat().st_size for p in path.iterdir() if p.is_file())
+    return sum(p.stat().st_size for p in path.rglob("*") if p.is_file())  # every session in the day
 
 
 def main():
@@ -44,7 +44,7 @@ def main():
     print(f"latest snapshot {manifest['snapshot_utc']} [{manifest['session']}], "
           f"{manifest['rows']} raw quotes across {len(manifest['collected'])} tickers, "
           f"missing: {manifest['missing'] or 'none'}, bill rate {manifest['rate']}")
-    print(f"storage: {raw_mb:.1f} MB raw per day, "
+    print(f"storage: {raw_mb:.1f} MB raw per day (all sessions), "
           f"{(data.SUMMARY / f'{last}.csv').stat().st_size / 1e3:.0f} KB summary; "
           f"a year of trading days is roughly {raw_mb * 252 / 1e3:.1f} GB raw")
     if manifest["session"] == "intraday":

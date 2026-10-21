@@ -31,11 +31,12 @@ in the foreground (`reports/inventory.csv`, `reports/summary.md`).
 | `fred` | 20 series: fed funds, SOFR, bills, the CMT curve 1m to 30y, 10y-2y and 10y-3m, CPI and core CPI, payrolls, unemployment, VIX, HY OAS, the target rate | 192,858 | 20 series | 1939-01-01 to 2026-09-03 | daily | fredgraph.csv |
 | `kalshi_markets` | every open market's listing: bid, ask, last, volume, OI, liquidity, times | 5,000 | 5,000 tickers | one snapshot so far | hourly | Kalshi public API through `kalshi-desk/kalshi.py` |
 | `kalshi_books` | full depth, both sides, on the 200 highest 24h-volume markets | 5,318 | 199 tickers | one snapshot so far | hourly | same |
+| `kalshi_books_5m` | the same depth plus a `reason` column, on the markets the KALSHI-WIDE rule would quote: two-sided, spread >= 10c, >= 24h to close, the 300 with the most open interest | none yet (job written, not loaded) | up to 300 tickers a snapshot | not yet | 5 min | same |
 | `edgar_8k` | full text of every 8-K by a universe company: body plus EX-99 exhibits, items, an earnings flag | 37 | 35 tickers | 2026-09-02 to 2026-09-03 | daily | SEC daily form index, complete submission files |
 | `crypto_l2` | top-20 bids and asks, once a second, BTCUSDT and ETHUSDT | 336 (first 3 minutes; the daemon is running) | 2 symbols | from 2026-09-05 01:10 UTC | 1 s | Bybit spot websocket, OKX as fallback |
 | `crypto_klines_1m` | 1-minute spot candles | 83,520 | 2 symbols | 2026-08-06 to 2026-09-03 | 1 min | data.binance.vision |
 | `crypto_bookdepth` | USD-M perp depth at 1 to 5% from mid, both sides, about once a minute | 2,004,480 | 2 symbols | 2026-08-06 to 2026-09-03 | ~1 min | data.binance.vision |
-| `options` | the chains `options-collector/` snapshots | 36,406 | 13 tickers | 2026-09-04 | daily | read through that project's `data.py`; not copied |
+| `options` | the chains `options-collector/` snapshots; `session=` picks `close` (default), `open` or `midday` | 36,406 | 13 tickers | 2026-09-04 | daily, up to three a day | read through that project's `data.py`; not copied |
 
 Store size after the first run: 183 MB, 150 of it equities.
 
@@ -54,8 +55,8 @@ store/<dataset>/<part>.parquet
 ```
 
 A part is one ticker or series for `equities_daily` and `fred`, one calendar
-day for the Kalshi and EDGAR sets, one month for the Binance archives and one
-hour (`<date>/<HH>.parquet`) for the L2 stream. `lake.load` opens only the
+day for the hourly Kalshi sets and EDGAR, one month for the Binance archives and one
+hour (`<date>/<HH>.parquet`) for the L2 stream and the 5-minute Kalshi books. `lake.load` opens only the
 parts a request can touch, so a 12-name load over one year reads 12 files.
 `lake.write(dataset, part, df, keys)` is the only write path: it reads the part
 if it exists, drops duplicate keys keeping the new row, sorts, and replaces the
@@ -79,6 +80,7 @@ idempotent: a rerun rewrites the same parts with the same keys.
 | `edgar` | for each of the last three filing days: the daily form index, 8-K and 8-K/A rows whose CIK is in the universe map, then the complete submission `.txt`, split into documents, keeping the 8-K body and every EX-99 exhibit, HTML stripped; items parsed from the first 20,000 characters; `earnings` is true when 2.02 is among them | same job |
 | `archive` | the last 30 daily zips of spot 1m klines and USD-M `bookDepth` from data.binance.vision, cached under `source-material/data-lake/` | same job |
 | `kalshi` | five pages of open markets, then depth on the 200 with the most 24h volume | hourly |
+| `kalshi-books` | up to five pages of open markets (1 s between pages), keep the two-sided ones with a spread of at least 10c and at least 24h to close, rank by open interest then 24h volume, depth (50 a side, 0.1 s between books) on the top 300 into `kalshi_books_5m` (every row of a run carries the run's start time, though fetching the books takes under a minute); stops fetching after 240 s; exits 1 if the listing fails, nothing is wide, or fewer than half the books come back (what it got is still written); public GETs only, and no `quality.py` afterwards (the hourly job covers it) | every 5 minutes |
 | `crypto` | websocket L2, one top-20 snapshot per symbol per second, flushed to the hour part every 60 s; reconnects with backoff on any error; after three consecutive failures on a venue moves to the next | 24/7, `KeepAlive` |
 
 `collect.py daily` runs equities, fred, edgar, archive and then `quality.py`;
@@ -118,6 +120,20 @@ launchctl bootout gui/$(id -u)/com.kelvinhe.lake-crypto
 exits; `bootout` is the only way to stop it. All three log to
 `reports/launchd.log`.
 
+A fourth job, `com.kelvinhe.lake-kalshi-books` (`StartInterval` 300, runs
+`collect.py kalshi-books`), is written and **not loaded**. Install it once this
+`collect.py` is the one on disk, since the plist calls the main checkout:
+
+```
+cp com.kelvinhe.lake-kalshi-books.plist ~/Library/LaunchAgents/
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.kelvinhe.lake-kalshi-books.plist
+```
+
+Its healthchecks slug is `lake-kalshi-books`; `hc-run.sh` creates the check on
+the first ping with healthchecks.io's default one-day period, so set it to
+5 minutes with about 10 of grace there. Until the first run lands, `quality.py`
+reports `kalshi_books_5m` stale, as it does for any feed that has never run.
+
 ## Quality
 
 `quality.py` writes `reports/status.json`:
@@ -136,7 +152,24 @@ parts at the feed's cadence, from `lake.gaps`, which knows that a weekend is
 not a gap in a business-day series and a holiday is; SPY currently shows
 Juneteenth and July 3. `dupes` counts repeated keys. `ok` is no feed stale and
 no duplicates; gaps are reported, not judged, because a real holiday and a
-missed day look the same. The morning brief reads `summary`.
+missed day look the same. The morning brief reads `summary`. `kalshi_books_5m` is
+stale after 15 minutes, and its gaps are judged on the snapshot clock (a ticker
+entering or leaving the wide set is not a gap). The `options` entry is judged
+on the close session only and also lists the latest day of each session under
+`sessions`, so a dead open or midday job shows as an old date or null.
+
+**Storage guard.** `status.json` also carries a `disk` block: for every
+directory under `store/` (registered or not; a stray `crypto_l2 2` copy is
+counted) plus the options raw folder, the bytes on disk, the growth per day over
+the trailing seven days, and the days of runway: free space on the volume
+divided by that growth. The growth needs the sizes of a week ago, so the
+previous `status.json` keeps one entry a day in `disk.history` (about eight
+days of it; `status.json` is now written through a rename). Under half a day
+of history growth and runway are `null`. When the whole lake's runway falls
+below 30 days `disk.low` is true, `ok` goes false and `summary` reads
+`DISK LOW: ...`; otherwise `summary` ends with a clause like `lake 1.8 GB,
++21 MB/day, disk full in 1,190 days`. The desk report prints `summary`, so that
+is where it shows without any change there.
 
 ## Checks
 
@@ -149,8 +182,15 @@ spell only, and after it left; tz-aware bounds; the gap detector on a planted
 a bare weekend, and empty input; the CIK map (zero padding, class-share dash,
 unknown ticker, two tickers on one CIK); 8-K parsing (document types kept and
 dropped, items, HTML and entities); Bybit and OKX book deltas (delete, insert,
-size update, padding to depth); tz-aware bounds and `as_of` as an instant on intraday rows; and the staleness verdicts. 42 checks, exits 1
-on any failure.
+size update, padding to depth); tz-aware bounds and `as_of` as an instant on intraday rows; and the staleness verdicts. A fake Kalshi
+client covers the 5-minute books: the wide-market filter (including the float
+edge, where 0.35 - 0.25 is 0.0999... and 55 of the 89 ten-cent quotes would
+otherwise drop out), the 300 cap, the page limit and the pauses, the round trip
+and its schema against the hourly books, and failed snapshots exiting 1 through
+`bundle()`. Planted options days check that `lake.load("options")` reads close
+by default, `session=` the others, and the old single-file layout. The storage
+guard is checked on planted history, free space and a stray directory. 89
+checks, exits 1 on any failure.
 
 ## Limitations
 
@@ -201,5 +241,17 @@ on any failure.
   stream records. Klines are there for completeness.
 - **Kalshi depth is 200 books an hour**, chosen by 24h volume, and the
   listing snapshot is the only record of the other 4,800.
+- **The 5-minute books are the wide markets with the most open interest, and
+  most wide markets have none.** On 2026-10-21 18:18 UTC, 2,857 of the 5,000
+  listed markets passed the filter and only 145 had open interest above zero
+  (93 had 24h volume), so about half of the 300 slots go to zero-open-interest
+  markets ranked by 24h volume and then by ticker. The sample is the first
+  5,000 open markets, as for the hourly listing, not every wide market on the
+  exchange. A live sample of the top-12 books had 16 to 38 levels each (mean
+  26); a thinner market will have fewer.
+- **The books run 24/7, about 88,000 public GETs a day** (five listing pages
+  and up to 300 books every 5 minutes). It paces itself (1 s between pages,
+  0.1 s between books) and relies on the client's retry for a 429.
 - **Options are read, not copied.** `lake.load("options")` calls
-  `options-collector/data.py`, so it is as current as that job.
+  `options-collector/data.py`, so it is as current as that job. It returns the
+  close session unless `session=` says otherwise.

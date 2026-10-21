@@ -3,6 +3,7 @@
     collect.py equities            daily OHLCV, point-in-time S&P universe, incremental
     collect.py fred                the macro set, full history each run
     collect.py kalshi              market listing plus depth on the most traded books
+    collect.py kalshi-books        depth on the wide-book candidate's markets, run every 5 minutes
     collect.py edgar [--days N]    8-K full text for universe CIKs, last N filing days
     collect.py archive [--days N]  data.binance.vision klines and futures book depth
     collect.py crypto [--seconds N]  live L2 websocket, 1s top-20 snapshots (runs forever by default)
@@ -37,6 +38,15 @@ FRED_SERIES = ["DFF", "SOFR", "DTB3", "DGS1MO", "DGS3MO", "DGS6MO", "DGS1", "DGS
                "BAMLH0A0HYM2", "DFEDTARU"]
 
 KALSHI_DEPTH_TOP = 200
+# kalshi-books: the markets kalshi-wide/PREREG.md would quote (two-sided, spread >= 10c, >= 24h to close)
+BOOKS_TOP = 300
+BOOKS_MIN_SPREAD = 0.10
+BOOKS_MIN_HOURS = 24
+BOOKS_REASON = "wide_book"       # why a book is in kalshi_books_5m; a second selection rule would add its own
+BOOKS_MIN_GOT = 0.5              # fewer than this share of the targeted books coming back fails the run
+KALSHI_MAX_PAGES = 5             # first 5,000 open markets: kalshi-desk/scanner.py MAX_PAGES and the hourly listing
+PAGE_SLEEP, BOOK_SLEEP = 1.0, 0.1   # seconds between listing pages and between order books
+BOOKS_BUDGET = 240               # seconds; the next run is due at 300, so stop fetching books before then
 EDGAR_RATE = 0.12
 CRYPTO_SYMBOLS = ["BTCUSDT", "ETHUSDT"]
 DEPTH = 20
@@ -169,6 +179,70 @@ def kalshi():
     m = lake.write("kalshi_books", day, books, keys=["ts", "ticker", "side", "price"]) if len(books) else 0
     log(f"kalshi: {len(df)} markets, {len(books)} depth rows on {top.size} books; day parts {n}/{m} rows")
     return len(df)
+
+
+def kalshi_listing(c):
+    """Open markets, at most KALSHI_MAX_PAGES pages of 1,000, pausing between pages."""
+    markets, cursor = [], None
+    for page in range(KALSHI_MAX_PAGES):
+        if page:
+            time.sleep(PAGE_SLEEP)
+        r = c.get("/markets", status="open", limit=1000, mve_filter="exclude", cursor=cursor)
+        markets += r.get("markets") or []
+        cursor = r.get("cursor")
+        if not cursor or not r.get("markets"):
+            break
+    return markets
+
+
+def wide_books(markets, ts, n=BOOKS_TOP):
+    """Tickers of the wide-book candidate's markets: the top `n` by open interest, then 24h volume.
+
+    Two-sided quote, spread >= BOOKS_MIN_SPREAD (float error forgiven: 0.35 - 0.25 is 0.0999...),
+    >= BOOKS_MIN_HOURS to close. Most wide markets have no open interest at all, so the
+    24h volume tie-break decides who fills the cap.
+    """
+    num = ["yes_bid_dollars", "yes_ask_dollars", "open_interest_fp", "volume_24h_fp"]
+    m = pd.DataFrame(markets).reindex(columns=["ticker", "close_time"] + num)
+    m[num] = m[num].apply(pd.to_numeric, errors="coerce")
+    spread = m.yes_ask_dollars - m.yes_bid_dollars
+    hours = (pd.to_datetime(m.close_time, utc=True, errors="coerce") - ts).dt.total_seconds() / 3600
+    m = m[(m.yes_bid_dollars > 0) & (m.yes_ask_dollars < 1) & (spread >= BOOKS_MIN_SPREAD - 1e-9)
+          & (hours >= BOOKS_MIN_HOURS)]
+    m = m.sort_values(["open_interest_fp", "volume_24h_fp", "ticker"], ascending=[False, False, True])
+    return m["ticker"].head(n).tolist()
+
+
+def kalshi_books():
+    """Depth on the wide-book candidate's markets, for kalshi_books_5m. Public GETs only."""
+    c = kalshi_client()
+    ts = now()
+    markets = kalshi_listing(c)
+    targets = wide_books(markets, ts)
+    if not targets:
+        raise RuntimeError(f"kalshi_books_5m: {len(markets)} markets listed, none wide enough")
+    rows, got, deadline = [], 0, time.time() + BOOKS_BUDGET
+    for t in targets:
+        if time.time() > deadline:
+            log(f"kalshi_books_5m: {BOOKS_BUDGET}s spent, stopping after {got} of {len(targets)} books")
+            break
+        time.sleep(BOOK_SLEEP)
+        try:
+            book = c.orderbook(t, depth=50)
+        except Exception as e:
+            log(f"kalshi_books_5m {t}: {e}")
+            continue
+        got += 1
+        for side in ("yes", "no"):
+            for px, sz in book.get(f"{side}_dollars") or []:
+                rows.append((ts, t, side, float(px), float(sz), BOOKS_REASON))
+    books = pd.DataFrame(rows, columns=["ts", "ticker", "side", "price", "size", "reason"])
+    if len(books):
+        lake.write("kalshi_books_5m", ts.strftime("%Y-%m-%d/%H"), books, keys=["ts", "ticker", "side", "price"])
+    log(f"kalshi_books_5m: {len(markets)} listed, {len(targets)} wide, {got} books, {len(books)} depth rows")
+    if got < BOOKS_MIN_GOT * len(targets):
+        raise RuntimeError(f"kalshi_books_5m: only {got} of {len(targets)} books came back")
+    return got
 
 
 # edgar
@@ -455,8 +529,11 @@ def quality():
     return q.main()
 
 
-def bundle(*steps):
-    """Run every step, then quality; return 1 if any step failed, so launchd and healthchecks see it."""
+def bundle(*steps, with_quality=True):
+    """Run every step, then quality; return 1 if any step failed, so launchd and healthchecks see it.
+
+    with_quality=False is for the 5-minute job: the hourly quality run covers it.
+    """
     failed = []
     for step in steps:
         try:
@@ -464,7 +541,8 @@ def bundle(*steps):
         except Exception as e:
             log(f"{step.__name__} failed: {type(e).__name__}: {e}")
             failed.append(step.__name__)
-    quality()
+    if with_quality:
+        quality()
     return 1 if failed else 0
 
 
@@ -479,6 +557,8 @@ if __name__ == "__main__":
         fred()
     elif cmd == "kalshi":
         kalshi()
+    elif cmd == "kalshi-books":
+        sys.exit(bundle(kalshi_books, with_quality=False))
     elif cmd == "edgar":
         edgar(days=opt.get("days", 3))
     elif cmd == "archive":
