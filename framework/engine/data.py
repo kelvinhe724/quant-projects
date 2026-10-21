@@ -197,6 +197,10 @@ def load_fred(series_id, cache=CACHE, refresh=False):
         try:
             r = requests.get(url, timeout=60)
             r.raise_for_status()
+            # FRED answers maintenance with a 200 and an HTML page (2026-10: one was cached over a
+            # live series and the book refused every session); only a CSV body may replace the cache
+            if not r.text.lstrip().lower().startswith(("observation_date", "date")):
+                raise requests.RequestException(f"FRED {series_id}: body is not CSV ({r.text.lstrip()[:40]!r})")
             with open(path, "w") as fh:
                 fh.write(r.text)
         except requests.RequestException as e:

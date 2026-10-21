@@ -413,6 +413,21 @@ try:
     os.makedirs(fred_dir, exist_ok=True)
     pd.Series([1.0, 2.0], index=pd.to_datetime(["2026-01-01", "2026-02-01"]), name="X").to_csv(os.path.join(fred_dir, "X.csv"))
     _get = _rq.get
+
+    class _Html:
+        status_code, text = 200, "<!doctype html>\n<html><title>Site Maintenance</title></html>"
+
+        def raise_for_status(self):
+            pass
+
+    _rq.get = lambda *a, **k: _Html()
+    try:
+        _s = engine_data.load_fred("X", cache=tmp, refresh=True)
+        check("FRED maintenance page (200 + HTML) never overwrites the cache; the cached series is served",
+              len(_s) == 2 and open(os.path.join(fred_dir, "X.csv")).read().startswith("\n") is False
+              and "<" not in open(os.path.join(fred_dir, "X.csv")).read())
+    finally:
+        _rq.get = _get
     _rq.get = lambda *a, **k: (_ for _ in ()).throw(_rq.ConnectionError("dns"))
     try:
         check("FRED unreachable with a cached copy falls back to the cache", len(engine_data.load_fred("X", cache=tmp, refresh=True)) == 2)
