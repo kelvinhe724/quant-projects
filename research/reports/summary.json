@@ -50,41 +50,41 @@
       {
         "fold": 1,
         "train_start": "2003-06-02",
-        "train_end": "2013-11-29",
+        "train_end": "2013-11-27",
         "test_start": "2013-12-30",
         "test_end": "2015-12-29",
         "picked": "{\"feature\": \"mom_3_1\"}",
-        "picked_train_sharpe": 0.1795245034022707,
+        "picked_train_sharpe": 0.17801876644311757,
         "picked_test_sharpe": 0.10434869720151939
       },
       {
         "fold": 2,
         "train_start": "2003-06-02",
-        "train_end": "2015-12-01",
+        "train_end": "2015-11-30",
         "test_start": "2015-12-30",
         "test_end": "2017-12-28",
         "picked": "{\"feature\": \"mom_12_1\"}",
-        "picked_train_sharpe": 0.29959023514476596,
+        "picked_train_sharpe": 0.2992898021036657,
         "picked_test_sharpe": -0.31975549404089143
       },
       {
         "fold": 3,
         "train_start": "2003-06-02",
-        "train_end": "2017-11-30",
+        "train_end": "2017-11-29",
         "test_start": "2017-12-29",
         "test_end": "2019-12-31",
         "picked": "{\"feature\": \"mom_12_1\"}",
-        "picked_train_sharpe": 0.2373943342763056,
+        "picked_train_sharpe": 0.23446082457686845,
         "picked_test_sharpe": -0.2884496229286187
       },
       {
         "fold": 4,
         "train_start": "2003-06-02",
-        "train_end": "2019-12-04",
+        "train_end": "2019-12-02",
         "test_start": "2020-01-02",
         "test_end": "2021-12-30",
         "picked": "{\"feature\": \"mom_12_1\"}",
-        "picked_train_sharpe": 0.19206029344507095,
+        "picked_train_sharpe": 0.19341653726144925,
         "picked_test_sharpe": 0.48913940624233293
       }
     ],
@@ -129,12 +129,13 @@
     "n_obs": 4407
   },
   "pre_window_dsr": {
-    "sharpe": 0.22637177049665677,
+    "sharpe": 0.22634608583435176,
     "psr": 0.8277294094555607,
-    "dsr": 0.5878488425127442,
-    "n_trials": 5,
-    "var_sharpe": 8.369874289391378e-05,
-    "n_obs": 4407
+    "dsr": 0.48670908653731754,
+    "n_trials": 7,
+    "var_sharpe": 0.00011332473869759181,
+    "n_obs": 4407,
+    "n_nan_sharpe": 0
   },
   "untouched": {
     "start": "2021-12-31",
@@ -189,24 +190,24 @@
       "n_obs": 5577
     },
     "engine": {
-      "sharpe": 0.3864288170525563,
-      "annual_return": 0.03264106414052348,
-      "annual_vol": 0.09476777708469955,
-      "max_drawdown": -0.22244922991558702,
+      "sharpe": 0.5376664065407004,
+      "annual_return": 0.045866892644758295,
+      "annual_vol": 0.09116256217932994,
+      "max_drawdown": -0.2090178080950248,
       "start": "2004-07-01",
       "end": "2026-08-31",
       "n_obs": 5577
     }
   },
   "engine": {
-    "turnover_per_year": 6.899590948636424,
-    "trades": 1876,
-    "avg_gross": 0.9722507562398865
+    "turnover_per_year": 5.728899277630938,
+    "trades": 1515,
+    "avg_gross": 0.8307612086948696
   },
   "adapter_parity": true,
-  "n_trials": 5,
-  "n_runs_logged": 5,
+  "n_trials": 7,
+  "n_runs_logged": 28,
   "model_id": "19d062dc4a70",
-  "run_at": "2026-09-04T20:24:09",
-  "seconds": 6
+  "run_at": "2026-10-21T15:21:40",
+  "seconds": 7
 }

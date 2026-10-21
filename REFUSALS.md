@@ -66,7 +66,7 @@ The rule, written into `framework/README.md` before any of these were run: a can
 - **`regimes/`** reads the book's window again, for a different decision, through its own lock, and states that the window is therefore not untouched in the strict sense for anything touching the book.
 - **`research/` and `risk-model/`** each read their window once but read it for two things in the same call (two cost models; the estimator race and the VaR coverage), which is disclosed rather than counted as one look.
 
-**Trial counts behind each deflated Sharpe.** These are the denominators. A DSR is only as honest as the count fed to it, and these counts are read off logged registries, not estimated.
+**Trial counts behind each deflated Sharpe.** These are the denominators. A DSR is only as honest as the count fed to it, and these counts are read off logged registries, not estimated. The lock files that freeze these counts are hashed without a secret, so anyone with the repo can rewrite and reseal one; the git history of the tracked lock files is the tamper evidence.
 
 | project | trials | DSR |
 |---|---|---|
@@ -80,7 +80,7 @@ The rule, written into `framework/README.md` before any of these were run: a can
 | `risk-model/` | 12 | 0.93 |
 | `equity-xs/` | 8 distinct registry keys, and the README states the true number of looks is higher because the earlier reads were the same keys on different training rows | 0.00 |
 | `crypto-basis/` | 8 | 0.00 |
-| `research/` | 5 | 0.59 |
+| `research/` | 7 (three grid variants, the walk-forward OOS stream, the untouched read, and since 2026-10-21 the full-panel research and engine paths; 5 before that, and 22 if the walk-forward fold rows were counted, which they no longer are) | 0.49 (0.59 at 5 trials before 2026-10-21) |
 
 **The plain statement.** A deflated Sharpe of 0.55 at 63 trials (0.59 on 2026-10-07, 0.56 on 2026-10-06, 0.63 at 60 on 2026-09-05; the reruns shared the order model, made sign flips two-session, then removed the four shorts this account cannot place) is not the same claim as a raw Sharpe of 0.76. The raw number says what one configuration did on one panel; the deflated number is the probability that the *selected* configuration's true Sharpe is above zero, given that 60 were tried and the variance of their daily Sharpes was 3.94e-04. The book's own README makes the harder version of the point: MinBTL is 8.4 years against 23.2 in hand, and for a book whose core is 0.67 beta to its universe, those are statements about the universe rather than about skill. Note one internal inconsistency I have not resolved: the root `README.md` still prints "DSR 0.63 over 56 trials" for the live book while `framework/README.md` and `validation.md` print 60. The 60 is current; the root table is stale.
 
