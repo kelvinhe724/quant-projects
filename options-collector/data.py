@@ -85,11 +85,15 @@ def bill_rate(date):
     try:
         r = requests.get(url, timeout=30)
         r.raise_for_status()
+        # FRED answers maintenance with a 200 and an HTML page (2026-10-21: the close snapshot crashed on it
+        # before collecting anything); only a CSV body is parsed, anything else falls through to ^IRX
+        if not r.text.lstrip().lower().startswith(("observation_date", "date")):
+            raise requests.RequestException(f"FRED DTB3: body is not CSV ({r.text.lstrip()[:40]!r})")
         s = pd.read_csv(StringIO(r.text), na_values=".").dropna()
         if not s.empty:
             return float(s.iloc[-1, 1]) / 100, str(s.iloc[-1, 0]), "DTB3"
-    except requests.RequestException:
-        pass
+    except (requests.RequestException, ValueError) as e:  # ValueError covers pandas' ParserError
+        print(f"FRED DTB3 unavailable ({type(e).__name__}: {e}); trying ^IRX", file=sys.stderr)
     try:
         h = yf.Ticker("^IRX").history(period="5d")["Close"].dropna()
         return float(h.iloc[-1]) / 100, h.index[-1].strftime("%Y-%m-%d"), "IRX"

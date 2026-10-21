@@ -392,5 +392,20 @@ finally:
     shutil.rmtree(sroot, ignore_errors=True)
 
 
+# FRED answers maintenance with HTTP 200 and an HTML page; the close snapshot of 2026-10-21 crashed on it before
+# collecting anything. The body check must send it down the ^IRX path instead.
+class _Maint:
+    text = "<!doctype html>\n<html><title>Site Maintenance | St. Louis Fed</title></html>"
+    def raise_for_status(self): pass
+class _IRX:
+    def history(self, period): return pd.DataFrame({"Close": [3.93]}, index=pd.to_datetime(["2026-10-20"]))
+_get, _tk = data.requests.get, data.yf.Ticker
+try:
+    data.requests.get, data.yf.Ticker = (lambda *a, **k: _Maint()), (lambda t: _IRX())
+    check("a FRED maintenance page falls through to ^IRX instead of crashing the collector",
+          data.bill_rate("2026-10-21") == (0.0393, "2026-10-20", "IRX"))
+finally:
+    data.requests.get, data.yf.Ticker = _get, _tk
+
 print(f"\n{sum(checks)}/{len(checks)} passed")
 raise SystemExit(0 if all(checks) else 1)
