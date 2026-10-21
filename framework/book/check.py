@@ -358,7 +358,9 @@ def status_json(ok=True, stale=(), age_h=0.5):
 
 LC = "28729\t0\tcom.kelvinhe.lake-crypto\n-\t0\tcom.kelvinhe.premia-book\n-\t0\tcom.kelvinhe.kalshi-shadow\n" \
      "-\t0\tcom.kelvinhe.lake-daily\n-\t0\tcom.kelvinhe.lake-hourly\n-\t0\tcom.kelvinhe.options-collector\n" \
-     "-\t0\tcom.kelvinhe.desk-report\n-\t0\tcom.kelvinhe.vrp-forward\n-\t0\tcom.kelvinhe.desk-sweep\n"
+     "-\t0\tcom.kelvinhe.desk-report\n-\t0\tcom.kelvinhe.vrp-forward\n-\t0\tcom.kelvinhe.desk-sweep\n" \
+     "-\t0\tcom.kelvinhe.options-collector-open\n-\t0\tcom.kelvinhe.options-collector-midday\n" \
+     "-\t0\tcom.kelvinhe.lake-kalshi-books\n-\t0\tcom.kelvinhe.desk-battle\n"  # the four jobs installed 2026-10-21
 LC_RESTART = LC.replace("28729\t0\tcom.kelvinhe.lake-crypto", "31001\t-15\tcom.kelvinhe.lake-crypto") \
                 .replace("-\t0\tcom.kelvinhe.vrp-forward", "-\t1\tcom.kelvinhe.vrp-forward")
 _hj = report.launchd_jobs(LC_RESTART)
