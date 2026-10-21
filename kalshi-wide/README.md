@@ -6,6 +6,13 @@ data, not the rule: the lake's book snapshots are hourly, so a 60-minute
 resting order is almost never observed, and the books it does record are the
 200 most traded markets, which are not the wide ones.
 
+**Status 2026-10-21: PARKED.** Not retired and not built further. Kalshi's member
+agreement bars anyone domiciled in the People's Republic of China, which likely
+includes the desk's owner (F-1 status presumes a foreign domicile); until Kalshi
+confirms eligibility in writing there is no path from this candidate to an order,
+so the 5-minute collector the verdict asked for is not pursued for it (the lake's
+`kalshi_books_5m` feed exists for the data moat regardless). Record: `REFUSALS.md §4`.
+
 ## Reviewer notes
 
 - **Built in a linked worktree**, not the main checkout (the harness blocked

@@ -12,7 +12,7 @@ Grill record: `outputs/2026-09/2026-09-11_trading-desk-project-handover.md` → 
 ## 1. Hypothesis
 Index implied volatility exceeds subsequently realised volatility by enough that a short ATM straddle on a 1/10-size cash-settled index option, delta-hedged daily, earns more than its spread, hedge slippage and the ATM-vs-VIX basis, at a size an account of $35k can hold through a VIX-80 day without a forced liquidation.
 
-The part that is genuinely in doubt is not the premium (NW t 8.35 over 16 years) but whether any of it is left after the basis: the project's own table puts the Sharpe at 0.73 with a 2-point basis and 0.23 at 3; the collector measures 2.4.
+The part that is genuinely in doubt is not the premium (NW t 8.35 over 16 years) but whether any of it is left after the basis: the project's own table puts the Sharpe at 0.73 with a 2-point basis and 0.23 at 3; the collector measured 2.4 at signature (amended 2026-10-21 to 2.90: the 2.4 paired 10-05's ATM vol with 10-06's VIX close; see §4 and REFUSALS.md §4).
 
 ## 2. Universe and instrument
 - **Traded:** XSP (Cboe Mini-SPX, 1/10 SPX, cash-settled, European, Section 1256). ATM straddle, nearest monthly expiry 25–40 calendar days out at entry. Hedge leg: SPY shares (XSP has no deliverable).
@@ -30,7 +30,7 @@ The part that is genuinely in doubt is not the premium (NW t 8.35 over 16 years)
 ## 4. Cost model — frozen numbers
 | item | number | source | re-measure |
 |---|---|---|---|
-| ATM-vs-VIX basis | **2.4 vol points** | collector SPY ATM 30d IV vs VIX close, 12 sessions 2026-09-04 → 10-05 (ATM 12.7% vs VIX 15.1 on 10-05; horizons_latest.csv) | once, at **60 SPY collector sessions** (≈ 2026-11-25 if no gaps), then frozen. Re-measure uses the mean over all sessions to date. If XSP ATM IV differs from SPY's by > 0.3 pt on the first 10 XSP sessions, XSP's number replaces it at the same re-measure date. |
+| ATM-vs-VIX basis | **2.90 vol points** (amended 2026-10-21 from 2.4, which paired 10-05's ATM vol with 10-06's VIX close; drafted 2026-10-07; REFUSALS.md §4) | collector SPY ATM 30d IV (own inversion, `options-collector/surface.py`) minus the same-day VIX close, 10 sessions 2026-09-04 → 10-06, mean 2.90, sd 0.32, range 2.45–3.45 | once, at **60 SPY collector sessions** (≈ 2026-11-25 if no gaps), then frozen. Re-measure uses the mean over all sessions to date. If XSP ATM IV differs from SPY's by > 0.3 pt on the first 10 XSP sessions, XSP's number replaces it at the same re-measure date. |
 | Straddle spread given up at entry | **0.6% of mid (SPY, median)** → XSP: **to be measured, provisionally 1.5%** | 12 SPY sessions, ATM 30d straddle, range 0.2–1.7% | XSP measured over its first 10 collector sessions; whichever is larger of measured and 1.5% is frozen |
 | Hedge slippage | 1 bp one-way per SPY share | project default; SPY is the most liquid listed equity | none |
 | Commission | $0.65/contract/leg + $0 SPY | Alpaca options paper schedule | none |
@@ -46,7 +46,7 @@ The part that is genuinely in doubt is not the premium (NW t 8.35 over 16 years)
 **Comparator and promotion rule (verbatim, binding):**
 > VRP is promoted into the live book only if, on the forward track of at least 126 sessions, (a) its own net Sharpe is above 1.0, (b) the book including VRP at the equal-allocator weight has a higher net Sharpe than the book without it over the same sessions, and (c) the 1/N attribution t-statistic of the VRP stream is positive. Any one failing is a refusal, logged in REFUSALS.md §2.
 
-**Trial count, enumerated now:** cycle offsets 0–20 (21 trials, the project's existing luck test) × basis {2.4} × spread {§4} × cap {4} = **21 logged trials** before the window is opened, plus the capped-path variant = 22. Every one goes through `research.registry.experiments.Registry` so `trials()` counts it. The DSR reported uses that count, never fewer.
+**Trial count, enumerated now:** cycle offsets 0–20 (21 trials, the project's existing luck test) × basis {2.90, amended from 2.4 before any trial ran} × spread {§4} × cap {4} = **21 logged trials** before the window is opened, plus the capped-path variant = 22. Every one goes through `research.registry.experiments.Registry` so `trials()` counts it. The DSR reported uses that count, never fewer.
 
 ## 6. Kill criteria
 - **No new cycle** when the VIX close > 30 at the entry session. (Backtest worst days: VIX 82.7, 75.5, 48.0, 40.8, 37.3 — all above 30 at the time, but entry was in the prior calm month; this rule limits *adding* exposure into stress, not the loss on the cycle already open. That is disclosed, not hidden.)
@@ -69,3 +69,5 @@ The part that is genuinely in doubt is not the premium (NW t 8.35 over 16 years)
 
 ---
 *Signature:* Kelvin He · 2026-10-06 (in session, chat record) · "I have read §5 and §6 and agree the result is binding either way."
+
+*Amendment signature:* Kelvin He · 2026-10-21 (in session, chat record: "sign the amendment") · §4 basis 2.4 → 2.90, drafted 2026-10-07, entered in REFUSALS.md §4. No window had been opened, no spread frozen and no trial run before this amendment.

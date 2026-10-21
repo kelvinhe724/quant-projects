@@ -31,7 +31,7 @@ REGISTRY = REPORTS / "registry"
 
 # PREREG.md §4, frozen. The spread is provisional until FROZEN exists (§4: the larger
 # of the measured XSP number and 1.5%); the window cannot be opened before that.
-BASIS = 0.024
+BASIS = 0.029                     # amended 2026-10-21 (drafted 10-07), REFUSALS.md §4: 2.4 paired mismatched dates
 SPREAD_PROVISIONAL = 0.015
 COST_BPS = 1.0
 HORIZON = 21

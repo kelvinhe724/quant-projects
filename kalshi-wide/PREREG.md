@@ -2,6 +2,8 @@
 
 Status: **SIGNED 2026-10-07** by Kelvin He, in session ("sign both"), before any backtest ran against it. The commit that adds this file is the lock; later changes are second looks for `REFUSALS.md §4`. Template: `research/PREREG-TEMPLATE.md`. Bar and gate shape: `vol-risk-premium/PREREG.md` §5.
 
+Status addendum: **PARKED 2026-10-21** by Kelvin He, in session ("park kalshi-wide"), pending Kalshi's written confirmation of eligibility (its member agreement bars persons domiciled in the PRC). The signed text below is unchanged. Record: `REFUSALS.md §4`.
+
 ## `KALSHI-WIDE`: model fade in wide books only
 
 **Hypothesis.** `kalshi-model/` found the market mid beats every model where books are tight, and the models beat the mid only where the quoted spread exceeds 10c — exactly where the published rule refused to trade because the spread ate the edge. The untested question is whether a **limit order at the model's price inside a wide book** (maker, not taker) gets filled often enough to earn the gap.
