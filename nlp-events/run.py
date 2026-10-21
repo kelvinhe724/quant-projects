@@ -34,7 +34,7 @@ from research.alpha.base import window_returns  # noqa: E402
 from research.features import FeatureStore, Raw  # noqa: E402
 from research.features.store import panel_hash  # noqa: E402
 from research.models import ModelRegistry  # noqa: E402
-from research.registry import Registry  # noqa: E402
+from research.registry import Registry, use  # noqa: E402
 
 from events import (FEATURES, SIGNALS, EventDrift, event_table, finbert_scorer, forward_returns, ic_table,  # noqa: E402
                     reaction_session)
@@ -107,6 +107,7 @@ def load():
 def main(minutes=9.0):
     t0 = time.time()
     os.makedirs(REPORTS, exist_ok=True)
+    use(os.path.join(REPORTS, "registry"))  # every harness evaluation and the lock log here, none unlogged
     opens, closes, spy, fil = load()
     print(f"{closes.shape[1]} names with prices, {len(closes)} sessions, {len(fil)} earnings 8-Ks {START} to {END}")
     fil = scores(fil, minutes)
@@ -165,7 +166,7 @@ def main(minutes=9.0):
         for params in final_set:
             a = EventDrift(**params)
             r = window_returns(a, panel, p, start, stop, cal)
-            g = window_returns(a, panel, p, start, stop, cal, cost_bps=0.0)
+            g = window_returns(a, panel, p, start, stop, cal, cost_bps=0.0, log=False)  # gross diagnostic
             rets[str(a)] = r
             out["variants"][str(a)] = {"params": params, **stats(r), "sharpe_gross": sharpe(g[g != 0])}
             registry.record(str(a), {**params, "window": "untouched"}, names, (start.date(), stop.date()), r,

@@ -32,7 +32,7 @@ from framework.book.strategies import book_config, sleeves
 from framework.engine import run, sharpe
 from research.alpha import Untouched, UntouchedWindowUsed
 from research.models import ModelRegistry
-from research.registry import Registry
+from research.registry import Registry, use
 
 REPORTS = os.path.join(HERE, "reports")
 BOOK = "beta+alpha"
@@ -63,6 +63,7 @@ def load():
 def main():
     t0 = time.time()
     os.makedirs(REPORTS, exist_ok=True)
+    use(os.path.join(REPORTS, "registry"))  # every harness evaluation and the lock log here, none unlogged
     bars, spy, fred = load()
     cal = bars.index
     obs = regimes.observations(spy)

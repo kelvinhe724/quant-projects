@@ -178,7 +178,16 @@ check("Raw.from_bars cuts at the view's as-of date", fb.calendar[-1] == IDX[900]
 print("\nUNTOUCHED WINDOW LOCK\n")
 tmp = tempfile.mkdtemp()
 lock = Untouched(os.path.join(tmp, "untouched.json"))
-body = lock.lock(IDX, 0.2, data_hash="abc")
+try:
+    Untouched(os.path.join(tmp, "unpinned.json")).lock(IDX, 0.2, data_hash="abc")
+    check("a new lock with no registry attached is refused", False)
+except UnloggedEvaluation:
+    check("a new lock with no registry attached is refused", not os.path.exists(os.path.join(tmp, "unpinned.json")))
+lock_reg = Registry(os.path.join(tmp, "lock-registry"))
+body = lock.lock(IDX, 0.2, data_hash="abc", registry=lock_reg)
+check("the lock records the registry's real path and a hash of its runs.jsonl (none yet)",
+      body["registry"] == os.path.realpath(lock_reg.path) and body["registry_sha256_at_lock"] is None
+      and body["registry_bytes_at_lock"] == 0)
 check("lock covers the last fifth of sessions", body["n_sessions"] == 300 and body["end"] == str(IDX[-1].date()))
 check("relocking the same window is a no-op", lock.lock(IDX, 0.2, "abc")["hash"] == body["hash"])
 try:
@@ -196,9 +205,65 @@ try:
     check("an open with no registry attached is refused and leaves the window shut", False)
 except UnloggedEvaluation:
     check("an open with no registry attached is refused and leaves the window shut", not lock.opened)
-lock_reg = Registry(os.path.join(tmp, "lock-registry"))
+try:
+    lock.open(lambda s, e: {"sharpe": 1.0}, registry=lock_reg)
+    check("an open on an empty registry is refused (it would freeze n_trials 0)", False)
+except LockError:
+    check("an open on an empty registry is refused (it would freeze n_trials 0)", not lock.opened)
+PRE = IDX[IDX < lock.window[0]]
 for i in (1, 2):
-    lock_reg.record(f"trial{i}", {}, NAMES, (IDX[0], IDX[-1]), frames["close"].iloc[:, i].pct_change())
+    lock_reg.record(f"trial{i}", {}, NAMES, (PRE[0], PRE[-1]), frames["close"].iloc[:, i].pct_change().loc[PRE])
+other = Registry(os.path.join(tmp, "throwaway"))
+other.record("trial1", {}, NAMES, (PRE[0], PRE[-1]), frames["close"].iloc[:, 1].pct_change().loc[PRE])
+try:
+    lock.open(lambda s, e: {"sharpe": 1.0}, registry=other)
+    check("an open with a registry other than the one the lock names is refused", False)
+except LockError:
+    check("an open with a registry other than the one the lock names is refused", not lock.opened)
+use(other.path)
+try:
+    lock.open(lambda s, e: {"sharpe": 1.0})
+    check("... and so is one attached with use()", False)
+except LockError:
+    check("... and so is one attached with use()", not lock.opened)
+use(None)
+peek = Registry(os.path.join(tmp, "peek"))
+plock = Untouched(os.path.join(tmp, "peek.json"))
+plock.lock(IDX, 0.2, data_hash="abc", registry=peek)
+peek.record("in sample", {}, NAMES, (PRE[0], PRE[-1]), frames["close"].iloc[:, 1].pct_change().loc[PRE])
+peek.record("full panel", {}, NAMES, (IDX[0], IDX[-1]), frames["close"].iloc[:, 2].pct_change())
+try:
+    plock.open(lambda s, e: {"sharpe": 1.0}, registry=peek)
+    check("an open is refused when a registry row already covers part of the window", False)
+except LockError as e:
+    check("an open is refused when a registry row already covers part of the window",
+          not plock.opened and "full panel" in str(e), str(e)[-70:])
+rw = Registry(os.path.join(tmp, "rewritten"))
+rw.record("in sample", {}, NAMES, (PRE[0], PRE[-1]), frames["close"].iloc[:, 1].pct_change().loc[PRE])
+rlock = Untouched(os.path.join(tmp, "rewritten.json"))
+rlock.lock(IDX, 0.2, data_hash="abc", registry=rw)
+with open(rw.file) as fh:
+    kept = fh.read()
+with open(rw.file, "w") as fh:
+    fh.write(kept.replace('"in sample"', '"renamed"'))
+try:
+    rlock.open(lambda s, e: {"sharpe": 1.0}, registry=rw)
+    check("an open is refused when runs.jsonl no longer starts with what it held at the lock", False)
+except LockError:
+    check("an open is refused when runs.jsonl no longer starts with what it held at the lock", not rlock.opened)
+legacy = Untouched(os.path.join(tmp, "legacy.json"))
+lb = {"start": body["start"], "end": body["end"], "n_sessions": body["n_sessions"], "data_hash": "abc",
+      "opened_at": None, "result": None}
+legacy.write(lb)
+try:
+    legacy.open(lambda s, e: {"sharpe": 1.0}, registry=Registry(os.path.join(tmp, "legacy-empty")))
+    check("a lock written before registries were recorded still refuses an empty registry", False)
+except LockError:
+    check("a lock written before registries were recorded still refuses an empty registry", not legacy.opened)
+legacy.open(lambda s, e: {"sharpe": 1.0}, registry=lock_reg)
+check("... and records the registry it is opened with, the count and a hash of runs.jsonl at the open",
+      legacy.read()["registry"] == os.path.realpath(lock_reg.path) and legacy.read()["n_trials"] == 2
+      and len(legacy.read()["registry_sha256_at_open"]) == 64)
 calls = []
 
 
@@ -212,6 +277,9 @@ res = lock.open(the_read, registry=lock_reg)
 check("first open runs the function once and stores its result", calls == [lock.window] and lock.result == res)
 check("the open freezes the trial count before the read (2 of the 3 logged) inside the lock and its hash",
       lock.read()["n_trials"] == 2 and lock_reg.trials() == 3, f"{lock.read()['n_trials']} at the open")
+d_frozen = lock_reg.dsr(frames["close"].iloc[:, 3].pct_change().loc[lock.window[0]:], n_trials=lock.read()["n_trials"])
+check("dsr(n_trials=...) deflates by the count the lock froze, not the count after the read logged itself",
+      d_frozen["n_trials"] == lock.read()["n_trials"] == 2)
 with open(lock.path) as fh:
     edited = json.load(fh)
 edited["n_trials"] = 1
@@ -268,6 +336,12 @@ d = reg.dsr(r_a)
 check("dsr comes from framework.book.validate's purgedcv call and is a probability",
       0 <= d["dsr"] <= 1 and 0 <= d["psr"] <= 1 and d["n_trials"] == 2, f"psr {d['psr']:.3f} dsr {d['dsr']:.3f}")
 check("deflating for trials never raises the probability", d["dsr"] <= d["psr"] + 1e-12)
+flat = pd.Series(0.001, index=IDX)
+e5 = reg.record("cash", {}, NAMES, (IDX[0].date(), IDX[-1].date()), flat)
+d5 = reg.dsr(r_a)
+check("a constant stream (float std about 1e-19) gets a NaN Sharpe: counted as a trial, left out of the variance",
+      np.isnan(e5["sharpe_daily"]) and d5["n_trials"] == 3 and d5["n_nan_sharpe"] == 1
+      and abs(d5["var_sharpe"] - d["var_sharpe"]) < 1e-15, f"var {d5['var_sharpe']:.2e}")
 check("planted momentum: the research path finds it", sharpe(r_a[r_a != 0]) > 0.5, f"{sharpe(r_a[r_a != 0]):.2f}")
 
 
@@ -295,7 +369,12 @@ stages = reg.runs()["tags"].map(lambda t: t.get("stage")).value_counts()
 check("every evaluation is logged (3 variants x 3 training folds, 3 test windows, 3 whole-window variants); "
       "the two whole-window streams already logged count once",
       (stages.get("walk_forward_train"), stages.get("walk_forward_test"), stages.get("walk_forward_grid")) == (9, 3, 3)
-      and reg.trials() == 2 + 9 + 3 + 1 and len(reg.runs()) == 3 + 15, f"{reg.trials()} trials, {len(reg.runs())} keys")
+      and len(reg.runs()) == 4 + 15, f"{len(reg.runs())} keys")
+check("fold rows (walk_forward_train, walk_forward_test) stay on disk but are not counted: 2 + 1 new whole-window "
+      "variant + the cash row", reg.trials() == 4 and reg.dsr(r_a)["n_trials"] == 4, f"{reg.trials()} trials")
+check("an empty window with a registry attached returns an empty stream and logs nothing",
+      window_returns(alpha, panel, frames["close"], IDX[-1] + pd.Timedelta(days=3), IDX[-1] + pd.Timedelta(days=30),
+                     dates, registry=reg).empty and len(reg.runs()) == 19)
 check("walk-forward OOS on planted momentum is positive", sharpe(oos[oos != 0]) > 0, f"{sharpe(oos[oos != 0]):.2f}")
 
 print("\nTHE HARNESS LOGS EVERY EVALUATION\n")
@@ -358,6 +437,11 @@ with open(dyn_mod.__file__, "a") as fh:
 check("an edited rule is a new key, the same source in another file is the same key, and a class inspect cannot "
       "read is keyed on its module file's bytes", keys[0] == keys[1] != keys[2] and code_hash(Dyn) != before_edit,
       f"{keys[0]} {keys[1]} {keys[2]}")
+hand = Registry(os.path.join(tmp, "hand"))
+ids = {hand.record("Rule", {"lookback": "frozen"}, NAMES, win, frames["close"].iloc[:, i].pct_change(), code="same")["id"]
+       for i in (1, 2, 1)}
+check("a hand-recorded row whose stream changed (the rule edited in a module no hash sees) is a new row, "
+      "the same stream again is the same row", len(ids) == 2 and len(hand.runs()) == 2 and hand.trials() == 2)
 stored = reg.stream(e1["id"])
 runs = reg.runs()
 grid_ids = runs.loc[runs["tags"].map(lambda t: t.get("stage")) == "walk_forward_grid", "id"]

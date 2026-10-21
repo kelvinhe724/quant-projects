@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.dirname(HERE))
 from research.alpha.base import Untouched, backtest, positions, walk_forward, window_returns  # noqa: E402
 from research.features.store import FeatureStore, Raw, panel_hash  # noqa: E402
 from research.models.registry import ModelRegistry  # noqa: E402
-from research.registry.experiments import Registry  # noqa: E402
+from research.registry.experiments import Registry, use  # noqa: E402
 
 import data  # noqa: E402
 from basis import (BAR, BARS_PER_DAY, COST_BPS, FEES, BasisMR, basis, daily, daily_sharpe, dislocation,  # noqa: E402
@@ -42,6 +42,7 @@ def say(msg):
 
 def main():
     os.makedirs(REPORTS, exist_ok=True)
+    use(os.path.join(REPORTS, "registry"))  # every harness evaluation and the lock log here, none unlogged
     spot, perp, funding = data.bars(START, END, BAR)
     # the harness's lock and walk-forward speak naive timestamps; everything here is UTC wall time
     for f in (*spot.values(), *perp.values(), funding):
@@ -102,9 +103,9 @@ def main():
     pre_dsr = reg.dsr(pre_daily)
     pos_pre = positions(BasisMR(**chosen), panel_pre, pre)
     trades_pre = pos_pre.diff().abs().sum().sum() / 2
-    gross_pre = reg.dsr(daily(backtest(pos_pre, close_pre, cost_bps=0.0)))
+    gross_pre = reg.dsr(daily(backtest(pos_pre, close_pre, cost_bps=0.0, log=False)))  # gross diagnostic
     # what one round trip captured before fees: total gross P&L per unit over the number of trades
-    gross_per_trade_bps = float((1 + backtest(pos_pre, close_pre, cost_bps=0.0)).prod() - 1) / trades_pre * 1e4
+    gross_per_trade_bps = float((1 + backtest(pos_pre, close_pre, cost_bps=0.0, log=False)).prod() - 1) / trades_pre * 1e4
 
     # the one look at the untouched window: chosen variant, three fee tiers in the same call
     def read(start, end):

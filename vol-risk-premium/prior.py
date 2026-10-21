@@ -123,8 +123,9 @@ def score(df, start, end, offset, option_spread, **sizing):
 
 def main(open_window=False):
     df, digest = panel()
+    reg = Registry(str(REGISTRY))
     lock = Untouched(str(LOCK))
-    body = lock.lock(df.index, HOLDOUT, data_hash=digest)
+    body = lock.lock(df.index, HOLDOUT, data_hash=digest, registry=reg)
     hold = pd.Timestamp(body["start"])
     sp, frozen = spread()
     print(f"panel {df.index[0].date()} -> {df.index[-1].date()}, {len(df)} days, hash {digest}")
@@ -133,7 +134,6 @@ def main(open_window=False):
     print(f"basis {BASIS:.3f} frozen; spread {sp:.3%} {'FROZEN' if frozen else 'PROVISIONAL (window stays shut)'}; "
           f"cap {CAP}, ${PER_UNIT_ACCOUNT:,.0f}/unit, {TARGET_VOL:.0%} vol target on ${ACCOUNT:,.0f}")
 
-    reg = Registry(str(REGISTRY))
     pre_end = df.index[df.index < hold][-1]
     rows = []
     for off in OFFSETS:
@@ -160,10 +160,11 @@ def main(open_window=False):
                          "(PREREG.md §4; write reports/spread-frozen.json from measure_spread.py first)")
 
     def fn(start, end):
+        frozen = lock.read()["n_trials"]  # the count the open froze, before the row logged here
         row, r = score(df, start, end, 0, sp)
         reg.record("VRP", {"basis": BASIS, "spread": sp, "cap": CAP, "offset": 0, "path": "sized",
                            "window": "untouched"}, ["XSP"], (start, end), r, code=CODE)
-        row["dsr"] = reg.dsr(r)
+        row["dsr"] = reg.dsr(r, n_trials=frozen)
         row["clears"] = bool(row["sized_sharpe"] > 0)
         return row
 

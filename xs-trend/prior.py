@@ -253,9 +253,10 @@ def main(open_window=False):
 
     # (a) the lock, before any run. Untouched.lock takes a fraction; the fraction is whatever puts the
     # first session of UNTOUCHED_START at the boundary, and the boundary is asserted, not trusted.
+    reg = Registry(REGISTRY)
     lock = Untouched(LOCK)
     n_after = int((cal >= UNTOUCHED_START).sum())
-    body = lock.lock(cal, n_after / len(cal), data_hash=digest)
+    body = lock.lock(cal, n_after / len(cal), data_hash=digest, registry=reg)
     first = str(cal[cal >= UNTOUCHED_START][0].date())
     if body["start"] != first:
         raise SystemExit(f"lock boundary {body['start']} is not the first session on/after {UNTOUCHED_START} ({first})")
@@ -269,7 +270,6 @@ def main(open_window=False):
     print(f"costs: {COST_BPS:.0f} bps + book model {COSTS}; capital for participation ${CAPITAL:,.0f}; "
           f"vol target {TARGET_VOL:.0%} on {VOL_DAYS}d, gross <= {MAX_GROSS:.0f}")
 
-    reg = Registry(REGISTRY)
     pre_end = cal[cal < hold][-1]
     if str(pre_end.date()) != IS_END:
         raise SystemExit(f"in-sample end {pre_end.date()} != {IS_END}")
@@ -379,7 +379,7 @@ def main(open_window=False):
 
     def fn(start, end):
         """The one read: scored PIT sleeve vs the scored EW basket of the same universe; clears if > 0 and > basket."""
-        res = {}
+        res, frozen = {}, lock.read()["n_trials"]  # the count the open froze, before the rows logged here
         for k in ("pit", "bh"):
             full = run_alpha(ALPHAS[k], panel, frames, b["liquidity"], end)
             r = full["scored"]["ret"].loc[start:end]
@@ -387,7 +387,7 @@ def main(open_window=False):
             reg.record(str(ALPHAS[k]), config(k, ALPHAS[k], "scored", "untouched"), names, (start.date(), end.date()),
                        r, tags={"stage": "untouched"}, code=CODE)
             if k == "pit":
-                res["dsr"] = reg.dsr(r)
+                res["dsr"] = reg.dsr(r, n_trials=frozen)
                 res["kill_dates"] = [str(x) for x in kill_dates(r)]
         res["clears"] = bool(res["pit"]["sharpe"] > 0 and res["pit"]["sharpe"] > res["bh"]["sharpe"])
         return res

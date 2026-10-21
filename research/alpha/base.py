@@ -10,8 +10,10 @@ the two paths return identical targets.
 Every backtest, window_returns and walk_forward call is an evaluation and
 logs itself to the attached registry (passed in, or research.registry.use),
 return stream included; with none attached they raise UnloggedEvaluation
-unless called with log=False. Untouched.open records the registry's trial
-count at the moment of opening in the lock.
+unless called with log=False. Untouched.lock records which registry the
+window belongs to; Untouched.open refuses any other, an empty one, or one
+that already holds a row over the window, and records the registry's trial
+count and a hash of its runs.jsonl at the moment of opening in the lock.
 """
 import hashlib
 import json
@@ -24,7 +26,7 @@ from purgedcv import WalkForwardSplit
 from framework.book.strategies import month_ends
 from framework.engine import Strategy, sharpe
 from research.features.store import Raw, cross_section, long_panel, panel_hash
-from research.registry.experiments import attached, code_hash
+from research.registry.experiments import attached, code_hash, file_sha256
 
 COST_BPS = 10.0
 
@@ -77,8 +79,11 @@ def _returns(pos, close, cost_bps):
 
 
 def _log(reg, r, pos, cost_bps, alpha, config, universe, tags):
-    """One registry row per evaluation, keyed on the alpha's code, the cost and a hash of the positions it held."""
-    if reg is not None:
+    """One registry row per evaluation, keyed on the alpha's code, the cost and a hash of the positions it held.
+
+    An empty window (a forward window that has not started) returns its empty stream unlogged: nothing was seen.
+    """
+    if reg is not None and len(r):
         reg.record(str(alpha) if alpha is not None else "backtest",
                    {**(config or {}), "cost_bps": cost_bps, "positions": panel_hash(pos)},
                    universe, (r.index[0], r.index[-1]), r, tags=tags,
@@ -203,24 +208,27 @@ class UntouchedWindowUsed(Exception):
 class Untouched:
     """The final window: locked by hash on first sight, opened once, refused after that.
 
-    lock() writes start, end, session count and the data hash, plus a hash
-    of the whole body (those four, the opened_at stamp, the result and the
-    trial count at the open), so nulling opened_at by hand breaks the hash
-    too. Locking again with anything different raises; so does a lock file
-    whose hash no longer matches its contents. open(fn) runs fn once and
-    stores its result; a second open raises, and the stored result is what
-    a rerun reports.
+    lock() writes start, end, session count and the data hash, the real path
+    of the registry the window belongs to and a sha256 of its runs.jsonl at
+    that moment, plus a hash of the whole body (those, the opened_at stamp,
+    the result and what open() adds), so nulling opened_at by hand breaks the
+    hash too. Locking again with anything different raises; so does a lock
+    file whose hash no longer matches its contents. open(fn) runs fn once and
+    stores its result; a second open raises, and the stored result is what a
+    rerun reports.
     """
 
     def __init__(self, path):
         self.path = path
 
     KEYS = ("start", "end", "n_sessions", "data_hash")
+    # fields added after the first locks were written: hashed when present, so a lock without them still verifies
+    LATER = ("n_trials", "registry", "registry_rel", "registry_sha256_at_lock", "registry_bytes_at_lock",
+             "registry_sha256_at_open")
 
     @classmethod
     def digest(cls, body):
-        # n_trials joined the hash when open() began recording it; a lock opened before that verifies without it
-        keys = cls.KEYS + ("opened_at", "result") + (("n_trials",) if "n_trials" in body else ())
+        keys = cls.KEYS + ("opened_at", "result") + tuple(k for k in cls.LATER if k in body)
         return hashlib.sha256(json.dumps({k: body.get(k) for k in keys}, sort_keys=True,
                                          default=str).encode()).hexdigest()[:16]
 
@@ -236,7 +244,9 @@ class Untouched:
         with open(self.path, "w") as fh:
             json.dump(body, fh, indent=2, default=str)
 
-    def lock(self, calendar, frac=0.2, data_hash=""):
+    def lock(self, calendar, frac=0.2, data_hash="", registry=None):
+        """Lock the last `frac` of `calendar`. A new lock needs a registry (passed in or research.registry.use):
+        the window is pinned to it, so the trials behind its one read cannot be logged somewhere else."""
         start = calendar[len(calendar) - int(round(len(calendar) * frac))]
         body = {"start": str(start.date()), "end": str(calendar[-1].date()),
                 "n_sessions": int((calendar >= start).sum()), "data_hash": data_hash, "opened_at": None,
@@ -247,8 +257,16 @@ class Untouched:
                 raise LockError(f"{self.path} locks {have['start']}..{have['end']} on data {have['data_hash']}, "
                                 f"asked for {body['start']}..{body['end']} on {data_hash}")
             return have
+        reg = _registry(registry, True)
+        body.update(self._where(reg), registry_sha256_at_lock=file_sha256(reg.file),
+                    registry_bytes_at_lock=os.path.getsize(reg.file) if os.path.exists(reg.file) else 0)
         self.write(body)
         return body
+
+    def _where(self, reg):
+        """The registry's real path, and its path from the lock's folder (the one that survives moving the repo)."""
+        path = os.path.realpath(reg.path)
+        return {"registry": path, "registry_rel": os.path.relpath(path, os.path.realpath(os.path.dirname(self.path)))}
 
     @property
     def window(self):
@@ -263,20 +281,51 @@ class Untouched:
     def result(self):
         return self.read()["result"]
 
+    def _check_registry(self, body, reg):
+        """Refuse an open on the wrong, an empty, a rewritten or an already-peeking registry."""
+        where = self._where(reg)
+        path = where["registry"]
+        if "registry" in body and path != body["registry"] and where["registry_rel"] != body.get("registry_rel"):
+            raise LockError(f"{self.path} belongs to the registry {body['registry']}, not {path}")
+        if reg.trials() == 0:
+            raise LockError(f"{self.path}: the registry {path} holds no counted trial; an open would freeze "
+                            "n_trials 0")
+        if body.get("registry_sha256_at_lock"):
+            with open(reg.file, "rb") as fh:
+                head = fh.read(body["registry_bytes_at_lock"])
+            if hashlib.sha256(head).hexdigest() != body["registry_sha256_at_lock"]:
+                raise LockError(f"{self.path}: {reg.file} no longer starts with the rows it held at the lock; "
+                                "the registry was rewritten, not appended to")
+        w0, w1 = pd.Timestamp(body["start"]).date(), pd.Timestamp(body["end"]).date()
+        runs = reg.runs()
+        for _, row in runs.iterrows():
+            a, z = (pd.Timestamp(x).date() for x in row["window"])
+            if a <= w1 and z >= w0:
+                raise LockError(f"{self.path}: registry row {row['id']} ({row['name']}, {row['window'][0]} to "
+                                f"{row['window'][1]}) already evaluated part of the window {w0} to {w1}")
+
     def open(self, fn, registry=None):
         """Run fn(start, end) once, store its JSON-able result, refuse ever after.
 
-        The registry's trial count at the moment of opening, before fn runs,
-        is written into the lock with the stamp, so the DSR denominator of the
-        one read is frozen with its result. An open needs a registry (passed
-        in or research.registry.use); there is no log=False here.
+        An open needs a registry (passed in or research.registry.use; there is
+        no log=False here): the one the lock names, holding at least one
+        counted trial, its runs.jsonl an append of what it held at the lock,
+        and no row whose window overlaps the untouched one (rows fn itself
+        writes come after this check). A lock written before the registry was
+        recorded takes the registry it is opened with. The trial count and a
+        sha256 of runs.jsonl at the moment of opening, before fn runs, are
+        written into the lock with the stamp, so the DSR denominator of the
+        one read is frozen with its result.
         """
         body = self.read()
         if body["opened_at"] is not None:
             raise UntouchedWindowUsed(f"{self.path} was opened at {body['opened_at']}; the window is spent")
         reg = _registry(registry, True)
+        self._check_registry(body, reg)
+        body.update({k: v for k, v in self._where(reg).items() if k not in body})  # a lock from before lock() named one
         body["opened_at"] = pd.Timestamp.now().isoformat(timespec="seconds")
         body["n_trials"] = reg.trials()
+        body["registry_sha256_at_open"] = file_sha256(reg.file)
         self.write(body)
         body["result"] = fn(pd.Timestamp(body["start"]), pd.Timestamp(body["end"]))
         self.write(body)

@@ -4,8 +4,10 @@ Features from the store, every grid variant logged as a trial, walk-forward
 picks the lookback, the untouched last fifth is opened once and its result
 stored in the lock file, the chosen alpha is saved to the model registry
 with the training panel's hash, and the same Alpha runs as a framework
-sleeve under the book's cost model and overlay. Reruns reproduce every
-number; the untouched window's number is read back from the lock.
+sleeve under the book's cost model and overlay. Nothing is evaluated past
+the window's start until the window is open; the engine path is logged as a
+trial beside the research path. Reruns reproduce every number; the untouched
+window's number is read back from the lock.
 
 Run: ../.venv/bin/python3 run.py   (about 6 seconds)
 """
@@ -29,7 +31,7 @@ from research.alpha.base import month_ends, window_returns
 from research.features import PRICE, FeatureStore, Raw
 from research.features.store import panel_hash
 from research.models import ModelRegistry
-from research.registry import Registry
+from research.registry import use
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPORTS = os.path.join(HERE, "reports")
@@ -74,7 +76,7 @@ def main():
     panel = store.build(raw, audit=True)
     close = raw.frames["close"]
     cal = panel.index
-    registry = Registry(os.path.join(REPORTS, "registry"))
+    registry = use(os.path.join(REPORTS, "registry"))
     models = ModelRegistry(os.path.join(REPORTS, "models"))
     lock = Untouched(os.path.join(REPORTS, "untouched.json"))
     data_hash = panel_hash(close)
@@ -85,6 +87,8 @@ def main():
     print(f"untouched window {hold.date()} to {end.date()}, {len(cal) - len(pre)} sessions"
           + (f", opened at {lock.read()['opened_at']}" if lock.opened else ", not yet opened"))
 
+    # Before the window is opened nothing is evaluated past `pre`: Untouched.open refuses a registry that
+    # already holds a row over the window.
     wf_table, wf_oos, full = walk_forward(XSMom, GRID, panel.loc[pre], close.loc[pre], FOLDS, TEST_SIZE,
                                           registry=registry, universe=ETFS)
     registry.record("XSMom walk-forward", {"grid": GRID, "folds": FOLDS, "test_size": TEST_SIZE}, ETFS,
@@ -96,23 +100,21 @@ def main():
     print(wf_table.round(3).to_string())
     print(f"\nselected-in-sample OOS Sharpe {sharpe(wf_oos[wf_oos != 0]):.3f}; chosen for the final window: {chosen}")
     in_sample = {k: stats(v) for k, v in full.items()}
-
+    me = month_ends(cal)
+    r_pre = backtest(positions(alpha, panel, me[me < hold]), close.loc[pre], registry=registry, alpha=alpha,
+                     config=chosen, universe=ETFS, tags={"stage": "pre_window"})
+    d_full = registry.dsr(r_pre)
     sleeve = Sleeve(XSMom(**chosen), store, series=[])
-    engine = run(sleeve, bars, config=book_config(kill=False))
-    research = positions(alpha, panel, month_ends(cal))
-    sent = pd.DataFrame(sleeve.targets).T.reindex(columns=ETFS)
-    parity = np.allclose(sent.reindex(research.index).to_numpy(), research.to_numpy(), atol=1e-12)
-    print(f"\nadapter parity at {len(sent)} month ends: {'exact' if parity else 'BROKEN'}")
-    r_research = backtest(research, close, registry=registry, alpha=alpha, config=chosen, universe=ETFS,
-                          tags={"stage": "full_panel"})
-    r_engine = engine.returns
 
     def final(start, stop):
-        r = window_returns(alpha, panel, close, start, stop, month_ends(cal), registry=registry,
+        frozen = lock.read()["n_trials"]  # the count the open froze; the two rows logged here are not in it
+        r = window_returns(alpha, panel, close, start, stop, me, registry=registry,
                            config={**chosen, "window": "untouched"}, universe=ETFS, tags={"stage": "untouched"})
-        e = r_engine.loc[start:stop]
-        return {"chosen": chosen, "research": stats(r), "engine": stats(e), "dsr": registry.dsr(r),
-                "engine_dsr": registry.dsr(e)}
+        e = run(Sleeve(XSMom(**chosen), store, series=[]), bars, config=book_config(kill=False)).returns.loc[start:stop]
+        registry.record("XSMom engine", {**chosen, "path": "engine", "window": "untouched"}, ETFS,
+                        (start.date(), stop.date()), e, tags={"stage": "untouched_engine"})
+        return {"chosen": chosen, "research": stats(r), "engine": stats(e), "dsr": registry.dsr(r, n_trials=frozen),
+                "engine_dsr": registry.dsr(e, n_trials=frozen)}
 
     try:
         result = lock.open(final, registry=registry)
@@ -124,19 +126,30 @@ def main():
         print(f"WARNING: the window was opened with {result['chosen']}, this run chose {chosen}; "
               "the stored result stands and this run's choice is in-sample")
 
+    # The window is spent from here on: the full-panel runs read it, and are logged as trials.
+    engine = run(sleeve, bars, config=book_config(kill=False))
+    research = positions(alpha, panel, me)
+    sent = pd.DataFrame(sleeve.targets).T.reindex(columns=ETFS)
+    parity = np.allclose(sent.reindex(research.index).to_numpy(), research.to_numpy(), atol=1e-12)
+    print(f"\nadapter parity at {len(sent)} month ends: {'exact' if parity else 'BROKEN'}")
+    r_research = backtest(research, close, registry=registry, alpha=alpha, config=chosen, universe=ETFS,
+                          tags={"stage": "full_panel"})
+    r_engine = engine.returns
+    registry.record("XSMom engine", {**chosen, "path": "engine"}, ETFS, (cal[0].date(), cal[-1].date()), r_engine,
+                    tags={"stage": "full_panel_engine"})
+
     model_id = models.save(str(alpha), {"alpha": "XSMom", **chosen, "features": store.names, "lags": store.lags},
                            close.loc[pre], (pre[0].date(), pre[-1].date()), result["research"]["sharpe"],
                            meta={"chosen": chosen, "grid": GRID, "picks": picks.to_dict()})
 
     full_r = stats(r_research)
     full_e = stats(r_engine)
-    d_full = registry.dsr(r_research.loc[pre])
     summary = {
         "universe": ETFS, "sessions": len(cal), "start": str(cal[0].date()), "end": str(cal[-1].date()),
         "close_hash": data_hash, "features": store.lags, "grid": GRID, "chosen": chosen,
         "walk_forward": {"table": wf_table.reset_index().to_dict("records"),
                          "selected_oos_sharpe": sharpe(wf_oos[wf_oos != 0])},
-        "in_sample_by_variant": in_sample, "pre_window_chosen": stats(r_research.loc[pre]), "pre_window_dsr": d_full,
+        "in_sample_by_variant": in_sample, "pre_window_chosen": stats(r_pre), "pre_window_dsr": d_full,
         "untouched": {"start": str(hold.date()), "end": str(end.date()), **result,
                       "opened_at": lock.read()["opened_at"]},
         "full_panel": {"research": full_r, "engine": full_e},

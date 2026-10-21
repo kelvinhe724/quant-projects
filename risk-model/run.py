@@ -25,7 +25,7 @@ from framework.book import validate
 from framework.book.daemon import read_ledger
 from research.alpha import Untouched, UntouchedWindowUsed
 from research.features.store import panel_hash
-from research.registry import Registry
+from research.registry import Registry, use
 
 REPORTS = os.path.join(HERE, "reports")
 SP_START, SP_END = "2003-06-02", "2026-08-31"
@@ -52,6 +52,7 @@ def race_stats(res, w0):
 def main():
     t0 = time.time()
     os.makedirs(REPORTS, exist_ok=True)
+    use(os.path.join(REPORTS, "registry"))  # every harness evaluation and the lock log here, none unlogged
     wrote = risk.ensure_etfs()
     print(f"lake: {wrote} ETF rows written")
     sp = risk.load_panel(start=SP_START, end=SP_END, universe_="sp500")

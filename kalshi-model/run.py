@@ -211,7 +211,7 @@ def main(df=None, reports=REPORTS, categories=None):
     models = ModelRegistry(os.path.join(reports, "models"))
     lock = Untouched(os.path.join(reports, "untouched.json"))
     dh = data_hash(df[["ticker", "price", "outcome"]])
-    lock.lock(pd.DatetimeIndex(df["close_time"]), HOLDOUT, dh)
+    lock.lock(pd.DatetimeIndex(df["close_time"]), HOLDOUT, dh, registry=registry)
     hold = lock.window[0].tz_localize("UTC")
     pre = df[df["close_time"] < hold]
     test = df[df["close_time"] >= hold]

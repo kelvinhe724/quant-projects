@@ -33,7 +33,7 @@ from research.alpha.base import month_ends, window_returns
 from research.features import Feature, FeatureStore, Raw
 from research.features.store import long_panel, panel_hash
 from research.models import ModelRegistry
-from research.registry import Registry
+from research.registry import Registry, use
 
 REPORTS = os.path.join(HERE, "reports")
 NAMES = ["AAPL", "MSFT", "AMZN", "NVDA", "JPM", "BAC", "GS", "XOM", "CVX", "JNJ",
@@ -133,6 +133,7 @@ def clean(obj):
 def main():
     t0 = time.time()
     os.makedirs(REPORTS, exist_ok=True)
+    use(os.path.join(REPORTS, "registry"))  # every harness evaluation and the lock log here, none unlogged
     raw = load()
     store = FeatureStore(vol.features())
     panel = store.build(raw, audit=True)

@@ -33,7 +33,7 @@ from research.alpha.base import month_ends, window_returns
 from research.features import FeatureStore
 from research.features.store import long_panel, panel_hash
 from research.models import ModelRegistry
-from research.registry import Registry
+from research.registry import Registry, use
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPORTS = os.path.join(HERE, "reports")
@@ -60,7 +60,7 @@ def fitted(made, params, train_end):
 def evaluate(alpha, panel, close, fwd, dollar_vol, sigma, start, stop, dates):
     """Research, gross and framework-net returns plus IC and decile spread on one window."""
     r = window_returns(alpha, panel, close, start, stop, dates)
-    g = window_returns(alpha, panel, close, start, stop, dates, cost_bps=0.0)
+    g = window_returns(alpha, panel, close, start, stop, dates, cost_bps=0.0, log=False)  # gross diagnostic
     keep = dates[(dates >= start) & (dates <= stop)]
     before = dates[dates < start][-1:]
     pos = positions(alpha, panel, before.append(keep))
@@ -75,6 +75,7 @@ def evaluate(alpha, panel, close, fwd, dollar_vol, sigma, start, stop, dates):
 def main():
     t0 = time.time()
     os.makedirs(REPORTS, exist_ok=True)
+    use(os.path.join(REPORTS, "registry"))  # every harness evaluation and the lock log here, none unlogged
     raw = load_raw(lake, START, END, snapshot=SNAPSHOT)
     spells = os.path.join(SNAPSHOT, "membership_intervals.csv")
     if not os.path.exists(spells):

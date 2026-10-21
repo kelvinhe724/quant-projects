@@ -26,7 +26,7 @@ import lob  # noqa: E402
 from research.alpha import Untouched, UntouchedWindowUsed  # noqa: E402
 from research.features.store import panel_hash  # noqa: E402
 from research.models import ModelRegistry  # noqa: E402
-from research.registry import Registry  # noqa: E402
+from research.registry import Registry, use  # noqa: E402
 
 REPORTS = os.path.join(HERE, "reports")
 # The harness's lock records the window's start as a date, so the untouched window is whole days: the last two of seven.
@@ -75,6 +75,7 @@ def sharpe_daily(r):
 def main():
     t0 = time.time()
     os.makedirs(REPORTS, exist_ok=True)
+    use(os.path.join(REPORTS, "registry"))  # every harness evaluation and the lock log here, none unlogged
     frame, meta = data.load()
     Y = lob.label_frame(frame["mid"])
     cal = frame.index
