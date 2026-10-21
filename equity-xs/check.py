@@ -175,7 +175,7 @@ hol = IDX[::9]
 raw_h = Raw({k: v.drop(hol) for k, v in raw_u.frames.items()}, {k: v.drop(hol) for k, v in raw_u.series.items()})
 cal_h = raw_h.frames["close"].index
 tab_h, _, _ = walk_forward(lambda **p: XSModel(dates=month_ends(cal_h), **p), [{"model": "mom"}],
-                           STORE.build(raw_h), raw_h.frames["close"], n_splits=3, test_size=200)
+                           STORE.build(raw_h), raw_h.frames["close"], n_splits=3, test_size=200, log=False)
 gaps = [cal_h.get_loc(pd.Timestamp(r.test_start)) - cal_h.get_loc(pd.Timestamp(r.train_end)) for r in tab_h.itertuples()]
 check("every fold's training rows end at least 21 sessions (not business days) before its test window",
       min(gaps) >= 21, f"session gaps {gaps}")
@@ -203,7 +203,7 @@ pos2 = pd.DataFrame({"A": [0.0, 0.5, 0.5, 0.0, 0.0, 0.0], "B": [0.0, -0.5, -0.5,
 adv2 = pd.DataFrame(2e5, index=close2.index, columns=["A", "B"])
 sig2 = pd.DataFrame(0.02, index=close2.index, columns=["A", "B"])
 net2 = framework_net(pos2, close2, adv2, sig2)
-gross2 = backtest(pos2, close2, cost_bps=0.0)
+gross2 = backtest(pos2, close2, cost_bps=0.0, log=False)
 part = 0.5 * CAPITAL / 2e5
 bps = cfg.costs.commission_bps + cfg.costs.slippage_bps(part, 0.02)
 day2 = gross2.iloc[2] - 2 * 0.5 * bps / 1e4 - 0.5 * cfg.borrow_bps / 1e4 / 252

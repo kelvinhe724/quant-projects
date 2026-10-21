@@ -27,7 +27,7 @@ import candles  # noqa: E402  kalshi-model/candles.py: the trained category list
 import lake  # noqa: E402
 import model as km  # noqa: E402
 import shadow  # noqa: E402  kalshi-desk/shadow.py: the desk's fill rule
-from research.registry import Registry  # noqa: E402
+from research.registry import Registry, code_hash  # noqa: E402
 
 kelly = candles.research_module("kelly")
 REPORTS = os.path.join(HERE, "reports")
@@ -286,7 +286,8 @@ def main(window_min=CANCEL_MIN):
     reg = Registry(os.path.join(REPORTS, "registry"))
     row = reg.record("KALSHI-WIDE", cfg, ["kalshi-lake-wide-books"], (snaps[0], snaps[-1]), daily.ret,
                      metrics={k: (None if isinstance(v, float) and not np.isfinite(v) else v) for k, v in out.items()},
-                     tags={"stage": "prior", "second_look": second})
+                     tags={"stage": "prior", "second_look": second},
+                     code=code_hash(sys.modules[__name__], shadow))  # the replay and the desk's fill rule
 
     cols = ["ts", "ticker", "series", "category", "spread", "P", "mid", "side", "price", "filled", "fill_ts", "end",
             "n_snaps", "n_books", "cost", "fee", "stake", "result", "pnl", "payoff", "kelly_f", "bucket"]

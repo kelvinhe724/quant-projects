@@ -273,10 +273,13 @@ def positions(p, tau):
     return pd.Series(np.where(edge > tau, 1.0, np.where(edge < -tau, -1.0, 0.0)), index=p.index)
 
 
-def pnl(pos, mid, fee_bps=FEE_BPS):
-    """Net return per second: a position decided at t fills at bar t+1's price; the fee is charged on traded weight."""
+def pnl(pos, mid, fee_bps=FEE_BPS, log=True):
+    """Net return per second: a position decided at t fills at bar t+1's price; the fee is charged on traded weight.
+
+    research's backtest logs it to the attached registry (research.registry.use); log=False runs it unlogged.
+    """
     P = pos.shift(1).to_frame(SYMBOL)
-    return backtest(P, mid.reindex(pos.index).to_frame(SYMBOL), cost_bps=fee_bps)
+    return backtest(P, mid.reindex(pos.index).to_frame(SYMBOL), cost_bps=fee_bps, log=log)
 
 
 def summarise(r, pos, fee_bps=FEE_BPS):

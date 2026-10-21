@@ -103,20 +103,19 @@ def main():
     sent = pd.DataFrame(sleeve.targets).T.reindex(columns=ETFS)
     parity = np.allclose(sent.reindex(research.index).to_numpy(), research.to_numpy(), atol=1e-12)
     print(f"\nadapter parity at {len(sent)} month ends: {'exact' if parity else 'BROKEN'}")
-    r_research = backtest(research, close)
+    r_research = backtest(research, close, registry=registry, alpha=alpha, config=chosen, universe=ETFS,
+                          tags={"stage": "full_panel"})
     r_engine = engine.returns
 
     def final(start, stop):
-        r = window_returns(alpha, panel, close, start, stop, month_ends(cal))
+        r = window_returns(alpha, panel, close, start, stop, month_ends(cal), registry=registry,
+                           config={**chosen, "window": "untouched"}, universe=ETFS, tags={"stage": "untouched"})
         e = r_engine.loc[start:stop]
-        out = {"chosen": chosen, "research": stats(r), "engine": stats(e), "dsr": registry.dsr(r),
-               "engine_dsr": registry.dsr(e)}
-        registry.record(str(alpha), {**chosen, "window": "untouched"}, ETFS, (start.date(), stop.date()), r,
-                        tags={"stage": "untouched"})
-        return out
+        return {"chosen": chosen, "research": stats(r), "engine": stats(e), "dsr": registry.dsr(r),
+                "engine_dsr": registry.dsr(e)}
 
     try:
-        result = lock.open(final)
+        result = lock.open(final, registry=registry)
         print(f"\nuntouched window opened now; result stored in {lock.path}")
     except UntouchedWindowUsed as e:
         result = lock.result

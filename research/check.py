@@ -4,27 +4,32 @@ Twelve fake instruments whose drift wanders slowly, so trailing momentum
 predicts the next month. The feature store must refuse a peeking feature,
 the untouched window must open once, the registry must count a rerun once,
 and an Alpha wrapped as a sleeve must send the engine the weights the
-research path computed. Exits 1 on any failure.
+research path computed. Every harness evaluation must log itself (or
+refuse to run), an edited rule must be a new key, and the pre-registration
+checker must fail a planted short the broker refuses. Exits 1 on any failure.
 
 Run: ../.venv/bin/python3 check.py
 """
+import importlib.util
 import json
 import os
 import shutil
 import sys
 import tempfile
+import types
 
 import numpy as np
 import pandas as pd
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from framework.engine import Bars, Config, CostModel, run, sharpe
-from research.alpha import (Alpha, LockError, Sleeve, Untouched, UntouchedWindowUsed, backtest, positions,
-                            walk_forward)
+from research import prereg_check
+from research.alpha import (Alpha, LockError, Sleeve, UnloggedEvaluation, Untouched, UntouchedWindowUsed, backtest,
+                            positions, walk_forward, window_returns)
 from research.alpha.base import month_ends
 from research.features import PRICE, Feature, FeatureStore, PeekError, Raw, cross_section, edgar_counts, macro
 from research.models import ModelRegistry, data_hash
-from research.registry import Registry
+from research.registry import Registry, code_hash, use
 
 checks = []
 
@@ -186,9 +191,40 @@ try:
     check("locking the same dates on different data is refused", False)
 except LockError:
     check("locking the same dates on different data is refused", True)
+try:
+    lock.open(lambda s, e: {"sharpe": 1.0})
+    check("an open with no registry attached is refused and leaves the window shut", False)
+except UnloggedEvaluation:
+    check("an open with no registry attached is refused and leaves the window shut", not lock.opened)
+lock_reg = Registry(os.path.join(tmp, "lock-registry"))
+for i in (1, 2):
+    lock_reg.record(f"trial{i}", {}, NAMES, (IDX[0], IDX[-1]), frames["close"].iloc[:, i].pct_change())
 calls = []
-res = lock.open(lambda s, e: calls.append((s, e)) or {"sharpe": 1.0})
+
+
+def the_read(s, e):
+    calls.append((s, e))
+    lock_reg.record("the read", {}, NAMES, (s, e), frames["close"].iloc[:, 3].pct_change().loc[s:e])
+    return {"sharpe": 1.0}
+
+
+res = lock.open(the_read, registry=lock_reg)
 check("first open runs the function once and stores its result", calls == [lock.window] and lock.result == res)
+check("the open freezes the trial count before the read (2 of the 3 logged) inside the lock and its hash",
+      lock.read()["n_trials"] == 2 and lock_reg.trials() == 3, f"{lock.read()['n_trials']} at the open")
+with open(lock.path) as fh:
+    edited = json.load(fh)
+edited["n_trials"] = 1
+with open(lock.path, "w") as fh:
+    json.dump(edited, fh)
+try:
+    lock.read()
+    check("lowering the stored trial count by hand breaks the hash", False)
+except LockError:
+    check("lowering the stored trial count by hand breaks the hash", True)
+edited["n_trials"] = 2
+with open(lock.path, "w") as fh:
+    json.dump(edited, fh)
 try:
     lock.open(lambda s, e: calls.append("again"))
     check("second open is refused", False)
@@ -218,13 +254,13 @@ reg = Registry(os.path.join(tmp, "registry"))
 alpha = XSMom("mom_12_1")
 dates = month_ends(IDX)
 pos_a = positions(alpha, panel, dates)
-r_a = backtest(pos_a, frames["close"])
+r_a = backtest(pos_a, frames["close"], log=False)  # recorded by hand below: the registry's own rules are under test
 e1 = reg.record("XSMom", {"feature": "mom_12_1"}, NAMES, (IDX[0].date(), IDX[-1].date()), r_a)
 e2 = reg.record("XSMom", {"feature": "mom_12_1"}, NAMES, (IDX[0].date(), IDX[-1].date()), r_a)
 check("same name, config, universe and window twice is one trial", e1["id"] == e2["id"] and e2["n_trials"] == 1)
 check("runs() keeps the latest row per key", len(reg.runs()) == 1 and sum(1 for _ in open(reg.file)) == 2)
 e3 = reg.record("XSMom", {"feature": "mom_6_1"}, NAMES, (IDX[0].date(), IDX[-1].date()),
-                backtest(positions(XSMom("mom_6_1"), panel, dates), frames["close"]))
+                backtest(positions(XSMom("mom_6_1"), panel, dates), frames["close"], log=False))
 check("a different config is a new trial", e3["n_trials"] == 2)
 e4 = reg.record("XSMom-renamed", {"feature": "mom_12_1"}, NAMES, (IDX[0].date(), IDX[-1].date()), r_a)
 check("an identical return stream under another name counts once", e4["n_trials"] == 2 and len(reg.runs()) == 3)
@@ -244,7 +280,7 @@ class Placebo(Alpha):
         return pd.Series(w / max(np.abs(w).sum(), 1) * 2, index=xs.index)
 
 
-r_p = backtest(positions(Placebo(), panel, dates), frames["close"])
+r_p = backtest(positions(Placebo(), panel, dates), frames["close"], log=False)
 check("placebo ranks do not", abs(sharpe(r_p[r_p != 0])) < 0.5, f"{sharpe(r_p[r_p != 0]):.2f}")
 
 print("\nWALK-FORWARD\n")
@@ -255,9 +291,79 @@ check("three folds, tests tile the end of the panel", len(table) == 3 and table[
 gaps = [(IDX.get_loc(pd.Timestamp(r.test_start)) - IDX.get_loc(pd.Timestamp(r.train_end))) for r in table.itertuples()]
 check("train ends at least the label horizon before test starts", min(gaps) >= 21, f"gaps {gaps}")
 check("stitched OOS covers every test session once", len(oos) == 600 and oos.index.is_unique)
-check("every grid variant is logged; the two whose streams were already logged count once",
-      reg.trials() == 3 and len(reg.runs()) == 6, f"{reg.trials()} trials, {len(reg.runs())} keys")
+stages = reg.runs()["tags"].map(lambda t: t.get("stage")).value_counts()
+check("every evaluation is logged (3 variants x 3 training folds, 3 test windows, 3 whole-window variants); "
+      "the two whole-window streams already logged count once",
+      (stages.get("walk_forward_train"), stages.get("walk_forward_test"), stages.get("walk_forward_grid")) == (9, 3, 3)
+      and reg.trials() == 2 + 9 + 3 + 1 and len(reg.runs()) == 3 + 15, f"{reg.trials()} trials, {len(reg.runs())} keys")
 check("walk-forward OOS on planted momentum is positive", sharpe(oos[oos != 0]) > 0, f"{sharpe(oos[oos != 0]):.2f}")
+
+print("\nTHE HARNESS LOGS EVERY EVALUATION\n")
+refused = []
+for attempt in (lambda: backtest(pos_a, frames["close"]),
+                lambda: window_returns(alpha, panel, frames["close"], IDX[1200], IDX[-1], dates),
+                lambda: walk_forward(XSMom, grid, panel, frames["close"], n_splits=3, test_size=200)):
+    try:
+        attempt()
+        refused.append(False)
+    except UnloggedEvaluation:
+        refused.append(True)
+check("with no registry attached, backtest, window_returns and walk_forward refuse to run", refused == [True] * 3)
+loose = []
+for flag in (None, 0, ""):
+    try:
+        backtest(pos_a, frames["close"], log=flag)
+        loose.append(False)
+    except UnloggedEvaluation:
+        loose.append(True)
+check("only the literal log=False runs unlogged (None, 0 and '' still raise), and it computes the same stream",
+      loose == [True] * 3 and backtest(pos_a, frames["close"], log=False).equals(r_a))
+default = use(os.path.join(tmp, "default"))
+backtest(pos_a, frames["close"], alpha=alpha, config={"feature": "mom_12_1"})
+backtest(pos_a, frames["close"], log=False)
+use(None)
+check("research.registry.use(path) attaches a default that every evaluation logs to, log=False included",
+      sorted(default.runs()["name"]) == ["XSMom[mom_12_1]", "backtest"])
+RULE = '''import pandas as pd
+
+from research.alpha import Alpha
+
+
+class Rule(Alpha):
+    name = "Rule"
+
+    def signal(self, xs):
+        return pd.Series(SIGN1.0 / len(xs), index=xs.index)
+'''
+
+
+def load_rule(tag, source):
+    path = os.path.join(tmp, f"rule_{tag}.py")
+    with open(path, "w") as fh:
+        fh.write(source)
+    spec = importlib.util.spec_from_file_location(f"rule_{tag}", path)
+    mod = sys.modules[spec.name] = importlib.util.module_from_spec(spec)  # inspect finds a class through its module
+    spec.loader.exec_module(mod)
+    return mod
+
+
+rules = [load_rule(t, RULE.replace("SIGN", s)).Rule() for t, s in (("a", ""), ("b", ""), ("c", "-"))]
+win = (IDX[0], IDX[-1])
+keys = [Registry.key("Rule", {}, NAMES, win, code_hash(x)) for x in rules]
+dyn_mod = load_rule("d", "x = 1\n")
+Dyn = type("Dyn", (Alpha,), {"__module__": "rule_d", "signal": lambda self, xs: pd.Series(0.0, index=xs.index)})
+before_edit = code_hash(Dyn)
+with open(dyn_mod.__file__, "a") as fh:
+    fh.write("x = 2\n")
+check("an edited rule is a new key, the same source in another file is the same key, and a class inspect cannot "
+      "read is keyed on its module file's bytes", keys[0] == keys[1] != keys[2] and code_hash(Dyn) != before_edit,
+      f"{keys[0]} {keys[1]} {keys[2]}")
+stored = reg.stream(e1["id"])
+runs = reg.runs()
+grid_ids = runs.loc[runs["tags"].map(lambda t: t.get("stage")) == "walk_forward_grid", "id"]
+check("each logged return stream round-trips from returns/<id>.parquet, so the DSR can be recomputed from disk",
+      stored.equals(r_a) and reg.dsr(stored) == reg.dsr(r_a)
+      and all(reg.stream(i).equals(full[json.dumps(g)]) for i, g in zip(grid_ids, grid)))
 
 print("\nADAPTER PARITY\n")
 price_store = FeatureStore(PRICE)
@@ -299,6 +405,47 @@ check("one changed training cell changes the data hash and the id", m3 != m1 and
 obj, meta = models.load(m1)
 check("load returns the pickled object and its metadata",
       obj == {"feature": "mom_12_1"} and meta["oos_score"] == 0.42 and meta["data_hash"] == data_hash(train))
+
+print("\nPRE-REGISTRATION CHECKER\n")
+PLANTED = """# Pre-registration: FXE-SHORT (planted)
+
+## 2. Universe and instrument
+- Instruments actually traded: FXE (Invesco CurrencyShares Euro Trust) shares, on Alpaca.
+- The sleeve goes short FXE when the euro carry turns negative.
+
+## 2a. Window provenance
+- ACK
+
+## 2b. Power
+- Forward track 252 sessions at a target net Sharpe of 1.0; a no-edge strategy passes 15.9% of the time.
+  If it passes anyway, Kelvin's judgment decides, named now.
+
+## 5. The test
+- **Prior layer:** backtest 2010-01-04 to 2022-12-30; untouched window 2023-01-03 to 2024-12-31, locked first.
+"""
+FXE = {"name": "Invesco CurrencyShares Euro Trust", "asset_class": "us_equity", "tradable": True, "shortable": False,
+       "marginable": True, "easy_to_borrow": False}
+real_asset, prereg_check.asset = prereg_check.asset, lambda sym: FXE if sym == "FXE" else None  # offline
+try:
+    ok, lines = prereg_check.tradability(PLANTED)
+finally:
+    prereg_check.asset = real_asset
+check("a planted pre-registration that shorts FXE fails tradability on Alpaca's shortable=False",
+      not ok and any("FXE" in s and "will not short" in s for s in lines), lines[0])
+repo = os.path.join(tmp, "repo")
+os.makedirs(os.path.join(repo, "fx"))
+with open(os.path.join(repo, "fx", "README.md"), "w") as fh:
+    fh.write("# FX carry\n\nDaily FXE closes, 2015-01-02 to 2024-12-31: Sharpe 0.41.\n")
+acked = prereg_check.provenance(PLANTED.replace("ACK", "fx/README.md published 2015-01-02 to 2024-12-31 on FXE; "
+                                                       "this window is a second look"), repo)
+silent = prereg_check.provenance(PLANTED.replace("ACK", "none"), repo)
+check("the same window hit passes provenance when section 2a names it and fails when it does not",
+      acked[0] and not silent[0] and any("fx/README.md" in s for s in acked[1]), acked[1][-1])
+ok, lines = prereg_check.power(PLANTED)
+check("power: no edge clears Sharpe 1.0 over 252 sessions 15.9% of the time and over 126 sessions 24.0% "
+      "(1 - N(bar x sqrt(N/252))); a 2b with a stated rate and a decision rule passes",
+      ok and abs(prereg_check.no_edge_pass_rate(252, 1.0) - 0.158655) < 1e-6
+      and abs(prereg_check.no_edge_pass_rate(126, 1.0) - 0.239750) < 1e-6, lines[1][:70])
 
 shutil.rmtree(tmp)
 n_fail = checks.count(False)

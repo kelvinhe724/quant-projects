@@ -9,10 +9,11 @@ The one-line honest summary: cross-sectional 12-1 momentum across 14 ETFs scores
 ```
 features/   store.py   Raw, Feature(name, fn, lag), FeatureStore.build(audit=True), cross_section, long_panel
             sets.py    PRICE (10 price/vol/momentum/liquidity features), macro(lags), edgar_counts(words)
-registry/   experiments.py   Registry.record / runs / trials / dsr
+registry/   experiments.py   Registry.record / stream / runs / trials / dsr, code_hash, use(path)
 alpha/      base.py    Alpha, positions, backtest, walk_forward, Sleeve (framework adapter), Untouched (the lock)
 models/     registry.py      ModelRegistry.save / load / entries, data_hash
-check.py    46 offline checks on a planted panel, exits 1 on failure
+check.py    57 offline checks on a planted panel, exits 1 on failure
+prereg_check.py   a PREREG.md against template v2: tradability, window provenance, power
 run.py      the worked example; writes reports/
 ```
 
@@ -36,7 +37,7 @@ The lag-1 convention costs one session of staleness at a month-end rebalance. Th
 
 ## Experiment registry
 
-`Registry.record(name, config, universe, window, returns)` appends one JSON line. The key is the hash of name, config, sorted universe and window; `runs()` keeps the latest line per key, and `trials()` counts distinct keys with identical return streams (same daily Sharpe and length) counted once, the rule `framework/book/validate.py::trials()` uses. `dsr(returns)` calls `validate.deflated_sharpe_ratio` and `validate.probabilistic_sharpe_ratio` (purgedcv 0.1.5, the functions the book's validation uses) with that count and the variance of the logged daily Sharpes. Nothing here reimplements the formula.
+`Registry.record(name, config, universe, window, returns, code=...)` appends one JSON line and writes the return stream to `returns/<id>.parquet` (`stream(id)` reads it back, so any DSR can be recomputed from disk). The key is the hash of name, config, sorted universe, window and code: `code_hash(...)` of the rule (an Alpha's class source through its MRO, a function's source, a module's file bytes, falling back to the module file when inspect finds no source), or, when the caller passes none, the hash of the file that called `record`, so an edited rule is a new trial rather than a replaced row. `runs()` keeps the latest line per key, and `trials()` counts distinct keys with identical return streams (same daily Sharpe and length) counted once, the rule `framework/book/validate.py::trials()` uses. `dsr(returns)` calls `validate.deflated_sharpe_ratio` and `validate.probabilistic_sharpe_ratio` (purgedcv 0.1.5, the functions the book's validation uses) with that count and the variance of the logged daily Sharpes. Nothing here reimplements the formula.
 
 The registry is per project: `research/reports/registry/` counts the looks taken here, `framework/book/reports/trials.csv` counts the book's. A W1 model that wants to be deflated against both passes the other count as `extra_trials`.
 
@@ -50,11 +51,13 @@ class Alpha:
 
 The research path is vectorised: `positions()` calls `signal` on the cross-section at each rebalance date, `backtest()` holds those weights until the next date with a one-session lag and 10 bps on traded weight. `Sleeve(alpha, store)` is a framework `Strategy`: at each rebalance it rebuilds the feature panel from the engine's as-of `Bars` view, takes the last row, and hands `signal`'s weights to the engine, which fills them at the next open under the book's cost model and risk overlay. The two paths compute features from different objects (the full panel vs the as-of view), so their targets agree only if every feature is causal; `check.py` asserts they agree to 1e-12 at every month end, and that a peeking feature breaks the agreement.
 
-`walk_forward(make_alpha, grid, panel, close, n_splits, test_size)` uses purgedcv's `WalkForwardSplit` with the label horizon purged from the end of each training window, fits every grid variant on the training rows, keeps the best training Sharpe, holds it on the test window, and stitches the test returns. Every variant's full-window run is logged as a trial.
+`walk_forward(make_alpha, grid, panel, close, n_splits, test_size)` uses purgedcv's `WalkForwardSplit` with the label horizon purged from the end of each training window, fits every grid variant on the training rows, keeps the best training Sharpe, holds it on the test window, and stitches the test returns.
+
+The harness logs every evaluation itself. `backtest`, `window_returns` and `walk_forward` write one registry row per evaluation (for `walk_forward`: every variant on every fold's training rows, the pick on every test window, every variant on the whole window), keyed on the Alpha's code, the cost and a hash of the positions held, to the registry passed as `registry=` or the default `research.registry.use(path)` attached. With neither they raise `UnloggedEvaluation`; the only way to evaluate unlogged is the literal `log=False`, which `grep` finds, and it never stops an attached registry from logging.
 
 ## The untouched window
 
-`Untouched(path).lock(calendar, frac, data_hash)` writes the window's start, end, session count and the data hash, plus a hash of the whole file (those four, the opened stamp and the stored result). Locking again with the same window is a no-op; any other window, or the same dates on different data, raises `LockError`, and so does a lock file whose contents no longer match its hash. `open(fn)` runs `fn(start, end)` once, stores the result in the lock file and refuses every later call with `UntouchedWindowUsed`. A rerun of `run.py` reports the stored result. To open the window again you have to delete the file by hand, and the commit history shows that you did.
+`Untouched(path).lock(calendar, frac, data_hash)` writes the window's start, end, session count and the data hash, plus a hash of the whole file (those four, the opened stamp and the stored result). Locking again with the same window is a no-op; any other window, or the same dates on different data, raises `LockError`, and so does a lock file whose contents no longer match its hash. `open(fn, registry=...)` runs `fn(start, end)` once, stores the result in the lock file and refuses every later call with `UntouchedWindowUsed`. It needs a registry (there is no `log=False` here) and writes that registry's trial count at the moment of opening, before `fn` runs, into the lock and its hash, so the DSR denominator of the one read is frozen with the result. Locks opened before the count existed still verify. A rerun of `run.py` reports the stored result. To open the window again you have to delete the file by hand, and the commit history shows that you did.
 
 `open` marks the window spent before it runs `fn`, so a crash inside `fn` also spends it. That is on purpose: a window you can retry until the code works is not untouched.
 
@@ -116,7 +119,8 @@ The DSR on the window uses the 4 trials logged before the window was read.
 - **No data lake yet.** `Raw.from_lake` is written to a one-line contract and tested against a stub. When the lake lands its loader will need to match, or this function changes.
 - **The audit perturbs one session.** It proves a feature does not read that session from earlier rows. A feature that peeks only at rows the audit did not perturb passes; `audit(raw, at=...)` can be run at more dates.
 - **Rebuilding features per rebalance is O(T) per call**, so a daily-rebalance `Sleeve` over 23 years rebuilds the panel 5,850 times. Fine for the 14-ETF store (about 30 ms a build), not for thousands of names.
-- **The registry keys on config, not code.** A change to an Alpha's `signal` under the same config replaces the old row instead of adding a trial. Tag code versions in `config` when that matters.
+- **The code hash covers what is passed, not what it calls.** An Alpha is keyed on its class source, so a feature function or a module constant edited elsewhere is not in `code`; on the harness path the positions hash catches it, but a direct `record()` should pass `code_hash(...)` over every module its rule lives in (as `vol-risk-premium/prior.py`, `xs-trend/prior.py` and `kalshi-wide/replay.py` do). A cosmetic edit makes new keys, and their identical streams count once.
+- **The worked example above predates harness logging.** A rerun of `run.py` now also logs each walk-forward fold's training and test evaluations and the full-panel research path: 22 trials instead of 5, pre-window DSR 0.29 instead of 0.59 (checked against a copy of `reports/`; the window stays spent and its stored result is unchanged).
 - **Lag is in sessions, not release calendars.** Macro publication lags vary by series and month; `macro({...: lag})` takes one number per series.
 - **Research and engine numbers are not comparable head to head**: 10 bps flat with no overlay against the book's commission, spread, impact, borrow, vol target and buffer.
 

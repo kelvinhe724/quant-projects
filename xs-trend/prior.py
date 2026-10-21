@@ -27,7 +27,7 @@ from research.alpha.base import (Alpha, Untouched, UntouchedWindowUsed, month_en
                                  walk_forward)
 from research.features import Feature, FeatureStore, Raw  # noqa: E402
 from research.features.store import panel_hash  # noqa: E402
-from research.registry import Registry  # noqa: E402
+from research.registry import Registry, code_hash  # noqa: E402
 
 
 def _import(project, module):
@@ -40,6 +40,7 @@ def _import(project, module):
 
 mom = _import("momentum", "momentum")        # ma_signal, long_only_weights, MIN_NAMES: the published signal code
 mom_data = _import("momentum", "data")       # UNIVERSE (the published 190 names) and the eligibility constants
+CODE = code_hash(sys.modules[__name__], mom, mom_data)  # this file and the momentum code it runs
 
 REPORTS = os.path.join(HERE, "reports")
 LOCK = os.path.join(REPORTS, "untouched.json")
@@ -279,7 +280,7 @@ def main(open_window=False):
                                              frames["close"].loc[ins], FOLDS, TEST_SIZE, cost_bps=WF_COST_BPS,
                                              registry=reg, universe=names)
     reg.record("XSTrend walk-forward", {"folds": FOLDS, "test_size": TEST_SIZE, "cost_bps": WF_COST_BPS}, names,
-               (ins[0].date(), ins[-1].date()), wf_oos, tags={"stage": "walk_forward_oos"})
+               (ins[0].date(), ins[-1].date()), wf_oos, tags={"stage": "walk_forward_oos"}, code=CODE)
 
     # (c) the three configurations on this engine, in-sample only.
     runs = {k: run_alpha(a, panel, frames, b["liquidity"], pre_end) for k, a in ALPHAS.items()}
@@ -289,7 +290,7 @@ def main(open_window=False):
             r = res[p]["ret"].loc[IS_START:IS_END]
             stats[(k, p)] = row(res[p], IS_START, IS_END)
             reg.record(str(ALPHAS[k]), config(k, ALPHAS[k], p), names, (IS_START, IS_END), r,
-                       tags={"stage": "in_sample"})
+                       tags={"stage": "in_sample"}, code=CODE)
 
     # per-fold Sharpe of the scored PIT path on the walk-forward's own test windows
     r_pit = runs["pit"]["scored"]["ret"]
@@ -384,7 +385,7 @@ def main(open_window=False):
             r = full["scored"]["ret"].loc[start:end]
             res[k] = {**row(full["scored"], start, end), "unlevered_sharpe": row(full["unlevered"], start, end)["sharpe"]}
             reg.record(str(ALPHAS[k]), config(k, ALPHAS[k], "scored", "untouched"), names, (start.date(), end.date()),
-                       r, tags={"stage": "untouched"})
+                       r, tags={"stage": "untouched"}, code=CODE)
             if k == "pit":
                 res["dsr"] = reg.dsr(r)
                 res["kill_dates"] = [str(x) for x in kill_dates(r)]
@@ -392,7 +393,7 @@ def main(open_window=False):
         return res
 
     try:
-        result = lock.open(fn)
+        result = lock.open(fn, registry=reg)
         print("\nUNTOUCHED WINDOW, opened now:")
     except UntouchedWindowUsed as e:
         result = lock.result

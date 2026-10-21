@@ -88,8 +88,8 @@ check("no position while z is between exit and entry once flat",
 
 # the trade earns the excursion's give-back: it enters after +20 bp and exits after
 # the basis has fallen back, so before costs it makes about 20 bp of P, minus 2 x cost
-r0 = backtest(pos, P, cost_bps=0.0)
-r17 = backtest(pos, P, cost_bps=17.0)
+r0 = backtest(pos, P, cost_bps=0.0, log=False)
+r17 = backtest(pos, P, cost_bps=17.0, log=False)
 gross = (1 + r0).prod() - 1
 check("gross P&L of the planted trade is close to the 20 bp excursion", 15e-4 < gross < 25e-4)
 check("net of 17 bp a side the same trade loses about 34 bp against gross",

@@ -181,7 +181,7 @@ print("\nHARNESS PRICE MAPPING\n")
 p = OPEN.shift(-1)
 pos = pd.DataFrame(0.0, index=CAL[:5], columns=NAMES)
 pos.loc[CAL[2], "S00"] = 1.0
-r = backtest(pos, p.iloc[:6], cost_bps=0.0)
+r = backtest(pos, p.iloc[:6], cost_bps=0.0, log=False)
 check("a weight set on row t earns open(t + 2) / open(t + 1) - 1 on row t + 1",
       abs(r.loc[CAL[3]] - (OPEN.loc[CAL[4], "S00"] / OPEN.loc[CAL[3], "S00"] - 1)) < 1e-12 and r.loc[CAL[2]] == 0)
 
@@ -213,12 +213,12 @@ trim = CAL[:-1]
 res = {}
 for sig in ("sent", "react", "resid"):
     pos = positions(EventDrift(sig, H), panel.loc[trim], trim)
-    res[sig] = sharpe(backtest(pos, p.loc[trim]))
+    res[sig] = sharpe(backtest(pos, p.loc[trim], log=False))
 shuffled = panel.copy()
 col = shuffled["sent_pct"]
 shuffled["sent_pct"] = pd.DataFrame(rng.permutation(col.to_numpy().ravel()).reshape(col.shape), index=col.index,
                                     columns=col.columns)
-res["placebo"] = sharpe(backtest(positions(EventDrift("sent", H), shuffled.loc[trim], trim), p.loc[trim]))
+res["placebo"] = sharpe(backtest(positions(EventDrift("sent", H), shuffled.loc[trim], trim), p.loc[trim], log=False))
 check("sentiment drift scores well over 1 on the planted panel", res["sent"] > 1.0, f"{res['sent']:.2f}")
 check("residual sentiment scores positive net of 10 bps", res["resid"] > 0.3, f"{res['resid']:.2f}")
 check("reaction drift scores positive", res["react"] > 0.3, f"{res['react']:.2f}")

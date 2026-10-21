@@ -1,3 +1,3 @@
-from .experiments import Registry
+from .experiments import Registry, attached, code_hash, use
 
-__all__ = ["Registry"]
+__all__ = ["Registry", "attached", "code_hash", "use"]

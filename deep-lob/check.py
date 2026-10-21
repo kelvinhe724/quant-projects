@@ -91,14 +91,14 @@ print("\nEXECUTION AND FEES\n")
 idx = pd.date_range("2026-01-01", periods=8, freq="s", tz="UTC")
 mid = pd.Series([100.0, 100.0, 101.0, 101.0, 101.0, 101.0, 101.0, 101.0], index=idx)
 pos = pd.Series([1.0, 0, 0, 0, 0, 0, 0, 0], index=idx)
-r = lob.pnl(pos, mid)
+r = lob.pnl(pos, mid, log=False)
 check("a position decided at t fills at bar t+1 and earns the move from t+1 to t+2",
       np.isclose(r.iloc[2], 0.01 - 1e-4) and np.isclose(r.iloc[3], -1e-4) and np.isclose(r.drop(r.index[[2, 3]]).sum(), 0))
 jump = pd.Series([100.0, 101.0, 101.0, 101.0, 101.0, 101.0, 101.0, 101.0], index=idx)
 check("a jump between bar t and t+1 is not earned by a position decided at t",
-      np.isclose(lob.pnl(pos, jump).sum(), -2e-4))
+      np.isclose(lob.pnl(pos, jump, log=False).sum(), -2e-4))
 check("the fee is 1 bp per unit traded, charged twice on a round trip",
-      np.isclose(lob.pnl(pos, jump, fee_bps=2.0).sum(), -4e-4))
+      np.isclose(lob.pnl(pos, jump, fee_bps=2.0, log=False).sum(), -4e-4))
 p = pd.DataFrame({-1: [0.1, 0.6, 0.3, 0.2], 0: [0.4, 0.3, 0.4, 0.6], 1: [0.5, 0.1, 0.3, 0.2]}, index=idx[:4])
 check("positions follow P(up) - P(down) against tau, flat inside it",
       list(lob.positions(p, 0.3)) == [1.0, -1.0, 0.0, 0.0] and list(lob.positions(p, 0.5)) == [0.0, 0.0, 0.0, 0.0])
@@ -148,7 +148,7 @@ check("deeplob's validation loss improved from its first epoch",
       or len(models["deeplob"].history) == 1)
 p5 = lob.proba_on(models["logit-imbalance"], frame, te[0], te[-1])[5]
 pos = lob.positions(p5, 0.1)
-r = lob.pnl(pos, frame["mid"].loc[te])
+r = lob.pnl(pos, frame["mid"].loc[te], log=False)
 check(f"the planted edge survives the 1 bp fee at a 1-second fill ({lob.summarise(r, pos)['bps_per_trade']:.2f} bps a trade)",
       r.sum() > 0)
 shuffled = Y.copy()

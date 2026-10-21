@@ -269,7 +269,7 @@ def main(df=None, reports=REPORTS, categories=None):
         return out
 
     try:
-        result = lock.open(final)
+        result = lock.open(final, registry=registry)
         print(f"untouched window opened now; result stored in {lock.path}")
         curves = side["curves"]
         side["predictions"].to_csv(os.path.join(reports, "untouched_predictions.csv"), index=False)

@@ -18,10 +18,12 @@ import pandas as pd
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import data  # noqa: E402
+import vrp  # noqa: E402
 from research.alpha.base import Untouched  # noqa: E402
-from research.registry.experiments import Registry  # noqa: E402
+from research.registry.experiments import Registry, code_hash  # noqa: E402
 from vrp import TRADING_DAYS, metrics, simulate  # noqa: E402
 
+CODE = code_hash(vrp, sys.modules[__name__])  # the simulator and this file: an edit to either is a new trial
 REPORTS = data.REPORTS
 LOCK = REPORTS / "untouched.json"
 FROZEN = REPORTS / "spread-frozen.json"
@@ -138,7 +140,7 @@ def main(open_window=False):
         row, r = score(df, df.index[0], pre_end, off, sp)
         rows.append(row)
         reg.record("VRP", {"basis": BASIS, "spread": sp, "cap": CAP, "offset": off, "path": "sized",
-                           "spread_frozen": frozen}, ["XSP"], (df.index[0], pre_end), r)
+                           "spread_frozen": frozen}, ["XSP"], (df.index[0], pre_end), r, code=CODE)
     tab = pd.DataFrame(rows).set_index("offset")
     pd.set_option("display.width", 160)
     print(f"\nPRE-WINDOW {df.index[0].date()} -> {pre_end.date()}, {len(OFFSETS)} offsets, each a logged trial "
@@ -160,12 +162,12 @@ def main(open_window=False):
     def fn(start, end):
         row, r = score(df, start, end, 0, sp)
         reg.record("VRP", {"basis": BASIS, "spread": sp, "cap": CAP, "offset": 0, "path": "sized",
-                           "window": "untouched"}, ["XSP"], (start, end), r)
+                           "window": "untouched"}, ["XSP"], (start, end), r, code=CODE)
         row["dsr"] = reg.dsr(r)
         row["clears"] = bool(row["sized_sharpe"] > 0)
         return row
 
-    res = lock.open(fn)
+    res = lock.open(fn, registry=reg)
     print("\nUNTOUCHED WINDOW, opened once:")
     print(json.dumps(res, indent=2, default=str))
     print("\nCLEARS the prior layer (sized Sharpe > 0): " + ("YES -> forward track" if res["clears"]

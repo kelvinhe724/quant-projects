@@ -6,6 +6,12 @@ proportional cost. The book path wraps the same Alpha in Sleeve, a
 framework Strategy that rebuilds the features from the engine's as-of view
 at each rebalance and hands the engine the same weights; check.py proves
 the two paths return identical targets.
+
+Every backtest, window_returns and walk_forward call is an evaluation and
+logs itself to the attached registry (passed in, or research.registry.use),
+return stream included; with none attached they raise UnloggedEvaluation
+unless called with log=False. Untouched.open records the registry's trial
+count at the moment of opening in the lock.
 """
 import hashlib
 import json
@@ -17,7 +23,8 @@ from purgedcv import WalkForwardSplit
 
 from framework.book.strategies import month_ends
 from framework.engine import Strategy, sharpe
-from research.features.store import Raw, cross_section, long_panel
+from research.features.store import Raw, cross_section, long_panel, panel_hash
+from research.registry.experiments import attached, code_hash
 
 COST_BPS = 10.0
 
@@ -48,8 +55,20 @@ def positions(alpha, panel, dates):
     return pd.DataFrame(rows).T.reindex(columns=panel.columns.get_level_values("instrument").unique()).fillna(0.0)
 
 
-def backtest(pos, close, cost_bps=COST_BPS):
-    """Net daily returns: targets set at t earn t+1, held until the next target, cost on traded weight."""
+class UnloggedEvaluation(RuntimeError):
+    """An evaluation with no registry attached and no explicit log=False."""
+
+
+def _registry(registry, log):
+    """The registry this evaluation logs to; None only when the caller passed the literal log=False."""
+    reg = attached(registry)
+    if reg is None and log is not False:
+        raise UnloggedEvaluation("no registry attached: pass registry=Registry(path), call "
+                                 "research.registry.use(path), or pass log=False to evaluate unlogged")
+    return reg
+
+
+def _returns(pos, close, cost_bps):
     held = pos.reindex(close.index).ffill().fillna(0.0)
     ret = close.pct_change().fillna(0.0)
     turnover = held.diff().abs().sum(axis=1).fillna(0.0)
@@ -57,14 +76,40 @@ def backtest(pos, close, cost_bps=COST_BPS):
     return pnl.rename("return")
 
 
-def window_returns(alpha, panel, close, start, end, dates, cost_bps=COST_BPS):
-    """Net returns from start to end, entering with the last position set before `start`."""
+def _log(reg, r, pos, cost_bps, alpha, config, universe, tags):
+    """One registry row per evaluation, keyed on the alpha's code, the cost and a hash of the positions it held."""
+    if reg is not None:
+        reg.record(str(alpha) if alpha is not None else "backtest",
+                   {**(config or {}), "cost_bps": cost_bps, "positions": panel_hash(pos)},
+                   universe, (r.index[0], r.index[-1]), r, tags=tags,
+                   code=code_hash(alpha) if alpha is not None else None)
+    return r
+
+
+def backtest(pos, close, cost_bps=COST_BPS, registry=None, log=True, alpha=None, config=None, universe=None,
+             tags=None):
+    """Net daily returns: targets set at t earn t+1, held until the next target, cost on traded weight.
+
+    Logged to the attached registry, always; with none attached it raises
+    unless log=False. `alpha` names the rule and hashes its code; without it
+    the row is named "backtest" and keyed on the positions and the calling file.
+    """
+    reg = _registry(registry, log)
+    return _log(reg, _returns(pos, close, cost_bps), pos, cost_bps, alpha, config, universe or list(close.columns),
+                tags)
+
+
+def window_returns(alpha, panel, close, start, end, dates, cost_bps=COST_BPS, registry=None, log=True, config=None,
+                   universe=None, tags=None):
+    """Net returns from start to end, entering with the last position set before `start`; logged as backtest is."""
+    reg = _registry(registry, log)
     dates = pd.DatetimeIndex(dates)
     keep = dates[(dates >= start) & (dates <= end)]
     before = dates[dates < start][-1:]
     pos = positions(alpha, panel, before.append(keep))
     first = before[0] if len(before) else start
-    return backtest(pos, close.loc[first:end], cost_bps).loc[start:]
+    r = _returns(pos, close.loc[first:end], cost_bps).loc[start:]
+    return _log(reg, r, pos, cost_bps, alpha, config, universe or list(close.columns), tags)
 
 
 def forward_returns(close, horizon):
@@ -73,7 +118,7 @@ def forward_returns(close, horizon):
 
 
 def walk_forward(make_alpha, grid, panel, close, n_splits, test_size, rebalance="month_end", horizon=21,
-                 cost_bps=COST_BPS, registry=None, universe=None, score=None):
+                 cost_bps=COST_BPS, registry=None, universe=None, score=None, log=True):
     """Rolling train/test over `grid`: fit every variant on the train window, keep the best train Sharpe, hold it on test.
 
     Each fold's training rows are purged by `horizon` sessions before the
@@ -83,7 +128,15 @@ def walk_forward(make_alpha, grid, panel, close, n_splits, test_size, rebalance=
     by sqrt(252), which is only a daily Sharpe when the bars are days, so
     an intraday project passes its own. Returns (table, stitched OOS
     returns, per-variant full-window returns).
+
+    Every evaluation is logged: each variant on each fold's training rows
+    (stage walk_forward_train), the pick on each test window
+    (walk_forward_test) and every variant on the whole window
+    (walk_forward_grid). With no registry attached it raises before any
+    work unless log=False.
     """
+    reg = _registry(registry, log)
+    universe = universe or list(close.columns)
     score = score or (lambda r: sharpe(r[r != 0]))
     cal = panel.index
     X = long_panel(panel)
@@ -101,22 +154,23 @@ def walk_forward(make_alpha, grid, panel, close, n_splits, test_size, rebalance=
         scores = {}
         for i, params in enumerate(grid):
             a = make_alpha(**params).fit(X.loc[train], y.loc[train])
-            r = backtest(positions(a, panel, dates[dates.isin(train)]), close.loc[train], cost_bps)
+            pos = positions(a, panel, dates[dates.isin(train)])
+            r = _log(reg, _returns(pos, close.loc[train], cost_bps), pos, cost_bps, a, params, universe,
+                     {"stage": "walk_forward_train", "fold": k + 1})
             scores[i] = (score(r), a)
         best = max(scores, key=lambda i: scores[i][0] if np.isfinite(scores[i][0]) else -np.inf)
         a = scores[best][1]
-        r = window_returns(a, panel, close, test[0], test[-1], dates, cost_bps)
+        r = window_returns(a, panel, close, test[0], test[-1], dates, cost_bps, registry=reg, log=log,
+                           config=grid[best], universe=universe, tags={"stage": "walk_forward_test", "fold": k + 1})
         picked.append(r)
         rows.append({"fold": k + 1, "train_start": train[0].date(), "train_end": train[-1].date(),
                      "test_start": test[0].date(), "test_end": test[-1].date(), "picked": json.dumps(grid[best]),
                      "picked_train_sharpe": scores[best][0], "picked_test_sharpe": score(r)})
     for params in grid:
         a = make_alpha(**params).fit(X, y)
-        r = backtest(positions(a, panel, dates), close, cost_bps)
-        full[json.dumps(params)] = r
-        if registry is not None:
-            registry.record(str(a), params, universe or list(close.columns), (cal[0].date(), cal[-1].date()), r,
-                            tags={"stage": "walk_forward_grid"})
+        pos = positions(a, panel, dates)
+        full[json.dumps(params)] = _log(reg, _returns(pos, close, cost_bps), pos, cost_bps, a, params, universe,
+                                        {"stage": "walk_forward_grid"})
     oos = pd.concat(picked)
     return pd.DataFrame(rows).set_index("fold"), oos, full
 
@@ -150,12 +204,12 @@ class Untouched:
     """The final window: locked by hash on first sight, opened once, refused after that.
 
     lock() writes start, end, session count and the data hash, plus a hash
-    of the whole body (those four, the opened_at stamp and the result), so
-    nulling opened_at by hand breaks the hash too. Locking again with
-    anything different raises; so does a lock file whose hash no longer
-    matches its contents. open(fn) runs fn
-    once and stores its result; a second open raises, and the stored
-    result is what a rerun reports.
+    of the whole body (those four, the opened_at stamp, the result and the
+    trial count at the open), so nulling opened_at by hand breaks the hash
+    too. Locking again with anything different raises; so does a lock file
+    whose hash no longer matches its contents. open(fn) runs fn once and
+    stores its result; a second open raises, and the stored result is what
+    a rerun reports.
     """
 
     def __init__(self, path):
@@ -165,7 +219,8 @@ class Untouched:
 
     @classmethod
     def digest(cls, body):
-        keys = cls.KEYS + ("opened_at", "result")
+        # n_trials joined the hash when open() began recording it; a lock opened before that verifies without it
+        keys = cls.KEYS + ("opened_at", "result") + (("n_trials",) if "n_trials" in body else ())
         return hashlib.sha256(json.dumps({k: body.get(k) for k in keys}, sort_keys=True,
                                          default=str).encode()).hexdigest()[:16]
 
@@ -208,12 +263,20 @@ class Untouched:
     def result(self):
         return self.read()["result"]
 
-    def open(self, fn):
-        """Run fn(start, end) once, store its JSON-able result, refuse ever after."""
+    def open(self, fn, registry=None):
+        """Run fn(start, end) once, store its JSON-able result, refuse ever after.
+
+        The registry's trial count at the moment of opening, before fn runs,
+        is written into the lock with the stamp, so the DSR denominator of the
+        one read is frozen with its result. An open needs a registry (passed
+        in or research.registry.use); there is no log=False here.
+        """
         body = self.read()
         if body["opened_at"] is not None:
             raise UntouchedWindowUsed(f"{self.path} was opened at {body['opened_at']}; the window is spent")
+        reg = _registry(registry, True)
         body["opened_at"] = pd.Timestamp.now().isoformat(timespec="seconds")
+        body["n_trials"] = reg.trials()
         self.write(body)
         body["result"] = fn(pd.Timestamp(body["start"]), pd.Timestamp(body["end"]))
         self.write(body)
