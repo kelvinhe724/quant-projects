@@ -98,7 +98,12 @@ def mark(chain, strike, expiry):
     if len(c) < 2:
         return spot, np.nan, np.nan, False
     call, put = c[c.cp == "C"].iloc[0], c[c.cp == "P"].iloc[0]
-    return spot, float((call.bid + call.ask + put.bid + put.ask) / 2), float(c["T"].iloc[0]), False
+    quotes = [call.bid, call.ask, put.bid, put.ask]
+    # a leg quoted 0/0 is no quote, not a worthless straddle (Yahoo zeroes XSP quotes after the 15:15 CT close on
+    # some days; the 2026-10-21 snapshot booked +$1,599 on one): mark the session "no quote", catch up next mark
+    if any(pd.isna(q) for q in quotes) or (call.bid + call.ask) <= 0 or (put.bid + put.ask) <= 0:
+        return spot, np.nan, float(c["T"].iloc[0]), False
+    return spot, float(sum(quotes) / 2), float(c["T"].iloc[0]), False
 
 
 def run(ticker="^XSP", out=None, units=UNITS):
@@ -123,14 +128,23 @@ def run(ticker="^XSP", out=None, units=UNITS):
             c = open_c[-1]
             spot, smid, T, settled = mark(chain, c["strike"], pd.Timestamp(c["expiry"]))
             prev = [m for m in (list(marks.to_dict("records")) + new_m) if pd.Timestamp(m["start"]) == pd.Timestamp(c["start"])]
-            last_mid = prev[-1]["straddle_mid"] if prev else c["entry_mid"]
+            valid = [m for m in prev if not pd.isna(m["straddle_mid"])]
+            last_mid = valid[-1]["straddle_mid"] if valid else c["entry_mid"]   # "no quote" sessions carry no mid
             last_sh = prev[-1]["hedge_shares"] if prev else 0.0
             last_spy = prev[-1]["spy"] if prev else spy.get(pd.Timestamp(c["start"]), np.nan)
             spy_now = spy.get(day, np.nan)
-            if np.isnan(smid) or np.isnan(spy_now):
+            if np.isnan(spy_now):
                 new_m.append({"date": day, "start": c["start"], "spot": spot, "spy": spy_now, "straddle_mid": smid,
                               "hedge_shares": last_sh, "pnl_option": np.nan, "pnl_hedge": np.nan, "cost": np.nan,
                               "pnl": np.nan, "status": "no mark"})
+                continue
+            if np.isnan(smid):
+                # no option quote: the hedge still moved, so book it; the option leg is booked against the last valid
+                # mid at the next quoted session; the hedge is not re-struck without a mark
+                pnl_hdg = last_sh * (spy_now - last_spy)
+                new_m.append({"date": day, "start": c["start"], "spot": spot, "spy": spy_now, "straddle_mid": np.nan,
+                              "hedge_shares": last_sh, "pnl_option": 0.0, "pnl_hedge": pnl_hdg, "cost": 0.0,
+                              "pnl": pnl_hdg, "status": "no quote"})
                 continue
             pnl_opt = (last_mid - smid) * MULTIPLIER * units
             pnl_hdg = last_sh * (spy_now - last_spy)

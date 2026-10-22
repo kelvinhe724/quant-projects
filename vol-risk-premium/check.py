@@ -187,5 +187,15 @@ check("prior: the real untouched window is locked on 2023-04-28, its hash verifi
       "it was opened once with a frozen spread and a recorded result",
       _vb.get("start") == "2023-04-28" and (not lock.opened or (os.path.exists(prior.FROZEN) and _vb.get("result") is not None)))
 
+# forward track: a 0/0 quoted leg is "no quote" (nan), never a worthless straddle; 2026-10-21 booked +$1,599 on one
+import forward as _fwd
+_chain = pd.DataFrame({"snapshot": ["2026-10-21 20:38:21"] * 2, "expiry": [pd.Timestamp("2026-11-02")] * 2,
+                       "strike": [780.0, 780.0], "cp": ["C", "P"], "bid": [0.0, 0.0], "ask": [0.0, 0.0],
+                       "T": [0.03, 0.03], "spot": [775.7, 775.7]})
+_mid0 = _fwd.mark(_chain, 780.0, pd.Timestamp("2026-11-02"))
+check("forward mark: a 0/0 quoted straddle is no quote (nan), not a mid of 0", np.isnan(_mid0[1]) and not _mid0[3])
+_mid1 = _fwd.mark(_chain.assign(bid=[9.0, 5.0], ask=[9.5, 5.5]), 780.0, pd.Timestamp("2026-11-02"))
+check("forward mark: a quoted straddle marks at the mid", abs(_mid1[1] - 14.5) < 1e-9)
+
 print(f"\n{sum(checks)}/{len(checks)} passed")
 raise SystemExit(0 if all(checks) else 1)

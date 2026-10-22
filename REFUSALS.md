@@ -116,6 +116,7 @@ Survivorship was the largest unquantified caveat in every equity project here. `
 - Every project's `check.py` fits its estimators to simulated data with planted parameters. That is a test of the code, and it is never reported as a result.
 
 ---
+- **`vol-risk-premium/` forward track, the 2026-10-21 mark (found 2026-10-22, fixed the same day).** The 15:38 CT snapshot carried a 0/0 quote on both legs of the open K780 straddle (Yahoo zeroes XSP quotes after the 15:15 CT close on some days) and `forward.mark()` took the 0.0 mid at face value, booking +$1,599 on the option leg: P&L to date printed $1,627.67. Rule now: a 0/0 leg is "no quote"; the hedge still books for the session; the option leg is booked against the last valid mid at the next quoted session; the hedge is not re-struck without a mark. The 10-21 row was re-marked under that rule (hedge only, -$291.87) and the rejected row is kept in `reports/forward/marks.rejected.csv`. P&L to date, per unit: $1,627.67 (wrong) -> $30.61. The entry path already refused zero quotes; the mark path did not. The deeper fix from the 2026-10-07 research (snapshot XSP inside its 15:15 CT session, item N3) is still not done, so the rule will fire again until it is.
 
 ## 6. What is still wrong
 

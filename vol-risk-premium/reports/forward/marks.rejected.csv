@@ -1,0 +1,2 @@
+date,start,spot,spy,straddle_mid,hedge_shares,pnl_option,pnl_hedge,cost,pnl,status,reason
+2026-10-21,2026-10-06,775.719970703125,773.0900268554688,0.0,-18.989874603383665,1599.0,-291.8677485461504,1.9455042008871704,1305.1867472529625,open,"rejected 2026-10-22: both legs quoted 0/0 in the 15:38 CT snapshot; forward.mark() took the 0.0 mid at face value (+$1,599 option leg). Re-marked under the no-quote rule."

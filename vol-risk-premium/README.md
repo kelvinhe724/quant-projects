@@ -379,3 +379,7 @@ the measured gap.
 expanding window every 21 days and never see future data, but the model
 specification, the horizon and the refit frequency were chosen by me knowing how
 the sample turned out.
+
+## Forward track note
+
+*2026-10-22:* a session whose straddle legs are quoted 0/0 is marked "no quote" (hedge booked, option leg caught up at the next quoted session); the 2026-10-21 mark had booked +$1,599 on such a quote and was re-marked. See `REFUSALS.md` §5 and `reports/forward/marks.rejected.csv`.
