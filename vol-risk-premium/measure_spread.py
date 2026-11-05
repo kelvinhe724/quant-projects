@@ -1,8 +1,8 @@
 """Measure the XSP ATM straddle spread from the collector's own snapshots (PREREG.md §4).
 
 Prints the per-session table. Once ten XSP sessions exist it writes
-reports/spread-frozen.json with the larger of the measured median and the 1.5%
-provisional number, and refuses to overwrite it afterwards: the number is
+reports/spread-frozen.json with the larger of the median over the FIRST ten sessions
+and the 1.5% provisional number, and refuses to overwrite it afterwards: the number is
 frozen the first time it is written.
 
 Run:  ../.venv/bin/python3 measure_spread.py [--ticker ^XSP] [--min-sessions 10]
@@ -50,6 +50,8 @@ def atm_straddles(ticker, start="2026-09-01", end=None):
         k = min(strikes, key=lambda x: abs(x - spot))
         c = chain[(chain.cp == "C") & (chain.strike == k)].iloc[0]
         p = chain[(chain.cp == "P") & (chain.strike == k)].iloc[0]
+        if any(pd.isna(x) for x in (c.bid, c.ask, p.bid, p.ask)) or c.bid + c.ask <= 0 or p.bid + p.ask <= 0:
+            continue    # a zeroed or missing leg is no quote (2026-10-21 carried 0/0 XSP quotes); forward.mark() agrees
         mid = (c.bid + c.ask + p.bid + p.ask) / 2
         spr = (c.ask - c.bid) + (p.ask - p.bid)
         if mid <= 0 or spr < 0:
@@ -68,18 +70,20 @@ def main(ticker="^XSP", min_sessions=10):
         return
     pd.set_option("display.width", 140)
     print(tab.assign(spread_pct=lambda t: (t.spread_pct * 100).round(2), iv=lambda t: (t.iv * 100).round(1)).to_string(index=False))
-    med = float(tab.spread_pct.median())
-    print(f"\n{len(tab)} sessions, median spread {med:.2%} of mid, mean {tab.spread_pct.mean():.2%}, "
-          f"max {tab.spread_pct.max():.2%}; provisional {PROVISIONAL:.1%}")
+    all_med = float(tab.spread_pct.median())
+    first = tab.sort_values("day").head(min_sessions)    # §4: the first min_sessions sessions, not every session to date
+    med = float(first.spread_pct.median())
+    print(f"\n{len(tab)} sessions, all-session median {all_med:.2%} of mid, mean {tab.spread_pct.mean():.2%}, "
+          f"max {tab.spread_pct.max():.2%}; first-{min_sessions} median {med:.2%}; provisional {PROVISIONAL:.1%}")
     if os.path.exists(FROZEN):
         print(f"already frozen: {open(FROZEN).read().strip()}")
         return
     if len(tab) < min_sessions:
         print(f"not frozen: {min_sessions - len(tab)} more {ticker} sessions needed")
         return
-    body = {"ticker": ticker, "sessions": int(len(tab)), "first": str(tab.day.min()), "last": str(tab.day.max()),
-            "measured_median": med, "provisional": PROVISIONAL, "spread": max(med, PROVISIONAL),
-            "frozen_at": pd.Timestamp.now().isoformat(timespec="seconds")}
+    body = {"ticker": ticker, "sessions_used": int(len(first)), "first": str(first.day.min()), "last": str(first.day.max()),
+            "measured_median": med, "all_sessions_median": all_med, "provisional": PROVISIONAL,
+            "spread": max(med, PROVISIONAL), "frozen_at": pd.Timestamp.now().isoformat(timespec="seconds")}
     with open(FROZEN, "w") as fh:
         json.dump(body, fh, indent=2)
     print(f"FROZEN at {body['spread']:.2%} -> {FROZEN}")
