@@ -30,7 +30,7 @@ RUNWAY_MIN_DAYS = 30   # ... and the lake goes not-ok when the disk would fill s
 HISTORY_EVERY = pd.Timedelta(hours=23)   # one size entry a day is enough for a week-long window
 # daily bars due by 06:00 CT the day after a session, and how many sessions each may trail:
 # FRED posts a day's rates the next afternoon, after the nightly run, so fred is a session behind
-DAILY_BARS = {"equities_daily": 0, "fred": 1}
+DAILY_BARS = {"equities_daily": 0, "fred": 2}  # 2: the bond market closes on Columbus and Veterans Day while NYSE is open
 BOOKS_5M_MIN = 0.6     # share of the 288 five-minute snapshots kalshi_books_5m must hold on the last full UTC day
 CT = "America/Chicago"
 
