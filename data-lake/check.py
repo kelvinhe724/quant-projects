@@ -677,9 +677,16 @@ def splice_checks(tmp):
         check("a close jump across fetches is flagged, one inside a fetch is not", s["jump"] == {"JMP": [boundary]}
               and s["jump_count"] == 1, s["jump"])
         check("tolerance 1.0 flags nothing", quality.splices(tol=1.0)["adj_count"] == 0)
-        rep = quality.report(now=pd.Timestamp("2020-04-02", tz="UTC"))
-        check("report carries splices and leaves problems alone", rep["splices"]["adj_count"] == 1
-              and not any("splice" in p for p in rep["problems"]), rep["problems"])
+        # on an otherwise clean lake (feeds stubbed fresh, one dataset) the splices ride along and touch neither ok nor problems
+        real_fp, real_ds = quality.feed_problems, dict(lake.DATASETS)
+        try:
+            quality.feed_problems = lambda *a, **k: []
+            lake.DATASETS = {"equities_daily": real_ds["equities_daily"]}
+            q = quality.report(now=pd.Timestamp("2020-04-02", tz="UTC"))
+        finally:
+            quality.feed_problems, lake.DATASETS = real_fp, real_ds
+        check("splices ride along without touching ok or problems",
+              q["splices"]["adj_count"] == 1 and q["ok"] and q["problems"] == [], (q["ok"], q["problems"]))
     finally:
         lake.STORE, lake.REPORTS = real
 
