@@ -24,7 +24,8 @@ from framework.book import universe
 from framework.book.allocate import LIVE_BOOK, REPORTS, load_allocations
 from framework.book.broker import (KILL, RECON_TOL, Limits, ShadowBroker, discrepancies, expected_weights,
                                    filled_value, unfilled)
-from framework.book.daemon import ET, HISTORY_YEARS, LEDGER, LIVE_START, last_session, previous_row, read_ledger
+from framework.book.daemon import (ET, HISTORY_YEARS, LEDGER, LIVE_START, RATES_STALE, last_session, previous_row,
+                                   read_ledger)
 from framework.book.strategies import CAPITAL, book_config, sleeves
 from framework.engine.data import CACHE, SUBSTITUTED
 
@@ -256,6 +257,8 @@ def daemon_health(ledger, now=None, launchctl_text=None, log_path=DAEMON_LOG):
             "log_mtime": pd.Timestamp(os.path.getmtime(log_path), unit="s", tz="UTC").tz_convert(ET).isoformat(timespec="seconds")
             if os.path.exists(log_path) else None,
             "substituted_bars": substituted_bars(log_path, expected.strftime("%Y-%m-%d"))}
+            "substituted_bars": substituted_bars(log_path),
+            "rates_stale": rates_stale_logged(log_path)}
 
 
 SESSION_LINE = re.compile(r"^(\d{4}-\d{2}-\d{2})  shadow equity")
@@ -292,6 +295,21 @@ def substituted_bars(log_path=DAEMON_LOG, session=None):
         n = (pd.Timestamp(session) - pd.Timestamp(t.group(1))).days
         return msg[:t.start()] + f"through {t.group(1)} ({n} days old)" + msg[t.end():]
     return [aged(x) for x in blocks.get(session, [])]
+
+
+def rates_stale_logged(log_path=DAEMON_LOG, lines=400):
+    """The daemon's stale-rates line if its most recent rates print was followed by one, else None."""
+    if not os.path.exists(log_path):
+        return None
+    with open(log_path, errors="replace") as fh:
+        tail = fh.readlines()[-lines:]
+    last = None
+    for l in tail:
+        if l.startswith("rates: newest month"):
+            last = None  # a newer run: only its own stale line counts
+        elif l.startswith(RATES_STALE + ":"):
+            last = l.strip()
+    return last
 
 
 def kill_status(path=KILL):
@@ -359,6 +377,8 @@ def build_alerts(book, lake, health, recon, kalshi, now=None, kill=None):
             a.append({"kind": "drawdown", "msg": f"{k} gross {s['gross']:.2f}x over the {RISK.max_gross:.0f}x cap"})
     for msg in health.get("substituted_bars", []):
         a.append({"kind": "feed", "msg": "premia-book traded on cached bars: " + msg})
+    if health.get("rates_stale"):
+        a.append({"kind": "feed", "msg": health["rates_stale"]})
     if health.get("missed"):
         a.append({"kind": "daemon", "msg": f"premia-book: session {health['expected_session']} not in the ledger "
                                           f"(last {health['last_session_logged']})"})
@@ -487,7 +507,7 @@ def render_md(r):
     return "\n".join(L)
 
 
-def build(now=None, ledger_path=LEDGER, kalshi_path=KALSHI_LEDGER, lake_path=LAKE_STATUS, launchctl_text=None,
+def build(now=None, ledger_path=LEDGER, kalshi_path=KALSHI_LEDGER, lake_path=LAKE_STATUS, launchctl_text=None, log_path=DAEMON_LOG,
           do_replay=True, kill_path=KILL):
     now = pd.Timestamp.now(tz=CT) if now is None else pd.Timestamp(now).tz_convert(CT)
     ledger = read_ledger(ledger_path)
@@ -497,7 +517,7 @@ def build(now=None, ledger_path=LEDGER, kalshi_path=KALSHI_LEDGER, lake_path=LAK
     risk = ledoit_wolf_var(positions, cached_returns(list(positions)), book.get("equity") or CAPITAL)
     kalshi = kalshi_summary(kalshi_path)
     lake = lake_summary(lake_path, now)
-    health = daemon_health(ledger, now, launchctl_text)
+    health = daemon_health(ledger, now, launchctl_text, log_path)
     recon = reconciliation(ledger)
     kill = kill_status(kill_path)
     alerts = build_alerts(book, lake, health, recon, kalshi, now, kill)
