@@ -116,6 +116,12 @@ try:
     check("a feature that reads tomorrow is refused by the audit", False)
 except PeekError as e:
     check("a feature that reads tomorrow is refused by the audit", "leak" in str(e), str(e)[:60])
+rank_leak = Feature("rank_leak", lambda r: r.frames["close"].shift(-5).rank(axis=1), 1)
+try:
+    FeatureStore([rank_leak]).audit(raw, IDX[pos])
+    check("a cross-sectional rank of a future row is refused by the audit", False)
+except PeekError as e:
+    check("a cross-sectional rank of a future row is refused by the audit", "rank_leak" in str(e), str(e)[:60])
 centred = Feature("centred", lambda r: r.frames["close"].rolling(5, center=True).mean(), 1)
 try:
     FeatureStore([centred]).audit(raw, IDX[pos])
