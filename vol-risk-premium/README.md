@@ -383,3 +383,5 @@ the sample turned out.
 ## Forward track note
 
 *2026-10-22:* a session whose straddle legs are quoted 0/0 is marked "no quote" (hedge booked, option leg caught up at the next quoted session); the 2026-10-21 mark had booked +$1,599 on such a quote and was re-marked. See `REFUSALS.md` §5 and `reports/forward/marks.rejected.csv`. *2026-11-05:* a session with an XSP chain but no SPY spot is marked "no mark": it books nothing and keeps no mid, and both legs catch up at the next fully marked session, the option against the last booked mid and the hedge against the last SPY spot that was booked (before, it kept the unbooked mid and the next session's hedge P&L came out NaN, so that session's P&L was dropped from the total; no such session is in `marks.csv` yet).
+
+*2026-11-05:* if the expiry session is missing from the lake, the cycle settles in a row dated at expiry at that day's Yahoo ^XSP and SPY closes (hedge closed there too), never at a later session's spot; until Yahoo prints those closes no row is written and the cycle stays open.
