@@ -318,6 +318,51 @@ shadow.run(bars.upto(cal[cal.get_loc(me) + 3]))
 check("shadow targets on a quiet day are what the book holds",
       shadow.results.books["TrendETF"]["pending"] is None and shadow.targets() == shadow.positions())
 
+# Shadow-live parity across sleeves (2026-11-05). The engine applies OrderRules per sleeve, the
+# broker to the netted book. ETFBeta held FXE long while EWMAC sent an FXE short the account
+# cannot place: the shadow kept ETFBeta's long (+0.046), the raw sum was net short (-0.449),
+# and Alpaca flattened FXE to zero from 2026-10-09 on.
+from framework.engine import Strategy
+
+
+class Fixed(Strategy):
+    def __init__(self, name, w, flip_on=None):
+        self.name, self.w, self.flip_on = name, w, flip_on
+
+    def on_bar(self, asof, bars):
+        return {n: -x if self.flip_on is not None and asof >= self.flip_on else x for n, x in self.w.items()}
+
+
+pbars = synthetic(n_days=400, instruments=("FXE", "SPY"), seed=11)
+pday = pbars.calendar[-1]
+ppx = pbars.close.iloc[-1].to_dict()
+
+
+def parity(*sleeves):
+    sh = ShadowBroker(list(sleeves), {str(s): 1 / len(sleeves) for s in sleeves}, pbars.calendar[200])
+    sh.run(pbars)
+    held = {n: w * sh.equity / ppx[n] for n, w in sh.positions().items()}
+    return sh, live_end(sh.targets(), sh.equity, ppx, held), held
+
+
+sh1, live1, _ = parity(Fixed("short", {"FXE": -0.6}))
+check("unshortable short, one sleeve: FXE flattens to zero in the shadow book and in the live book fed its targets",
+      "FXE" not in sh1.positions() and "FXE" not in sh1.targets() and "FXE" not in live1,
+      f"shadow {sh1.positions()} targets {sh1.targets()} live {live1}")
+sh2, live2, held2 = parity(Fixed("long", {"FXE": 0.2}), Fixed("short", {"FXE": -0.6}))
+check("unshortable short netted against another sleeve's long: live keeps the long the shadow holds, no FXE order",
+      sh2.positions().get("FXE", 0) > 0 and np.isclose(sh2.targets().get("FXE", 0), sh2.positions()["FXE"])
+      and np.isclose(live2.get("FXE", 0), held2["FXE"]),
+      f"shadow {sh2.positions().get('FXE')} target {sh2.targets().get('FXE')} live qty {live2.get('FXE')} "
+      f"vs {held2.get('FXE')}")
+sh3, _, _ = parity(Fixed("long", {"SPY": 0.6}), Fixed("flip", {"SPY": 0.2}, flip_on=pday))
+_long = sh3.results.books["long"]
+_long_spy = {**_long["weights"].iloc[-1].to_dict(), **(_long["pending"] or {})}["SPY"]
+check("a sleeve's sign flip counts as its close in the targets, the book its next fill reaches, not the far side",
+      sh3.results.books["flip"]["weights"].iloc[-1]["SPY"] > 0 and sh3.results.books["flip"]["pending"]["SPY"] < 0
+      and np.isclose(sh3.targets()["SPY"], _long_spy * float(_long["equity"].iloc[-1]) / sh3.equity),
+      f"targets {sh3.targets()}")
+
 
 # ---------------------------------------------------------------- report.py on synthetic ledgers
 import json

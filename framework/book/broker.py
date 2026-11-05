@@ -204,12 +204,23 @@ class ShadowBroker:
         A sleeve's fresh targets override what it holds; anything the buffer
         left alone, and a quiet sleeve, contribute what they hold, so nothing
         is re-traded that the engine did not trade.
+
+        Each sleeve's sends first go through the sign rules its own next fill
+        applies (the engine runs OrderRules per sleeve): a short on an
+        unshortable name, and the far side of a two-session flip, count as
+        zero. Summed raw, one sleeve's unplaceable FXE short cancelled the
+        other's long and Alpaca flattened a name the shadow held (2026-10-09
+        to 11-04). Buffer and $25 minimum still apply to the netted book only.
         """
+        rules = self.results.config.order_rules
         total = self.equity
         out = {}
         for k, b in self.results.books.items():
             share = float(b["equity"].iloc[-1]) / total
-            w = {**b["weights"].iloc[-1].to_dict(), **(b["pending"] or {})}
+            held = b["weights"].iloc[-1].to_dict()
+            sends = {n: 0.0 if (x < 0 and n in rules.unshortable) or rules.flips(n, x, held.get(n, 0.0)) else x
+                     for n, x in (b["pending"] or {}).items()}
+            w = {**held, **sends}
             for n, x in w.items():
                 out[n] = out.get(n, 0.0) + float(x) * share
         return {n: x for n, x in out.items() if abs(x) > 1e-9}
