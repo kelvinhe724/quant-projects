@@ -256,8 +256,7 @@ def daemon_health(ledger, now=None, launchctl_text=None, log_path=DAEMON_LOG):
             "missed": due and expected.strftime("%Y-%m-%d") not in have,
             "log_mtime": pd.Timestamp(os.path.getmtime(log_path), unit="s", tz="UTC").tz_convert(ET).isoformat(timespec="seconds")
             if os.path.exists(log_path) else None,
-            "substituted_bars": substituted_bars(log_path, expected.strftime("%Y-%m-%d"))}
-            "substituted_bars": substituted_bars(log_path),
+            "substituted_bars": substituted_bars(log_path, expected.strftime("%Y-%m-%d")),
             "rates_stale": rates_stale_logged(log_path)}
 
 

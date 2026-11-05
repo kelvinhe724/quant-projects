@@ -609,7 +609,6 @@ check("headline: first line carries the Alpaca account and the shadow book, each
 hn = report.headline(report.book_summary(two), v1, {}, lake_ok, [])[0]
 check("headline: no Alpaca row says so and keeps the shadow figures", hn.startswith("Alpaca n/a · shadow 2026-09-04: 100,900"), hn)
 
-r = report.build(NOW, ledger_path=os.path.join(tmp, "ledger0.csv"), kalshi_path=kdb, lake_path=status_json(),
 r = report.build(NOW, ledger_path=os.path.join(tmp, "ledger0.csv"), kalshi_path=kdb, lake_path=status_json(), log_path=os.path.join(tmp, "none"),
                  launchctl_text=LC, do_replay=False, kill_path=os.path.join(tmp, "no-KILL"))
 md = report.write(r, os.path.join(tmp, "reports"))
