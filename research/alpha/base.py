@@ -78,7 +78,7 @@ def _returns(pos, close, cost_bps):
     return pnl.rename("return")
 
 
-def _log(reg, r, pos, cost_bps, alpha, config, universe, tags):
+def _log(reg, r, pos, cost_bps, alpha, config, universe, tags, _fold=False):
     """One registry row per evaluation, keyed on the alpha's code, the cost and a hash of the positions it held.
 
     An empty window (a forward window that has not started) returns its empty stream unlogged: nothing was seen.
@@ -87,7 +87,7 @@ def _log(reg, r, pos, cost_bps, alpha, config, universe, tags):
         reg.record(str(alpha) if alpha is not None else "backtest",
                    {**(config or {}), "cost_bps": cost_bps, "positions": panel_hash(pos)},
                    universe, (r.index[0], r.index[-1]), r, tags=tags,
-                   code=code_hash(alpha) if alpha is not None else None)
+                   code=code_hash(alpha) if alpha is not None else None, _fold=_fold)
     return r
 
 
@@ -105,8 +105,9 @@ def backtest(pos, close, cost_bps=COST_BPS, registry=None, log=True, alpha=None,
 
 
 def window_returns(alpha, panel, close, start, end, dates, cost_bps=COST_BPS, registry=None, log=True, config=None,
-                   universe=None, tags=None):
-    """Net returns from start to end, entering with the last position set before `start`; logged as backtest is."""
+                   universe=None, tags=None, _fold=False):
+    """Net returns from start to end, entering with the last position set before `start`; logged as backtest is.
+    _fold is walk_forward's: only it may log a fold stage."""
     reg = _registry(registry, log)
     dates = pd.DatetimeIndex(dates)
     keep = dates[(dates >= start) & (dates <= end)]
@@ -114,7 +115,7 @@ def window_returns(alpha, panel, close, start, end, dates, cost_bps=COST_BPS, re
     pos = positions(alpha, panel, before.append(keep))
     first = before[0] if len(before) else start
     r = _returns(pos, close.loc[first:end], cost_bps).loc[start:]
-    return _log(reg, r, pos, cost_bps, alpha, config, universe or list(close.columns), tags)
+    return _log(reg, r, pos, cost_bps, alpha, config, universe or list(close.columns), tags, _fold)
 
 
 def forward_returns(close, horizon):
@@ -161,12 +162,13 @@ def walk_forward(make_alpha, grid, panel, close, n_splits, test_size, rebalance=
             a = make_alpha(**params).fit(X.loc[train], y.loc[train])
             pos = positions(a, panel, dates[dates.isin(train)])
             r = _log(reg, _returns(pos, close.loc[train], cost_bps), pos, cost_bps, a, params, universe,
-                     {"stage": "walk_forward_train", "fold": k + 1})
+                     {"stage": "walk_forward_train", "fold": k + 1}, _fold=True)
             scores[i] = (score(r), a)
         best = max(scores, key=lambda i: scores[i][0] if np.isfinite(scores[i][0]) else -np.inf)
         a = scores[best][1]
         r = window_returns(a, panel, close, test[0], test[-1], dates, cost_bps, registry=reg, log=log,
-                           config=grid[best], universe=universe, tags={"stage": "walk_forward_test", "fold": k + 1})
+                           config=grid[best], universe=universe, tags={"stage": "walk_forward_test", "fold": k + 1},
+                           _fold=True)
         picked.append(r)
         rows.append({"fold": k + 1, "train_start": train[0].date(), "train_end": train[-1].date(),
                      "test_start": test[0].date(), "test_end": test[-1].date(), "picked": json.dumps(grid[best]),
@@ -224,7 +226,7 @@ class Untouched:
     KEYS = ("start", "end", "n_sessions", "data_hash")
     # fields added after the first locks were written: hashed when present, so a lock without them still verifies
     LATER = ("n_trials", "registry", "registry_rel", "registry_sha256_at_lock", "registry_bytes_at_lock",
-             "registry_sha256_at_open")
+             "registry_sha256_at_open", "var_sharpe")
 
     @classmethod
     def digest(cls, body):
@@ -315,7 +317,8 @@ class Untouched:
         recorded takes the registry it is opened with. The trial count and a
         sha256 of runs.jsonl at the moment of opening, before fn runs, are
         written into the lock with the stamp, so the DSR denominator of the
-        one read is frozen with its result.
+        one read is frozen with its result, and so is the variance of the counted
+        daily Sharpes (var_sharpe), the DSR's other registry input.
         """
         body = self.read()
         if body["opened_at"] is not None:
@@ -325,6 +328,7 @@ class Untouched:
         body.update({k: v for k, v in self._where(reg).items() if k not in body})  # a lock from before lock() named one
         body["opened_at"] = pd.Timestamp.now().isoformat(timespec="seconds")
         body["n_trials"] = reg.trials()
+        body["var_sharpe"] = reg.var_sharpe()  # dsr(var_sharpe=...) reads this, so later rows cannot move the DSR
         body["registry_sha256_at_open"] = file_sha256(reg.file)
         self.write(body)
         body["result"] = fn(pd.Timestamp(body["start"]), pd.Timestamp(body["end"]))

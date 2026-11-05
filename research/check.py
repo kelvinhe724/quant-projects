@@ -531,6 +531,74 @@ check("power: no edge clears Sharpe 1.0 over 252 sessions 15.9% of the time and 
       ok and abs(prereg_check.no_edge_pass_rate(252, 1.0) - 0.158655) < 1e-6
       and abs(prereg_check.no_edge_pass_rate(126, 1.0) - 0.239750) < 1e-6, lines[1][:70])
 
+# r1-registry: fold stages only from walk_forward, streams inside their window, var_sharpe frozen at the open
+print("\nREGISTRY METADATA AND THE FROZEN VARIANCE\n")
+meta = Registry(os.path.join(tmp, "meta"))
+forged = []
+for attempt in (lambda: backtest(pos_a, frames["close"], registry=meta, tags={"stage": "walk_forward_test"}),
+                lambda: meta.record("x", {}, NAMES, (IDX[0], IDX[-1]), r_a, tags={"stage": "walk_forward_train"})):
+    try:
+        attempt()
+        forged.append(False)
+    except ValueError:
+        forged.append(True)
+check("a caller-set fold stage is refused (backtest with walk_forward_test, record with walk_forward_train), "
+      "so a row cannot tag itself out of the count", forged == [True, True] and len(meta.runs()) == 0)
+wide = frames["close"].iloc[:1000, 1].pct_change()
+outside = []
+for w in ((IDX[0], IDX[799]), (IDX[300], IDX[999])):
+    try:
+        meta.record("wide", {}, NAMES, w, wide)
+        outside.append(False)
+    except ValueError:
+        outside.append(True)
+day = pd.date_range(f"{IDX[5].date()} 09:30", f"{IDX[5].date()} 16:00", freq="5min")
+intraday = meta.record("intraday", {}, NAMES, (IDX[5].date(), IDX[5].date()),
+                       pd.Series(rng.normal(0, 1e-3, len(day)), index=day))
+check("a 1000-session stream declared over sessions 0..799 (or 300..999) is refused; a 5-minute stream inside a "
+      "same-date window is accepted", outside == [True, True] and intraday["n_obs"] == len(day)
+      and len(meta.runs()) == 1)
+frz = Registry(os.path.join(tmp, "frozen-var"))
+flock = Untouched(os.path.join(tmp, "frozen-var.json"))
+flock.lock(IDX, 0.2, data_hash="var", registry=frz)
+FPRE = IDX[IDX < flock.window[0]]
+for i in (1, 4, 7):
+    frz.record(f"trial{i}", {}, NAMES, (FPRE[0], FPRE[-1]), frames["close"].iloc[:, i].pct_change().loc[FPRE])
+var_at_open = frz.var_sharpe()
+flock.open(lambda s, e: {"sharpe": 1.0}, registry=frz)
+fb = flock.read()
+cand = frames["close"].iloc[:, 3].pct_change().loc[flock.window[0]:]
+d_open = frz.dsr(cand, n_trials=fb["n_trials"], var_sharpe=fb["var_sharpe"])
+base1 = frames["close"].iloc[:, 1].pct_change().loc[FPRE]
+for j in range(50):
+    frz.record(f"clone{j}", {}, NAMES, (FPRE[0], FPRE[-1]), base1 + rng.normal(0, 1e-5, len(base1)))
+d_after = frz.dsr(cand, n_trials=fb["n_trials"], var_sharpe=fb["var_sharpe"])
+d_live = frz.dsr(cand, n_trials=fb["n_trials"])
+check("the open freezes var_sharpe with n_trials; 50 near-clone rows logged after it move the live variance but "
+      "not dsr(n_trials=frozen, var_sharpe=frozen)",
+      fb["var_sharpe"] == var_at_open > 0 and frz.trials() == 53 and abs(d_after["dsr"] - d_open["dsr"]) < 1e-12
+      and d_after["var_sharpe"] == fb["var_sharpe"] and abs(d_live["var_sharpe"] - fb["var_sharpe"]) > 1e-6,
+      f"frozen var {fb['var_sharpe']:.2e}, live {d_live['var_sharpe']:.2e}, dsr {d_open['dsr']:.4f}")
+with open(flock.path) as fh:
+    edited = json.load(fh)
+edited["var_sharpe"] = 0.0
+with open(flock.path, "w") as fh:
+    json.dump(edited, fh)
+try:
+    flock.read()
+    check("editing the frozen var_sharpe by hand breaks the lock's hash", False)
+except LockError:
+    check("editing the frozen var_sharpe by hand breaks the lock's hash", True)
+import hashlib
+OLD_LATER = ("n_trials", "registry", "registry_rel", "registry_sha256_at_lock", "registry_bytes_at_lock",
+             "registry_sha256_at_open")
+old_body = {k: v for k, v in fb.items() if k not in ("var_sharpe", "hash")}
+old_keys = Untouched.KEYS + ("opened_at", "result") + tuple(k for k in OLD_LATER if k in old_body)
+old_hash = hashlib.sha256(json.dumps({k: old_body.get(k) for k in old_keys}, sort_keys=True,
+                                     default=str).encode()).hexdigest()[:16]
+check("a lock body without var_sharpe hashes exactly as before the key existed, so existing locks still verify",
+      Untouched.digest(old_body) == old_hash)
+
 shutil.rmtree(tmp)
 n_fail = checks.count(False)
 print(f"\n{len(checks) - n_fail} of {len(checks)} checks passed")
