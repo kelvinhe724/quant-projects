@@ -77,6 +77,9 @@ STRUCTURE = re.compile(r"\biron\s+(?:fly|flies|butterfl(?:y|ies)|condors?)\b|\bb
 BOTH = re.compile(r"\b(?:iron|condors?|butterfl(?:y|ies)|straddles?|strangles?)\b", re.I)
 COVERED = re.compile(r"\bcovered\s+calls?\b|\bcash-secured\s+puts?\b", re.I)
 BUY = re.compile(r"(?<![\w-])(?:buy(?:s|ing)?|bought|long)(?![\w-])", re.I)
+# a buy that closes a position ("buy back", "to close", "close it by buying") is not a wing
+CLOSING = re.compile(r"\bback\b|\bto\s+close\b|\bclosing\b|\bclos(?:e|es|ed)\s+(?:it|them|out|the\s+(?:position|trade|straddle|strangle"
+                     r"|spread|fly|legs?|short|cycle))\b|\bunwind(?:s|ing)?\b", re.I)
 LEVEL = {"defined": 3, "covered": 1}  # Alpaca: 1 covered call / cash-secured put, 2 long call/put, 3 spreads
 INDEX = {"XSP", "SPX"}
 NEGATION = {"no", "never", "not", "without", "cannot", "can't", "nor", "none", "impossible", "isn't", "won't",
@@ -160,7 +163,10 @@ def bought(para):
             if NEGATION & {w.lower() for w, _ in words(sent[:m.start()])[-3:]}:
                 continue
             stop = min([len(sent)] + [m.end() + x.start() for x in re.finditer(CLAUSE, sent[m.end():])])
-            out |= option_types(sent[m.end():stop])
+            clause = sent[m.end():stop]
+            if CLOSING.search(clause) or CLOSING.search(" ".join(w for w, _ in words(sent[:m.start()])[-3:])):
+                continue   # closing a short is not buying a wing: a naked straddle with an exit rule stays uncovered
+            out |= option_types(clause)
     return out
 
 

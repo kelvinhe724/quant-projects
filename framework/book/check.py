@@ -622,13 +622,13 @@ PROBLEMS = ["daily run 2026-11-05T03:31Z: equities failed: RuntimeError: equitie
             "crypto_l2 bybit: no rows in 24h"]
 for ok in (False, True):   # True: a status.json that says ok next to problems is still not ok
     r = report.build(NOW, ledger_path=os.path.join(tmp, "ledger0.csv"), kalshi_path=kdb,
-                     lake_path=status_json(ok=ok, problems=PROBLEMS), launchctl_text=LC, do_replay=False,
+                     lake_path=status_json(ok=ok, problems=PROBLEMS), log_path=os.path.join(tmp, "none"), launchctl_text=LC, do_replay=False,
                      kill_path=os.path.join(tmp, "no-KILL"))
     check(f"lake problems (status ok={ok}): one feed alert each and the headline says lake NOT ok, not lake ok",
           [a["msg"] for a in r["alerts"]] == ["data lake: " + p for p in PROBLEMS]
           and "lake NOT ok" in r["headline"][1] and "lake ok" not in r["headline"][1], str(r["alerts"]))
 r = report.build(NOW, ledger_path=os.path.join(tmp, "ledger0.csv"), kalshi_path=kdb, lake_path=status_json(problems=[]),
-                 launchctl_text=LC, do_replay=False, kill_path=os.path.join(tmp, "no-KILL"))
+                 log_path=os.path.join(tmp, "none"), launchctl_text=LC, do_replay=False, kill_path=os.path.join(tmp, "no-KILL"))
 check("an empty problems list is lake ok with no alert", r["alerts"] == [] and "lake ok" in r["headline"][1], str(r["alerts"]))
 check("report never touches keys: read_env and AlpacaBroker are not imported into report.py",
       "read_env" not in dir(report) and "AlpacaBroker" not in dir(report))

@@ -260,4 +260,7 @@ def run_once(dry_run=False, session=None, now=None, ack_mode_change=False):
 
 
 if __name__ == "__main__":
+    # launchd sends stdout and stderr to one file; line-buffer stdout so a crash's Traceback lands after this run's
+    # own lines, the order report.substituted_bars assumes when it drops a crashed run's pending substitutions
+    sys.stdout.reconfigure(line_buffering=True)
     run_once(dry_run="--dry-run" in sys.argv, ack_mode_change="--ack-mode-change" in sys.argv)
