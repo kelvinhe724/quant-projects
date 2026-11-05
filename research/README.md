@@ -12,7 +12,7 @@ features/   store.py   Raw, Feature(name, fn, lag), FeatureStore.build(audit=Tru
 registry/   experiments.py   Registry.record / stream / runs / trials / dsr, code_hash, use(path)
 alpha/      base.py    Alpha, positions, backtest, walk_forward, Sleeve (framework adapter), Untouched (the lock)
 models/     registry.py      ModelRegistry.save / load / entries, data_hash
-check.py    71 offline checks on a planted panel, exits 1 on failure
+check.py    97 offline checks on a planted panel, exits 1 on failure
 prereg_check.py   a PREREG.md against template v2: tradability, window provenance, power
 run.py      the worked example; writes reports/
 ```
