@@ -27,16 +27,19 @@ def collect_day(date, now=None, tickers=data.UNIVERSE, fetch=None, rate=None, ca
     d = data.session_dir(date, session)
     d.mkdir(parents=True, exist_ok=True)
 
+    # rates.csv is written once and only with a real rate: a missing rate leaves no file, so the next run asks again
     rates_path = d / "rates.csv"
-    if not rates_path.exists():
+    if rates_path.exists():
+        r = pd.read_csv(rates_path)["rate"].iloc[0]
+        r = None if pd.isna(r) else float(r)
+    else:
         r, obs, series = rate(date)
         if r is None:
-            print(f"{date}: FRED and Yahoo both unreachable, rate recorded as missing",
+            print(f"{date}: FRED and Yahoo both unreachable, rate not recorded; a rerun will ask again",
                   file=sys.stderr)
-        pd.DataFrame([{"date": date, "series": series, "rate": r, "observation_date": obs}]) \
-            .to_csv(rates_path, index=False)
-    r = pd.read_csv(rates_path)["rate"].iloc[0]
-    r = None if pd.isna(r) else float(r)
+        else:
+            pd.DataFrame([{"date": date, "series": series, "rate": r, "observation_date": obs}]) \
+                .to_csv(rates_path, index=False)
 
     written, skipped, missing, closes = [], [], [], []
     for t in tickers:
@@ -85,6 +88,33 @@ def collect_day(date, now=None, tickers=data.UNIVERSE, fetch=None, rate=None, ca
     return manifest
 
 
+def backfill_rate(date, session="close", rate=None):
+    """Fill the rate of an existing day whose rates.csv is empty, into rates.backfill.csv (rates.csv is never rewritten).
+
+    DTB3 only, looked up as of the day before the session, and the observation must predate the session.
+    Returns the sidecar path, or None after printing why it refused (nothing is written).
+    """
+    rate = rate or data.bill_rate
+    d = data.session_dir(date, session)
+    rates_path, side = d / "rates.csv", d / "rates.backfill.csv"
+    if not rates_path.exists() or not pd.isna(pd.read_csv(rates_path)["rate"].iloc[0]):
+        print(f"{date} [{session}]: no empty rates.csv to backfill", file=sys.stderr)
+        return None
+    if side.exists():
+        print(f"{date} [{session}]: rates.backfill.csv already exists", file=sys.stderr)
+        return None
+    r, obs, series = rate((pd.Timestamp(date) - pd.Timedelta(days=1)).strftime("%Y-%m-%d"))
+    if r is None or series != "DTB3":
+        print(f"{date} [{session}]: no DTB3 rate (got {series}), refusing", file=sys.stderr)
+        return None
+    if not pd.Timestamp(obs) < pd.Timestamp(date):
+        print(f"{date} [{session}]: DTB3 observation {obs} is not before the session date, refusing",
+              file=sys.stderr)
+        return None
+    pd.DataFrame([{"date": date, "series": series, "rate": r, "observation_date": obs}]).to_csv(side, index=False)
+    return side
+
+
 def main(argv=None, now=None):
     p = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -93,7 +123,12 @@ def main(argv=None, now=None):
     run.add_argument("--date", help="YYYY-MM-DD folder to collect into")
     run.add_argument("--session", choices=data.SESSIONS, default="close",
                      help="which snapshot of the day; close is the one the summaries are built from")
+    bf = sub.add_parser("backfill", help="fill an empty rates.csv into rates.backfill.csv (DTB3, prior-day observation)")
+    bf.add_argument("--date", required=True)
+    bf.add_argument("--session", choices=data.SESSIONS, default="close")
     a = p.parse_args(argv)
+    if a.cmd == "backfill":
+        return 0 if backfill_rate(a.date, a.session) else 1
 
     now = pd.Timestamp.now("UTC") if now is None else now
     date = a.date or data.trading_date(now)
