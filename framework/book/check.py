@@ -400,7 +400,7 @@ check("alerts: daemon dead when the last NYSE session is not in the ledger the n
 early = report.daemon_health(ledger_rows([100000, 100500, 101000]), pd.Timestamp("2026-09-04 17:00", tz="America/New_York"), LC)
 check("alerts: no daemon alert before the 19:00 ET grace on the day itself", not early["missed"])
 broken = report.daemon_health(good, NOW, LC.replace("-\t0\tcom.kelvinhe.lake-daily", "-\t1\tcom.kelvinhe.lake-daily")
-                              .replace("-\t0\tcom.kelvinhe.premia-book\n", ""))
+                              .replace("-\t0\tcom.kelvinhe.premia-book\n", ""), log_path=os.path.join(tmp, "none"))
 a = report.build_alerts(book, lake_ok, broken, {"mismatches": []}, {}, NOW)
 check("alerts: launchd exit status and an unloaded job are daemon alerts",
       sorted(x["msg"] for x in a) == ["com.kelvinhe.lake-daily last exit status 1", "com.kelvinhe.premia-book is not loaded in launchd"], str(a))
@@ -448,6 +448,47 @@ check("kill switch: a KILL file is the first alert and carries the reason writte
 loss = report.book_summary(ledger_rows([100000, 100000, 96500]))
 a = report.build_alerts(loss, lake_ok, health_ok, {"mismatches": []}, {}, NOW)
 check("alerts: a day past the broker's 3% daily loss limit", any("daily loss limit" in x["msg"] for x in a), str(a))
+
+# --- stale carry rates: the panel sat on 2026-01 from 2026-09-09 with no alert
+import contextlib
+import io
+
+_jan, _nov = pd.Timestamp("2026-01-01"), pd.Timestamp("2026-11-05")
+check("rates_stale: a newest month over 4 months back is a stale line, 4 months back is not",
+      str(daemon_mod.rates_stale(_jan, _nov)).startswith("carry rates stale: newest 2026-01")
+      and daemon_mod.rates_stale(pd.Timestamp("2026-07-01"), _nov) is None
+      and daemon_mod.rates_stale(pd.Timestamp("2026-06-01"), _nov) is not None)
+
+
+def _live_bars_out(last):
+    """What live_bars prints when every rate column's last (shifted) month is `last`."""
+    idx = pd.date_range("2025-06-01", last, freq="MS")
+    fake = pd.DataFrame(3.0, index=idx, columns=["EUR", "JPY", "GBP", "AUD", "CAD", "CHF", "USD"])
+    real = daemon_mod.universe.load_rates, daemon_mod.universe.load_bars
+    daemon_mod.universe.load_rates = lambda refresh=False: fake
+    daemon_mod.universe.load_bars = lambda start, end, rates: None
+    try:
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            daemon_mod.live_bars(_nov)
+        return buf.getvalue()
+    finally:
+        daemon_mod.universe.load_rates, daemon_mod.universe.load_bars = real
+
+
+_stale_out, _fresh_out = _live_bars_out("2026-02-01"), _live_bars_out("2026-10-01")
+check("daemon: live_bars prints the stale-rates line on a January panel in November, and not on a September one",
+      "\ncarry rates stale: newest 2026-01" in _stale_out and "carry rates stale" not in _fresh_out, _stale_out.strip().replace("\n", " | "))
+
+_log = os.path.join(tmp, "daemon_rates.log")
+open(_log, "w").write("rates: newest month EUR 2026-01, USD 2026-01\n" + _stale_out.splitlines()[-1] + "\n2026-11-04  shadow equity 1\n")
+_hs = report.daemon_health(good, NOW, LC, log_path=_log)
+a = report.build_alerts(book, lake_ok, _hs, {"mismatches": []}, {}, NOW)
+check("alerts: the daemon's stale-rates line is a feed alert naming the month",
+      [x["kind"] for x in a] == ["feed"] and a[0]["msg"].startswith("carry rates stale: newest 2026-01"), str(a))
+open(_log, "a").write("rates: newest month EUR 2026-09, USD 2026-09\n")
+check("alerts: a later run with fresh rates clears the stale-rates alert",
+      report.daemon_health(good, NOW, LC, log_path=_log)["rates_stale"] is None)
 
 rng = np.random.default_rng(7)
 R = pd.DataFrame({"X": rng.normal(0, 0.01, 1000), "Y": rng.normal(0, 0.02, 1000)})

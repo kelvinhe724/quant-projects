@@ -52,11 +52,32 @@ def last_session(now=None):
     return days[closes <= now][-1]
 
 
+RATES_MAX_AGE_MONTHS = 4
+RATES_STALE = "carry rates stale"
+
+
+def rates_stale(newest, today):
+    """The alert line when the newest rate month the carry sleeve ranks on is over RATES_MAX_AGE_MONTHS
+    months before `today`'s month, else None.
+
+    OECD prints land two to three months after the month they average, so four is one month of slack.
+    The panel sat on 2026-01 from 2026-09-09 on (FRED's OECD EUR and GBP series end there and
+    load_rates cuts every currency back to them) with nothing but the plain rates line to say so.
+    """
+    age = (today.year - newest.year) * 12 + today.month - newest.month
+    if age > RATES_MAX_AGE_MONTHS:
+        return f"{RATES_STALE}: newest {newest:%Y-%m}, {age} months before {today:%Y-%m-%d}"
+    return None
+
+
 def live_bars(session):
     start = (session - pd.DateOffset(years=HISTORY_YEARS)).date()
     rates = universe.load_rates(refresh=True)
     newest = rates.apply(lambda s: s.last_valid_index() - pd.DateOffset(months=1))
     print("rates: newest month " + ", ".join(f"{c} {d:%Y-%m}" for c, d in newest.items()))
+    stale = rates_stale(newest.min(), session)
+    if stale:
+        print(stale)  # report.rates_stale_logged turns this into a feed alert
     return universe.load_bars(str(start), str((session + pd.Timedelta(days=1)).date()), rates)
 
 

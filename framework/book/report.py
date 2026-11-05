@@ -23,7 +23,8 @@ from framework.book import universe
 from framework.book.allocate import LIVE_BOOK, REPORTS, load_allocations
 from framework.book.broker import (KILL, RECON_TOL, Limits, ShadowBroker, discrepancies, expected_weights,
                                    filled_value, unfilled)
-from framework.book.daemon import ET, HISTORY_YEARS, LEDGER, LIVE_START, last_session, previous_row, read_ledger
+from framework.book.daemon import (ET, HISTORY_YEARS, LEDGER, LIVE_START, RATES_STALE, last_session, previous_row,
+                                   read_ledger)
 from framework.book.strategies import CAPITAL, book_config, sleeves
 from framework.engine.data import CACHE, SUBSTITUTED
 
@@ -250,7 +251,8 @@ def daemon_health(ledger, now=None, launchctl_text=None, log_path=DAEMON_LOG):
             "missed": due and expected.strftime("%Y-%m-%d") not in have,
             "log_mtime": pd.Timestamp(os.path.getmtime(log_path), unit="s", tz="UTC").tz_convert(ET).isoformat(timespec="seconds")
             if os.path.exists(log_path) else None,
-            "substituted_bars": substituted_bars(log_path)}
+            "substituted_bars": substituted_bars(log_path),
+            "rates_stale": rates_stale_logged(log_path)}
 
 
 def substituted_bars(log_path=DAEMON_LOG, lines=400):
@@ -260,6 +262,21 @@ def substituted_bars(log_path=DAEMON_LOG, lines=400):
     with open(log_path, errors="replace") as fh:
         tail = fh.readlines()[-lines:]
     return [l.split(SUBSTITUTED + ": ", 1)[1].strip() for l in tail if SUBSTITUTED + ": " in l]
+
+
+def rates_stale_logged(log_path=DAEMON_LOG, lines=400):
+    """The daemon's stale-rates line if its most recent rates print was followed by one, else None."""
+    if not os.path.exists(log_path):
+        return None
+    with open(log_path, errors="replace") as fh:
+        tail = fh.readlines()[-lines:]
+    last = None
+    for l in tail:
+        if l.startswith("rates: newest month"):
+            last = None  # a newer run: only its own stale line counts
+        elif l.startswith(RATES_STALE + ":"):
+            last = l.strip()
+    return last
 
 
 def kill_status(path=KILL):
@@ -327,6 +344,8 @@ def build_alerts(book, lake, health, recon, kalshi, now=None, kill=None):
             a.append({"kind": "drawdown", "msg": f"{k} gross {s['gross']:.2f}x over the {RISK.max_gross:.0f}x cap"})
     for msg in health.get("substituted_bars", []):
         a.append({"kind": "feed", "msg": "premia-book traded on cached bars: " + msg})
+    if health.get("rates_stale"):
+        a.append({"kind": "feed", "msg": health["rates_stale"]})
     if health.get("missed"):
         a.append({"kind": "daemon", "msg": f"premia-book: session {health['expected_session']} not in the ledger "
                                           f"(last {health['last_session_logged']})"})
