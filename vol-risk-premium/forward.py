@@ -5,7 +5,8 @@ when one is due (21 sessions after the last start, VIX at or below 30, a listed
 strike nearest spot at the nearest monthly expiry 25-40 days out), sells the
 straddle at the bid, marks it at the mid every session, hedges in SPY at the
 same snapshot's SPY spot with the Black-Scholes delta at the sold vol, and
-settles at intrinsic on the expiry session. Append-only CSVs; a session already
+settles at intrinsic on the expiry session (a missing expiry session
+settles in a row dated at expiry at that day's Yahoo closes). Append-only CSVs; a session already
 marked is never marked twice. Per unit: sizing is a separate, pre-registered rule.
 
 Run:  ../.venv/bin/python3 forward.py                 the XSP track -> reports/forward/
@@ -42,6 +43,19 @@ def vix_closes(start, end):
     v = yf.download("^VIX", start=start, end=end, progress=False, auto_adjust=True)["Close"]
     v = v.iloc[:, 0] if isinstance(v, pd.DataFrame) else v
     return v.dropna()
+
+
+def expiry_close(ticker, day):
+    """(ticker, SPY) Yahoo daily closes on `day`, or None if either is not printed yet: the late-settle prices."""
+    import yfinance as yf
+    try:
+        px = yf.download(list(dict.fromkeys([ticker, "SPY"])), start=day, end=day + pd.Timedelta(days=1),
+                         progress=False, auto_adjust=False)["Close"]
+        px = px[px.index.normalize() == day]
+        return None if px.empty or px.isna().values.any() else (float(px[ticker].iloc[0]), float(px["SPY"].iloc[0]))
+    except Exception as e:      # network or Yahoo error: same as not printed yet, the next run retries
+        print(f"Yahoo close for {day.date()} failed: {e}")
+        return None
 
 
 def sessions(ticker, start="2026-09-01"):
@@ -123,17 +137,31 @@ def run(ticker="^XSP", out=None, units=UNITS):
         if day in done:
             continue
         chain = days[day]
-        open_c = [c for c in (list(cycles.to_dict("records")) + new_c) if c.get("status", "open") == "open"]
+        gone = {pd.Timestamp(m["start"]) for m in new_m if m["status"] == "settled"}   # settled earlier in this run
+        open_c = [c for c in (list(cycles.to_dict("records")) + new_c)
+                  if c.get("status", "open") == "open" and pd.Timestamp(c["start"]) not in gone]
         if open_c:
             c = open_c[-1]
-            spot, smid, T, settled = mark(chain, c["strike"], pd.Timestamp(c["expiry"]))
+            exp = pd.Timestamp(c["expiry"]).normalize()
+            mday = day
+            if day > exp:
+                # the expiry session is missing from the lake: settle in a row dated at expiry at the expiry-day Yahoo
+                # closes, never at this later session's spot; no close yet -> no row, the cycle stays open, retry
+                px = expiry_close(ticker, exp)
+                if px is None:
+                    print(f"cycle {pd.Timestamp(c['start']).date()}: expiry {exp.date()} not in the lake and no Yahoo "
+                          f"close yet; left open, next run retries")
+                    break
+                mday, (spot, spy_now), smid, T, settled = exp, px, abs(px[0] - c["strike"]), 0.0, True
+            else:
+                spot, smid, T, settled = mark(chain, c["strike"], exp)
+                spy_now = spy.get(day, np.nan)
             prev = [m for m in (list(marks.to_dict("records")) + new_m) if pd.Timestamp(m["start"]) == pd.Timestamp(c["start"])]
             valid = [m for m in prev if not pd.isna(m["straddle_mid"])]
             last_mid = valid[-1]["straddle_mid"] if valid else c["entry_mid"]   # "no quote" sessions carry no mid
             last_sh = prev[-1]["hedge_shares"] if prev else 0.0
             hedged = [m for m in prev if not pd.isna(m["spy"])]                  # "no mark" sessions carry no spy
             last_spy = hedged[-1]["spy"] if hedged else spy.get(pd.Timestamp(c["start"]), np.nan)
-            spy_now = spy.get(day, np.nan)
             if np.isnan(spy_now):
                 # no SPY spot: book nothing; both legs catch up at the next fully marked session, so the mid is not kept
                 new_m.append({"date": day, "start": c["start"], "spot": spot, "spy": spy_now, "straddle_mid": np.nan,
@@ -152,12 +180,13 @@ def run(ticker="^XSP", out=None, units=UNITS):
             pnl_hdg = last_sh * (spy_now - last_spy)
             sh_new = 0.0 if settled else -(-straddle_delta(spot, c["strike"], max(T, 1e-6), c["iv"])) * MULTIPLIER * units * (spot / spy_now)
             cost = abs(sh_new - last_sh) * spy_now * HEDGE_BPS / 1e4 + (2 * COMMISSION * units if settled else 0.0)
-            new_m.append({"date": day, "start": c["start"], "spot": spot, "spy": spy_now, "straddle_mid": smid,
+            new_m.append({"date": mday, "start": c["start"], "spot": spot, "spy": spy_now, "straddle_mid": smid,
                           "hedge_shares": sh_new, "pnl_option": pnl_opt, "pnl_hedge": pnl_hdg, "cost": cost,
                           "pnl": pnl_opt + pnl_hdg - cost, "status": "settled" if settled else "open"})
             if settled:
                 c["status"] = "settled"
-            continue
+            if mday == day:
+                continue        # a late settle falls through: this session is then flat or an entry like any other
         starts = [pd.Timestamp(c["start"]) for c in (list(cycles.to_dict("records")) + new_c)]
         # the cycle clock runs on NYSE sessions, not on snapshot sessions: a missed collector day still counts
         since = len(nyse_sessions(max(starts) + pd.Timedelta(days=1), day)) if starts else HORIZON

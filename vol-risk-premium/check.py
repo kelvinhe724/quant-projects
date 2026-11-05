@@ -226,6 +226,67 @@ check("forward: a SPY-less session mid-cycle books the same total P&L as the ful
       and list(_gap.status) == ["open", "open", "no mark", "open", "open"] and np.isnan(_gap.straddle_mid.iloc[2])
       and abs(_full.pnl_option.sum() - (_mids[0] - 0.2 - _mids[-1]) * 100) < 1e-9)
 
+# forward track late settle: the expiry session's chain is missing from the lake (10-13, 10-14, 10-20 were). The cycle
+# settles in a row DATED AT EXPIRY at the expiry-day Yahoo closes, never at a later session's spot; no close yet, no row.
+_K780 = {"start": pd.Timestamp("2026-10-06"), "expiry": pd.Timestamp("2026-11-02"), "strike": 780.0, "spot": 781.89,
+         "units": 1, "entry_bid": 20.14, "entry_mid": 20.565, "spread_pct": 0.0413, "iv": 0.1213009013366698,
+         "vix": 15.01, "monthly": False, "status": "open"}
+_M1030 = {"date": pd.Timestamp("2026-10-30"), "start": pd.Timestamp("2026-10-06"), "spot": 758.010009765625,
+          "spy": 755.719970703125, "straddle_mid": 21.405, "hedge_shares": -99.39297136306313, "pnl_option": 0.0,
+          "pnl_hedge": 0.0, "cost": 0.0, "pnl": 0.0, "status": "open"}
+_XSP = {"2026-11-02": (754.1400146484375, 752.0999755859375), "2026-11-03": (756.8900146484375, 754.3499755859375)}
+
+
+def _day(d):
+    return pd.DataFrame({"snapshot": [f"{d} 20:30:00"] * 2, "expiry": [pd.Timestamp("2026-11-02")] * 2,
+                         "strike": [780.0, 780.0], "cp": ["C", "P"], "bid": [1.0, 1.0], "ask": [1.2, 1.2],
+                         "T": [0.0, 0.0], "spot": [_XSP[d][0]] * 2, "impliedVolatility": [0.12, 0.12]})
+
+
+def _late(lake_days, close, spy_days=None):
+    """run() on the K780 book as of 10-30 with only `lake_days` in the lake; `close(ticker, day)` stubs Yahoo."""
+    calls = []
+    old = _fwd.sessions, _fwd.vix_closes, getattr(_fwd, "expiry_close", None)
+    _fwd.sessions = lambda t: ({pd.Timestamp(d): _day(d) for d in lake_days},
+                               pd.Series({pd.Timestamp(d): _XSP[d][1] for d in (spy_days or lake_days)}))
+    _fwd.vix_closes = lambda s, e: pd.Series({pd.Timestamp("2026-10-30"): 16.0})
+    _fwd.expiry_close = lambda t, d: (calls.append(d), close(t, d))[1]
+    try:
+        with tempfile.TemporaryDirectory() as tmp:
+            pd.DataFrame([_K780]).to_csv(os.path.join(tmp, "cycles.csv"), index=False)
+            pd.DataFrame([_M1030]).to_csv(os.path.join(tmp, "marks.csv"), index=False)
+            _fwd.run("^XSP", out=tmp)
+            return (pd.read_csv(os.path.join(tmp, "cycles.csv")), pd.read_csv(os.path.join(tmp, "marks.csv")), calls)
+    finally:
+        _fwd.sessions, _fwd.vix_closes, _fwd.expiry_close = old
+
+
+_c, _m, _calls = _late(["2026-11-03"], lambda t, d: _XSP["2026-11-02"])
+_s = _m[_m.status == "settled"]
+check(f"late settle: no 11-02 chain, 11-03 present -> one settled mark dated 2026-11-02 at spot 754.14, mid 25.86, "
+      f"pnl -94.47 (got {list(zip(_s.date, _s.spot.round(2), _s.straddle_mid.round(2), _s.pnl.round(2)))})",
+      len(_s) == 1 and _s.date.iloc[0] == "2026-11-02" and abs(_s.spot.iloc[0] - 754.14) < 1e-3
+      and abs(_s.straddle_mid.iloc[0] - 25.86) < 1e-3 and abs(_s.pnl.iloc[0] - -94.4718092727617) < 1e-6
+      and (_c.status == "settled").all() and "2026-11-03" in set(_m.date)
+      and not ((_m.date == "2026-11-03") & (_m.status == "settled")).any())
+_c, _m, _calls = _late(["2026-11-03"], lambda t, d: None)
+check("late settle: no Yahoo close for the expiry yet -> no mark row written, the cycle stays open, the run retries",
+      list(_m.date) == ["2026-10-30"] and (_c.status == "open").all() and len(_calls) == 1)
+_c, _m, _calls = _late(["2026-11-02"], lambda t, d: (_ for _ in ()).throw(AssertionError("Yahoo called")))
+_s = _m[_m.status == "settled"]
+check("late settle: with the expiry chain present the existing settle path books it (spot 754.14, mid 25.86, no Yahoo call)",
+      len(_s) == 1 and _s.date.iloc[0] == "2026-11-02" and abs(_s.straddle_mid.iloc[0] - 25.86) < 1e-3
+      and abs(_s.pnl.iloc[0] - -94.4718092727617) < 1e-6 and _calls == [])
+_c, _m, _calls = _late(["2026-11-02", "2026-11-03"], lambda t, d: (_ for _ in ()).throw(AssertionError("Yahoo called")))
+check(f"late settle: a cycle settled earlier in the same run is not settled again on the next session "
+      f"({list(zip(_m.date, _m.status))})", (_m.status == "settled").sum() == 1 and _calls == [])
+_c, _m, _calls = _late(["2026-11-02", "2026-11-03"], lambda t, d: _XSP["2026-11-02"], spy_days=["2026-11-03"])
+_s = _m[_m.status == "settled"]
+check(f"late settle: an expiry chain with no SPY ('no mark') settles next run in a row dated at expiry, hedge closed "
+      f"against the last non-NaN SPY: same pnl -94.47, no NaN ({list(zip(_m.date, _m.status, _m.pnl.round(2)))})",
+      list(_m.status) == ["open", "no mark", "settled", "flat"] and _s.date.iloc[0] == "2026-11-02"
+      and abs(_m.pnl.sum() - -94.4718092727617) < 1e-6 and not _m.pnl.isna().any() and len(_calls) == 1)
+
 # measure_spread: PREREG §4 freezes the median over the FIRST 10 sessions; zeroed legs are no quote
 import measure_spread as _ms
 _days = pd.bdate_range("2026-09-08", periods=24)   # after Labor Day, so every day is an NYSE session
