@@ -601,6 +601,38 @@ check("the open freezes var_sharpe with n_trials; 50 near-clone rows logged afte
       fb["var_sharpe"] == var_at_open > 0 and frz.trials() == 53 and abs(d_after["dsr"] - d_open["dsr"]) < 1e-12
       and d_after["var_sharpe"] == fb["var_sharpe"] and abs(d_live["var_sharpe"] - fb["var_sharpe"]) > 1e-6,
       f"frozen var {fb['var_sharpe']:.2e}, live {d_live['var_sharpe']:.2e}, dsr {d_open['dsr']:.4f}")
+# r3-accounting: the production reads (fn logs its own row, then dsr) must pass the frozen var_sharpe, not just n_trials
+plock = Untouched(os.path.join(tmp, "prod-var.json"))
+preg = Registry(os.path.join(tmp, "prod-var"))
+plock.lock(IDX, 0.2, data_hash="prod", registry=preg)
+for i in (1, 4, 7):
+    preg.record(f"trial{i}", {}, NAMES, (FPRE[0], FPRE[-1]), frames["close"].iloc[:, i].pct_change().loc[FPRE])
+pvar = preg.var_sharpe()
+
+
+def prod_fn(s, e):
+    b = plock.read()
+    r = frames["close"].iloc[:, 3].pct_change().loc[s:e]
+    preg.record("own read", {}, NAMES, (s, e), r * 0 + 0.01 + rng.normal(0, 1e-4, len(r)))  # a far-off Sharpe
+    return {"frozen": preg.dsr(r, n_trials=b["n_trials"], var_sharpe=b["var_sharpe"])["dsr"],
+            "live": preg.dsr(r, n_trials=b["n_trials"])["dsr"],
+            "want": preg.dsr(r, n_trials=b["n_trials"], var_sharpe=pvar)["dsr"]}
+
+
+pres = plock.open(prod_fn, registry=preg)
+import ast  # noqa: E402
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+bare = []
+for rel in ("vol-risk-premium/prior.py", "research/run.py", "xs-trend/prior.py"):
+    for node in ast.walk(ast.parse(open(os.path.join(ROOT, rel)).read())):
+        if isinstance(node, ast.Call) and getattr(node.func, "attr", "") == "dsr":
+            kw = {k.arg for k in node.keywords}
+            if "n_trials" in kw and "var_sharpe" not in kw:
+                bare.append(f"{rel}:{node.lineno}")
+check("an untouched read whose fn logs its own far-off row publishes the DSR of the frozen variance (the live one "
+      "moves); every dsr(n_trials=...) in vol-risk-premium/prior.py, research/run.py, xs-trend/prior.py also passes "
+      "var_sharpe", abs(pres["frozen"] - pres["want"]) < 1e-12 and abs(pres["live"] - pres["frozen"]) > 1e-6
+      and not bare, f"frozen {pres['frozen']:.4f}, live {pres['live']:.4f}, bare {bare}")
 with open(flock.path) as fh:
     edited = json.load(fh)
 edited["var_sharpe"] = 0.0

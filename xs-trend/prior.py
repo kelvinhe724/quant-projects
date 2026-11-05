@@ -379,7 +379,7 @@ def main(open_window=False):
 
     def fn(start, end):
         """The one read: scored PIT sleeve vs the scored EW basket of the same universe; clears if > 0 and > basket."""
-        res, frozen = {}, lock.read()["n_trials"]  # the count the open froze, before the rows logged here
+        res, frz = {}, lock.read()  # n_trials and var_sharpe as the open froze them, before the rows logged here
         for k in ("pit", "bh"):
             full = run_alpha(ALPHAS[k], panel, frames, b["liquidity"], end)
             r = full["scored"]["ret"].loc[start:end]
@@ -387,7 +387,7 @@ def main(open_window=False):
             reg.record(str(ALPHAS[k]), config(k, ALPHAS[k], "scored", "untouched"), names, (start.date(), end.date()),
                        r, tags={"stage": "untouched"}, code=CODE)
             if k == "pit":
-                res["dsr"] = reg.dsr(r, n_trials=frozen)
+                res["dsr"] = reg.dsr(r, n_trials=frz["n_trials"], var_sharpe=frz["var_sharpe"])
                 res["kill_dates"] = [str(x) for x in kill_dates(r)]
         res["clears"] = bool(res["pit"]["sharpe"] > 0 and res["pit"]["sharpe"] > res["bh"]["sharpe"])
         return res

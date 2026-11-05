@@ -107,14 +107,15 @@ def main():
     sleeve = Sleeve(XSMom(**chosen), store, series=[])
 
     def final(start, stop):
-        frozen = lock.read()["n_trials"]  # the count the open froze; the two rows logged here are not in it
+        b = lock.read()  # n_trials and var_sharpe as the open froze them; the two rows logged here are not in them
         r = window_returns(alpha, panel, close, start, stop, me, registry=registry,
                            config={**chosen, "window": "untouched"}, universe=ETFS, tags={"stage": "untouched"})
         e = run(Sleeve(XSMom(**chosen), store, series=[]), bars, config=book_config(kill=False)).returns.loc[start:stop]
         registry.record("XSMom engine", {**chosen, "path": "engine", "window": "untouched"}, ETFS,
                         (start.date(), stop.date()), e, tags={"stage": "untouched_engine"})
-        return {"chosen": chosen, "research": stats(r), "engine": stats(e), "dsr": registry.dsr(r, n_trials=frozen),
-                "engine_dsr": registry.dsr(e, n_trials=frozen)}
+        return {"chosen": chosen, "research": stats(r), "engine": stats(e), "dsr":
+                registry.dsr(r, n_trials=b["n_trials"], var_sharpe=b["var_sharpe"]),
+                "engine_dsr": registry.dsr(e, n_trials=b["n_trials"], var_sharpe=b["var_sharpe"])}
 
     try:
         result = lock.open(final, registry=registry)
