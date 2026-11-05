@@ -324,6 +324,70 @@ def storage_checks(tmp):
         opt.ROOT, quality.free_bytes = real_root, real_free
 
 
+def daily_feed_checks():
+    """The FRED step refuses a non-CSV body; the equities step refetches a ticker that fell behind."""
+    print("lake-daily: fred body, equities gap")
+    real = (collect.requests.get, collect.FRED_SERIES, collect.time.sleep, collect.yf.download, collect.universe)
+    collect.time.sleep = lambda s: None
+
+    class Resp:
+        def __init__(self, text):
+            self.text = text
+        def raise_for_status(self):
+            pass
+
+    try:
+        collect.FRED_SERIES = ["PLANTED"]
+        collect.requests.get = lambda *a, **k: Resp("<!DOCTYPE html><html><body>FRED is down for maintenance</body></html>")
+        try:
+            collect.fred()
+            err = None
+        except Exception as e:
+            err = e
+        check("a maintenance HTML page raises a clear error instead of a ParserError",
+              isinstance(err, RuntimeError) and "not CSV" in str(err), repr(err))
+        check("and writes nothing", "PLANTED" not in lake.parts("fred"))
+        collect.requests.get = lambda *a, **k: Resp("observation_date,PLANTED\n2026-11-02,4.1\n2026-11-03,.\n")
+        check("a CSV body still loads, '.' rows dropped", collect.fred() == 1 and len(lake.load("fred", universe=None).query("series == 'PLANTED'")) == 1)
+
+        shutil.rmtree(os.path.join(lake.STORE, "equities_daily"), ignore_errors=True)
+
+        def plant(t, last):
+            days = pd.bdate_range("2026-08-03", last)
+            lake.write("equities_daily", t, pd.DataFrame({
+                "date": days, "ticker": t, "open": 1.0, "high": 1.0, "low": 1.0, "close": 1.0, "adj_close": 1.0,
+                "volume": 1.0, "collected_at": pd.Timestamp("2026-11-01")}))
+
+        plant("AAA", "2026-10-30")      # current
+        plant("BBB", "2026-10-16")      # live, 14 days behind
+        plant("DEAD", "2026-08-10")     # months behind: Yahoo stopped serving it
+        asked = []
+
+        def fake_download(chunk, start, **k):
+            asked.append(start)
+            idx = pd.bdate_range(start, "2026-11-02")
+            cols = pd.MultiIndex.from_product([["Open", "High", "Low", "Close", "Adj Close", "Volume"], ["AAA", "BBB"]])
+            return pd.DataFrame(2.0, index=idx, columns=cols)
+
+        collect.yf.download = fake_download
+        collect.universe = lambda: ["AAA", "BBB", "DEAD"]
+        last = {"AAA": pd.Timestamp("2026-10-30"), "BBB": pd.Timestamp("2026-10-16"), "DEAD": pd.Timestamp("2026-08-10")}
+        check("start is 7 days before the newest bar when every live ticker is current",
+              collect.incremental_start({"A": last["AAA"], "B": last["AAA"]}) == "2026-10-23")
+        check("start is 7 days before the laggard's own last bar, and a dead name does not drag it back",
+              collect.incremental_start(last) == "2026-10-09", collect.incremental_start(last))
+        collect.equities()
+        check("equities asks Yahoo from the laggard's last bar", asked == ["2026-10-09"], asked)
+        bbb = lake.load("equities_daily", universe=["BBB"]).date
+        check("the 14-day gap is filled: every business day to 2026-11-02",
+              list(bbb[bbb >= "2026-10-01"]) == list(pd.bdate_range("2026-10-01", "2026-11-02")))
+        check("the dead name is left as it was", lake.load("equities_daily", universe=["DEAD"]).date.max() == pd.Timestamp("2026-08-10"))
+    finally:
+        collect.requests.get, collect.FRED_SERIES, collect.time.sleep, collect.yf.download, collect.universe = real
+        shutil.rmtree(os.path.join(lake.STORE, "equities_daily"), ignore_errors=True)
+        shutil.rmtree(os.path.join(lake.STORE, "fred"), ignore_errors=True)
+
+
 def main():
     tmp = tempfile.mkdtemp()
     real_store, real_intervals, real_reports = lake.STORE, lake.INTERVALS, lake.REPORTS
@@ -448,6 +512,7 @@ def main():
         books_5m_checks()
         options_session_checks(tmp)
         storage_checks(tmp)
+        daily_feed_checks()
     finally:
         lake.STORE, lake.INTERVALS, lake.REPORTS = real_store, real_intervals, real_reports
         lake._options().ROOT = real_opt_root
