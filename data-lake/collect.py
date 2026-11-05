@@ -10,6 +10,7 @@
     collect.py daily / hourly      what the launchd jobs run
 """
 import asyncio
+import fcntl
 import html
 import io
 import json
@@ -529,21 +530,45 @@ def quality():
     return q.main()
 
 
-def bundle(*steps, with_quality=True):
-    """Run every step, then quality; return 1 if any step failed, so launchd and healthchecks see it.
+def record_run(command, started, steps):
+    """Merge this run into reports/last_run.json, one entry per command, so quality sees the nightly run's steps.
+
+    The 5-minute, hourly and daily jobs can finish together: the lock keeps one from dropping another's entry.
+    """
+    os.makedirs(lake.REPORTS, exist_ok=True)
+    path = os.path.join(lake.REPORTS, "last_run.json")
+    with open(path + ".lock", "w") as lk:
+        fcntl.flock(lk, fcntl.LOCK_EX)
+        try:
+            runs = json.load(open(path))
+        except (OSError, ValueError):
+            runs = {}
+        runs[command] = {"command": command, "started": started.isoformat(), "finished": now().isoformat(),
+                         "steps": steps}
+        with open(path + ".tmp", "w") as fh:
+            json.dump(runs, fh, indent=1)
+        os.replace(path + ".tmp", path)
+
+
+def bundle(*steps, with_quality=True, command=None):
+    """Run every step, record them in last_run.json, then quality; return 1 if any step failed,
+    so launchd and healthchecks see it.
 
     with_quality=False is for the 5-minute job: the hourly quality run covers it.
     """
-    failed = []
+    started, done = now(), []
     for step in steps:
         try:
             step()
+            done.append({"step": step.__name__, "status": "ok"})
         except Exception as e:
-            log(f"{step.__name__} failed: {type(e).__name__}: {e}")
-            failed.append(step.__name__)
+            msg = f"{type(e).__name__}: {e}"
+            log(f"{step.__name__} failed: {msg}")
+            done.append({"step": step.__name__, "status": "failed", "error": msg.splitlines()[0]})
+    record_run(command or "+".join(s.__name__ for s in steps), started, done)
     if with_quality:
         quality()
-    return 1 if failed else 0
+    return 1 if any(d["status"] == "failed" for d in done) else 0
 
 
 if __name__ == "__main__":
@@ -558,7 +583,7 @@ if __name__ == "__main__":
     elif cmd == "kalshi":
         kalshi()
     elif cmd == "kalshi-books":
-        sys.exit(bundle(kalshi_books, with_quality=False))
+        sys.exit(bundle(kalshi_books, with_quality=False, command="kalshi-books"))
     elif cmd == "edgar":
         edgar(days=opt.get("days", 3))
     elif cmd == "archive":
@@ -566,9 +591,9 @@ if __name__ == "__main__":
     elif cmd == "crypto":
         crypto(seconds=opt.get("seconds"))
     elif cmd == "daily":
-        sys.exit(bundle(equities, fred, edgar, archive))
+        sys.exit(bundle(equities, fred, edgar, archive, command="daily"))
     elif cmd == "hourly":
-        sys.exit(bundle(kalshi))
+        sys.exit(bundle(kalshi, command="hourly"))
     else:
         print(__doc__)
         sys.exit(2)

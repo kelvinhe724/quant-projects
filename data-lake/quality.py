@@ -5,11 +5,16 @@ Run: ../.venv/bin/python3 quality.py   (seconds; also runs at the end of every l
 import json
 import os
 import shutil
+import sys
 
 import pandas as pd
 import pyarrow.parquet as pq
 
 import lake
+from collect import VENUES
+
+sys.path.append(lake.ROOT)
+from framework.book.universe import sessions  # noqa: E402  the book's NYSE calendar
 
 # how old the newest row may be before the feed counts as stale
 STALE_AFTER = {"equities_daily": "4D", "fred": "4D", "kalshi_markets": "2h", "kalshi_books": "2h",
@@ -23,6 +28,11 @@ BOOKS = ("kalshi_books", "kalshi_books_5m")
 GROWTH_DAYS = 7        # storage guard: growth is measured over the trailing week
 RUNWAY_MIN_DAYS = 30   # ... and the lake goes not-ok when the disk would fill sooner than this at that rate
 HISTORY_EVERY = pd.Timedelta(hours=23)   # one size entry a day is enough for a week-long window
+# daily bars due by 06:00 CT the day after a session, and how many sessions each may trail:
+# FRED posts a day's rates the next afternoon, after the nightly run, so fred is a session behind
+DAILY_BARS = {"equities_daily": 0, "fred": 1}
+BOOKS_5M_MIN = 0.6     # share of the 288 five-minute snapshots kalshi_books_5m must hold on the last full UTC day
+CT = "America/Chicago"
 
 
 def newest(dataset, names):
@@ -129,6 +139,51 @@ def disk_line(d):
     return s
 
 
+def last_runs():
+    """reports/last_run.json from collect.bundle(): {command: {started, finished, steps}}, {} if never written."""
+    try:
+        return json.load(open(os.path.join(lake.REPORTS, "last_run.json")))
+    except (OSError, ValueError):
+        return {}
+
+
+def since(dataset, start, now, cols):
+    """Rows of an hour-partitioned dataset in [start, now], reading only `cols` of the hour parts that can hold them."""
+    tcol = lake.DATASETS[dataset][0]
+    names = [n for n in lake.parts(dataset) if pd.Timestamp(f"{n[:10]} {n[11:13]}:00", tz="UTC") >= start.floor("h")]
+    frames = [pd.read_parquet(lake.part_path(dataset, n), columns=cols) for n in names]
+    df = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame(columns=cols)
+    t = pd.to_datetime(df[tcol], utc=True)
+    return df[(t >= start) & (t <= now)]
+
+
+def feed_problems(now, datasets):
+    """What freshness by newest row cannot see: a failed nightly step, a missing daily bar, a dead venue, a thin day."""
+    out = []
+    run = last_runs().get("daily")
+    if run:
+        out += [f"daily run {run['started'][:16]}Z: {s['step']} failed: {s['error'][:120]}"
+                for s in run["steps"] if s["status"] == "failed"]
+    local = now.tz_convert(CT).tz_localize(None)
+    days = sessions(local - pd.Timedelta(days=14), local)
+    due = days[(days + pd.Timedelta(hours=30)).tz_localize(CT) <= now]   # 06:00 CT the next calendar day
+    for name, lag in DAILY_BARS.items():
+        want, last = due[-1 - lag], datasets[name]["last"]
+        if last is None or pd.Timestamp(last).normalize() < want:
+            out.append(f"{name}: no {want.date()} bar (last {str(last)[:10]})")
+    day = now.floor("D") - pd.Timedelta(days=1)
+    l2 = since("crypto_l2", now - pd.Timedelta(hours=24), now, ["ts", "venue"])
+    out += [f"crypto_l2 {v}: no rows in 24h" for v in VENUES if not (l2["venue"] == v).any()]
+    b = since("kalshi_books_5m", day, now, ["ts"])
+    t = pd.to_datetime(b["ts"], utc=True)
+    if not (t > now - pd.Timedelta(hours=24)).any():
+        out.append("kalshi_books_5m: no rows in 24h")
+    n = t[t < day + pd.Timedelta(days=1)].dt.floor("5min").nunique()   # a doubled launch in one slot counts once
+    if n < BOOKS_5M_MIN * 288:
+        out.append(f"kalshi_books_5m: {n} of 288 snapshots on {day.date()}, under {BOOKS_5M_MIN:.0%}")
+    return out
+
+
 def report(now=None):
     now = to_utc(now or pd.Timestamp.now("UTC"))
     out = {"generated_at": now.isoformat(), "datasets": {}}
@@ -165,10 +220,11 @@ def report(now=None):
     stale = [n for n, d in out["datasets"].items() if d["stale"]]
     dup = [n for n, d in out["datasets"].items() if d["dupes"]]
     disk = out["disk"] = storage(now)
-    out["ok"] = not stale and not dup and not disk["low"]
-    out["summary"] = ("all feeds fresh" if not stale else "stale: " + ", ".join(stale)) \
-        + ("" if not dup else "; duplicates in " + ", ".join(dup)) \
-        + "; " + disk_line(disk)
+    feeds = (["stale: " + ", ".join(stale)] if stale else []) + (["duplicates in " + ", ".join(dup)] if dup else []) \
+        + feed_problems(now, out["datasets"])
+    out["problems"] = feeds + ([disk_line(disk)] if disk["low"] else [])   # every reason ok is false, one line each
+    out["ok"] = not out["problems"]
+    out["summary"] = ("; ".join(feeds) or "all feeds fresh") + "; " + disk_line(disk)
     return out
 
 
