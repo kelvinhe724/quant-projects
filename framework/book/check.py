@@ -479,6 +479,48 @@ check("kalshi: settled P&L through paper.stats on a read-only connection, open c
       and "demo" not in k["books"], str(sb))
 check("kalshi: a missing ledger is reported, not raised", "error" in report.kalshi_summary(os.path.join(tmp, "no.sqlite")))
 
+SUB = "SUBSTITUTED-CACHED-BARS: FXC unavailable from yfinance, using cached bars through {} ({} days old)"
+BLOCK = "rates: newest month EUR 2026-01\n{}{}  shadow equity 100,000.00  positions {{}}\nledger: 2 rows appended -> x\ndashboard -> y\n"
+
+
+def daemon_log(*blocks):
+    path = os.path.join(tmp, f"daemon{len(os.listdir(tmp))}.log")
+    open(path, "w").write("".join(blocks))
+    return path
+
+
+old_sub = BLOCK.format(SUB.format("2026-09-02", 1) + "\n", "2026-09-03")
+clean = BLOCK.format("", "2026-09-04")
+h = report.daemon_health(good, NOW, LC, log_path=daemon_log(old_sub, clean))
+a = report.build_alerts(book, lake_ok, h, report.reconciliation(good), {"last_mark": NOW.isoformat()}, NOW)
+check("cached-bar alert: an old session's substitution block followed by a clean current block raises none",
+      h["substituted_bars"] == [] and a == [], str(a))
+h = report.daemon_health(good, NOW, LC, log_path=daemon_log(old_sub))
+check("cached-bar alert: an old block with no block for the current session raises none (the missed alert covers that)",
+      h["substituted_bars"] == [])
+cur = BLOCK.format(SUB.format("2026-09-03", 7) + "\n" + SUB.format("2026-09-03", 7) + "\n", "2026-09-04")
+h = report.daemon_health(good, NOW, LC, log_path=daemon_log(old_sub, cur))
+a = report.build_alerts(book, lake_ok, h, report.reconciliation(good), {"last_mark": NOW.isoformat()}, NOW)
+check("cached-bar alert: a current-session substitution alerts once, with the age from the dates (session minus last cached bar)",
+      [x["msg"] for x in a] == ["premia-book traded on cached bars: FXC unavailable from yfinance, using cached bars through 2026-09-03 (1 days old)"],
+      str(a))
+crashed = "rates: x\n" + SUB.format("2026-09-02", 1) + "\nTraceback (most recent call last):\nRuntimeError: no data for IEF\n"
+check("cached-bar alert: a run that crashed after substituting does not leak into the next session's block",
+      report.substituted_bars(daemon_log(crashed, clean), "2026-09-04") == [])
+
+two = ledger_rows([100000, 100500, 101000, 100800, 100900])
+_p = os.path.join(tmp, "two.csv")
+_alp = [{**two.iloc[-2].to_dict(), "book": "alpaca", "equity": 90000.0, "positions": "{}", "note": "submitted"},
+        {**two.iloc[-1].to_dict(), "book": "alpaca", "equity": 89500.0, "positions": "{}", "note": "submitted"}]
+pd.concat([two, pd.DataFrame(_alp)]).to_csv(_p, index=False)
+tb = report.book_summary(report.read_ledger(_p))
+hl = report.headline(tb, v1, {}, lake_ok, [])[0]
+check("headline: first line carries the Alpaca account and the shadow book, each with equity, day P&L and since-start",
+      hl.startswith("Alpaca 89,500 (-500 day, -10.50% since 2026-08-31) · shadow 2026-09-04: 100,900 (+100 day, +0.90% since 2026-08-31)")
+      and "DD " in hl and "gross " in hl, hl)
+hn = report.headline(report.book_summary(two), v1, {}, lake_ok, [])[0]
+check("headline: no Alpaca row says so and keeps the shadow figures", hn.startswith("Alpaca n/a · shadow 2026-09-04: 100,900"), hn)
+
 r = report.build(NOW, ledger_path=os.path.join(tmp, "ledger0.csv"), kalshi_path=kdb, lake_path=status_json(),
                  launchctl_text=LC, do_replay=False, kill_path=os.path.join(tmp, "no-KILL"))
 md = report.write(r, os.path.join(tmp, "reports"))

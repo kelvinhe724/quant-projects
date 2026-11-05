@@ -12,6 +12,7 @@ Run: ../../.venv/bin/python3 -m framework.book.report
 import glob
 import json
 import os
+import re
 import sqlite3
 import subprocess
 import sys
@@ -126,7 +127,10 @@ def book_summary(ledger, results=None, note=None):
     alpaca = ledger[(ledger.book == "alpaca") & (ledger.date == last.date)]
     if len(alpaca):
         a = alpaca.iloc[-1]
-        out["alpaca"] = {"equity": float(a.equity), "positions": json.loads(a.positions), "note": str(a.note)}
+        before = ledger[(ledger.book == "alpaca") & (ledger.date < last.date)].sort_values("date")
+        out["alpaca"] = {"equity": float(a.equity), "positions": json.loads(a.positions), "note": str(a.note),
+                         "pnl_day": float(a.equity - before.iloc[-1].equity) if len(before) else 0.0,
+                         "pnl_since_start_pct": float(a.equity) / CAPITAL - 1}
     return out
 
 
@@ -250,16 +254,43 @@ def daemon_health(ledger, now=None, launchctl_text=None, log_path=DAEMON_LOG):
             "missed": due and expected.strftime("%Y-%m-%d") not in have,
             "log_mtime": pd.Timestamp(os.path.getmtime(log_path), unit="s", tz="UTC").tz_convert(ET).isoformat(timespec="seconds")
             if os.path.exists(log_path) else None,
-            "substituted_bars": substituted_bars(log_path)}
+            "substituted_bars": substituted_bars(log_path, expected.strftime("%Y-%m-%d"))}
 
 
-def substituted_bars(log_path=DAEMON_LOG, lines=400):
-    """Cached-bar substitutions the daemon logged in its most recent output."""
-    if not os.path.exists(log_path):
+SESSION_LINE = re.compile(r"^(\d{4}-\d{2}-\d{2})  shadow equity")
+THROUGH = re.compile(r"through (\d{4}-\d{2}-\d{2}) \(\d+ days old\)")
+
+
+def substituted_bars(log_path=DAEMON_LOG, session=None):
+    """Cached-bar substitutions the daemon logged while computing `session` (a YYYY-MM-DD), and only those.
+
+    daemon.log has no run header. A run prints its SUBSTITUTED lines while loading bars and then
+    "<date>  shadow equity ...", so the lines since the last such marker belong to the date on the
+    next one. A run that dies first (Traceback, refused, KILL) drops what it had pending. An older
+    session's block never alerts (2026-10-23's FXC substitution repeated on 12 reports). The age is
+    recomputed from the two dates in the line: session minus the last cached bar.
+    """
+    if not os.path.exists(log_path) or not session:
         return []
+    pending, blocks = [], {}
     with open(log_path, errors="replace") as fh:
-        tail = fh.readlines()[-lines:]
-    return [l.split(SUBSTITUTED + ": ", 1)[1].strip() for l in tail if SUBSTITUTED + ": " in l]
+        for l in fh:
+            m = SESSION_LINE.match(l)
+            if SUBSTITUTED + ": " in l:
+                pending.append(l.split(SUBSTITUTED + ": ", 1)[1].strip())
+            elif m:
+                blocks[m.group(1)] = list(dict.fromkeys(pending))  # a reload prints each line twice
+                pending = []
+            elif l.startswith(("Traceback", "refused:", "KILL file present")):
+                pending = []
+
+    def aged(msg):
+        t = THROUGH.search(msg)
+        if not t:
+            return msg
+        n = (pd.Timestamp(session) - pd.Timestamp(t.group(1))).days
+        return msg[:t.start()] + f"through {t.group(1)} ({n} days old)" + msg[t.end():]
+    return [aged(x) for x in blocks.get(session, [])]
 
 
 def kill_status(path=KILL):
@@ -371,7 +402,10 @@ def headline(book, risk, kalshi, lake, alerts):
     if book.get("equity") is None:
         pnl = "book: no ledger rows yet"
     else:
-        pnl = (f"Book {book['session']}: {book['equity']:,.0f} ({book['pnl_day']:+,.0f} day, "
+        al = book.get("alpaca")
+        acct = (f"Alpaca {al['equity']:,.0f} ({al['pnl_day']:+,.0f} day, {al['pnl_since_start_pct']:+.2%} since {LIVE_START})"
+                if al else "Alpaca n/a")
+        pnl = (f"{acct} · shadow {book['session']}: {book['equity']:,.0f} ({book['pnl_day']:+,.0f} day, "
                f"{book['pnl_since_start_pct']:+.2%} since {LIVE_START}) · DD {book['drawdown']:.2%} · gross {book['gross']:.2f}x of {RISK.max_gross:.0f}x")
         sl = book.get("sleeves")
         if sl:
