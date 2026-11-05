@@ -117,6 +117,12 @@ try:
     check("a feature that reads tomorrow is refused by the audit", False)
 except PeekError as e:
     check("a feature that reads tomorrow is refused by the audit", "leak" in str(e), str(e)[:60])
+rank_leak = Feature("rank_leak", lambda r: r.frames["close"].shift(-5).rank(axis=1), 1)
+try:
+    FeatureStore([rank_leak]).audit(raw, IDX[pos])
+    check("a cross-sectional rank of a future row is refused by the audit", False)
+except PeekError as e:
+    check("a cross-sectional rank of a future row is refused by the audit", "rank_leak" in str(e), str(e)[:60])
 centred = Feature("centred", lambda r: r.frames["close"].rolling(5, center=True).mean(), 1)
 try:
     FeatureStore([centred]).audit(raw, IDX[pos])
@@ -617,5 +623,19 @@ check("a lock body without var_sharpe hashes exactly as before the key existed, 
 
 shutil.rmtree(tmp)
 n_fail = checks.count(False)
+# --- r1-peek-audit (reviewer): a cell that is exactly 0 on the audit date must still move, so a leak that reads only
+# zero cells (index volume, halted names) is refused; the multiplicative factor alone would leave 0 at 0
+_raw0 = copy.deepcopy(raw) if "copy" in dir() else None
+if _raw0 is None:
+    import copy as _copy
+    _raw0 = _copy.deepcopy(raw)
+_raw0.frames["volume"].iloc[pos] = 0.0
+zero_leak = Feature("zero_leak", lambda r: r.frames["volume"].shift(-1), 1)
+try:
+    FeatureStore([zero_leak]).audit(_raw0, IDX[pos])
+    check("a leak that reads only zero cells on the audit date is refused by the audit", False)
+except PeekError as e:
+    check("a leak that reads only zero cells on the audit date is refused by the audit", "zero_leak" in str(e), str(e)[:60])
+
 print(f"\n{len(checks) - n_fail} of {len(checks)} checks passed")
 sys.exit(1 if n_fail else 0)

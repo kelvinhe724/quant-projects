@@ -131,6 +131,8 @@ Pulled from the Limitations sections of the largest projects. These are unfixed,
 
 **`research/` (the platform everything else runs on).** (1) The peek audit perturbs one session, so a feature peeking only at unperturbed rows would pass. (2) The registry keys on config, not code: changing an `Alpha`'s `signal` under the same config replaces the row instead of counting a new trial. (3) Research and engine numbers are not comparable head to head, 10 bps flat against the book's full cost stack.
 
+**`research/` peek audit, invariance hole (closed in `a78f324`).** The audit bumped every cell on the audit date by the same map (1.5x + 1), which keeps cross-sectional order, so a feature that ranks a future row (`close.shift(-5).rank(axis=1)`) passed it; each cell now gets its own seeded factor in 0.5-2.0 and `research/check.py` carries that rank leak as a must-refuse case. The single-date limit in (1) above still stands.
+
 **`data-lake/`.** Yahoo's adjusted close is a snapshot from the fetch date and incremental runs only refresh seven days, so after a dividend the older rows keep the old factor. Every project on the lake inherits this.
 
 **`vol-risk-premium/`.** Sixteen years with one true crash and no 1987 or 2008; the sample's worst day is a hard lower bound, not an estimate, and there is no margin model, so the -13.6% drawdown is optimistic in a way with no bound.
