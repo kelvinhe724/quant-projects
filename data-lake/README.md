@@ -75,8 +75,8 @@ idempotent: a rerun rewrites the same parts with the same keys.
 
 | feed | what one run does | schedule |
 |---|---|---|
-| `equities` | yfinance `auto_adjust=False` for the 894-name universe; incremental from seven days before the newest stored date; `--full` backfills from 2003-06-01 for names with no part yet, so an interrupted first run resumes | daily 21:30 Chicago, weekdays |
-| `fred` | full history of each series; a revised value replaces the stored one | same job |
+| `equities` | yfinance `auto_adjust=False` for the 894-name universe; incremental from seven days before the oldest last bar among tickers within 30 days of the newest one, so a name that fell behind is refetched from its own last bar and a failed run backfills on the next good one; `--full` backfills from 2003-06-01 for names with no part yet, so an interrupted first run resumes | daily 21:30 Chicago, weekdays |
+| `fred` | full history of each series; a revised value replaces the stored one; a body that is not CSV (FRED's maintenance page) fails the step instead of being parsed | same job |
 | `edgar` | for each of the last three filing days: the daily form index, 8-K and 8-K/A rows whose CIK is in the universe map, then the complete submission `.txt`, split into documents, keeping the 8-K body and every EX-99 exhibit, HTML stripped; items parsed from the first 20,000 characters; `earnings` is true when 2.02 is among them | same job |
 | `archive` | the last 30 daily zips of spot 1m klines and USD-M `bookDepth` from data.binance.vision, cached under `source-material/data-lake/` | same job |
 | `kalshi` | five pages of open markets, then depth on the 200 with the most 24h volume | hourly |
@@ -189,14 +189,14 @@ otherwise drop out), the 300 cap, the page limit and the pauses, the round trip
 and its schema against the hourly books, and failed snapshots exiting 1 through
 `bundle()`. Planted options days check that `lake.load("options")` reads close
 by default, `session=` the others, and the old single-file layout. The storage
-guard is checked on planted history, free space and a stray directory. 89
+guard is checked on planted history, free space and a stray directory. 97
 checks, exits 1 on any failure.
 
 ## Limitations
 
 - **Adjusted closes go stale.** `adj_close` is Yahoo's dividend-and-split
   adjusted series as of the day the row was fetched. An incremental run only
-  refetches the last seven days, so after a dividend the older rows keep the
+  refetches the last seven days (more for a name that fell behind), so after a dividend the older rows keep the
   old adjustment. `close` and `volume` are raw and do not have this problem.
   Rebuild with `collect.py equities --full` after moving `store/equities_daily`
   aside, or adjust from raw with a corporate-actions table this store does

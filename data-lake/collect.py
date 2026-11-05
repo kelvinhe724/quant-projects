@@ -32,6 +32,7 @@ import lake
 CACHE = os.path.join(lake.ROOT, "source-material", "data-lake")
 UA = {"User-Agent": "Kelvin He kelvinhe724@uchicago.edu data-lake"}
 PANEL_START = "2003-06-01"
+BACKFILL_DAYS = 30               # how far back an incremental equities run reaches for a ticker that fell behind
 
 FRED_SERIES = ["DFF", "SOFR", "DTB3", "DGS1MO", "DGS3MO", "DGS6MO", "DGS1", "DGS2", "DGS5", "DGS10",
                "DGS30", "T10Y2Y", "T10Y3M", "CPIAUCSL", "CPILFESL", "PAYEMS", "UNRATE", "VIXCLS",
@@ -76,6 +77,19 @@ def universe():
     return sorted(set(iv["ticker"]) | set(ETFS))
 
 
+def incremental_start(lasts):
+    """First date an incremental equities pull asks for, from {ticker: last stored bar date}.
+
+    Seven days before the oldest last bar among tickers within BACKFILL_DAYS of the newest one: a name
+    that missed some days (a vendor gap, a chunk that came back empty) is refetched from its own last
+    bar, not from a window anchored on the newest bar of any ticker. Names further behind are
+    delisted or dead as far as Yahoo goes and do not drag the window back.
+    """
+    newest = max(lasts.values())
+    live = [d for d in lasts.values() if d >= newest - pd.Timedelta(days=BACKFILL_DAYS)]
+    return (min(live) - pd.Timedelta(days=7)).strftime("%Y-%m-%d")
+
+
 def equities(full=False):
     """Pull OHLCV for the universe from the last stored date; the first run backfills from 2003."""
     logging.getLogger("yfinance").setLevel(logging.CRITICAL)
@@ -86,9 +100,8 @@ def equities(full=False):
         start = PANEL_START
         tickers = [t for t in tickers if t not in set(have)]
     else:
-        last = max(pd.read_parquet(lake.part_path("equities_daily", t), columns=["date"])["date"].max()
-                   for t in have if not t.startswith("_"))
-        start = (pd.Timestamp(last) - pd.Timedelta(days=7)).strftime("%Y-%m-%d")
+        start = incremental_start({t: pd.Timestamp(pd.read_parquet(lake.part_path("equities_daily", t), columns=["date"])["date"].max())
+                                   for t in have if not t.startswith("_")})
     rows, got = 0, 0
     for i in range(0, len(tickers), 100):
         chunk = tickers[i:i + 100]
@@ -130,6 +143,10 @@ def fred():
         url = f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={s}"
         r = requests.get(url, headers=UA, timeout=60)
         r.raise_for_status()
+        # FRED answers maintenance with a 200 and an HTML page (framework/engine/data.py load_fred
+        # and the options collector refuse it the same way); never parse that as a series
+        if not r.text.lstrip().lower().startswith(("observation_date", "date")):
+            raise RuntimeError(f"fred {s}: body is not CSV ({r.text.lstrip()[:40]!r})")
         df = pd.read_csv(io.StringIO(r.text), na_values=".")
         df.columns = ["date", "value"]
         df = df.dropna()
