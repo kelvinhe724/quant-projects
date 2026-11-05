@@ -1277,6 +1277,11 @@ try:
         f"{_yd}T10:20:01Z lake-daily 75 1\n{_yd}T12:50:01Z lake-daily 75 1\n{_yd}T23:30:01Z lake-daily 1 1\n"
         f"{_yd}T10:00:00Z premia-book 0 0\n2000-01-01T00:00:00Z lake-daily 75 1\n")
     _dm_count = _dm()
+    # the Chicago day, not the UTC day: a 03:30Z row dated today is 22:30 CT yesterday (counts); dated yesterday it is the day before (does not)
+    _td = str(NOW.tz_convert("America/Chicago").date())
+    open(report.EXITS_LOG, "w").write(
+        f"{_td}T03:30:00Z lake-daily 75 1\n{_yd}T03:30:00Z lake-daily 1 1\nnot-a-time lake-daily 75 1\n")
+    _dm_ct = _dm()
 finally:
     report.EXITS_LOG = _elog0
 check("launchd alerts: a last exit status of 75 reads 'last attempt offline: session not collected', not the generic text",
@@ -1286,6 +1291,8 @@ check("exits log: two 75s and one 1 for a slug yesterday give one count line; ot
       _dm_count[-1] == "yesterday's offline (75) and failed (1) runs: lake-daily 2x75 1x1", str(_dm_count))
 check("exits log: a missing log adds no alert line and the other alerts are unchanged",
       _dm_missing == ["com.kelvinhe.lake-daily last attempt offline: session not collected"], str(_dm_missing))
+check("exits log: 'yesterday' is the Chicago day: a 03:30Z row dated today counts, one dated yesterday does not, an unparsable stamp is skipped",
+      _dm_ct[-1] == "yesterday's offline (75) and failed (1) runs: lake-daily 1x75 0x1", str(_dm_ct))
 
 
 print(f"\n{sum(checks)}/{len(checks)} checks passed")

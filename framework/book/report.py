@@ -245,8 +245,10 @@ def launchd_jobs(text=None):
 
 
 def exit_counts(now, path=None):
-    """{slug: {75: n, 1: n}} for the UTC day before `now`, from the exits log; {} if the log is missing."""
-    day = str((pd.Timestamp(now).tz_convert("UTC") - pd.Timedelta(days=1)).date())
+    """{slug: {75: n, 1: n}} for the Chicago day before `now`, from the exits log; {} if the log is missing.
+
+    Rows are stamped in UTC, so a 02:30 CT battle that failed lands on the next UTC date: convert each row before comparing."""
+    day = (pd.Timestamp(now).tz_convert(CT) - pd.Timedelta(days=1)).date()
     n = {}
     try:
         lines = open(EXITS_LOG if path is None else path).read().splitlines()
@@ -254,7 +256,13 @@ def exit_counts(now, path=None):
         return {}
     for line in lines:
         t = line.split()
-        if len(t) >= 3 and t[0][:10] == day and t[2] in ("75", "1"):
+        if len(t) < 3 or t[2] not in ("75", "1"):
+            continue
+        try:
+            when = pd.Timestamp(t[0]).tz_convert(CT).date()
+        except (ValueError, TypeError):
+            continue  # an unparsable or tz-naive stamp is not a run we can place on a day
+        if when == day:
             c = n.setdefault(t[1], {})
             c[int(t[2])] = c.get(int(t[2]), 0) + 1
     return n
