@@ -17,9 +17,11 @@ sys.path.append(lake.ROOT)
 from framework.book.universe import sessions  # noqa: E402  the book's NYSE calendar
 
 # how old the newest row may be before the feed counts as stale
-STALE_AFTER = {"equities_daily": "4D", "fred": "4D", "kalshi_markets": "2h", "kalshi_books": "2h",
-               "kalshi_books_5m": "15min", "edgar_8k": "4D", "crypto_l2": "3min", "crypto_klines_1m": "3D",
-               "crypto_bookdepth": "3D", "options": "4D"}
+# wall-clock backstop only: daily feeds are judged by sessions in DAILY_BARS (due 06:00 CT the next day), and these
+# widths cover a three-day weekend so a Monday or Tuesday morning report does not alarm on Friday's bar
+STALE_AFTER = {"equities_daily": "7D", "fred": "7D", "kalshi_markets": "2h", "kalshi_books": "2h",
+               "kalshi_books_5m": "15min", "edgar_8k": "5D", "crypto_l2": "3min", "crypto_klines_1m": "5D",
+               "crypto_bookdepth": "5D", "options": "4D"}
 # (parts to scan for gaps and duplicates, expected cadence)
 GAP_SCAN = {"kalshi_markets": 7, "kalshi_books": 7, "kalshi_books_5m": 24, "crypto_l2": 24, "crypto_klines_1m": 1,
             "crypto_bookdepth": 1, "equities_daily": ["SPY"], "fred": ["DGS10"]}

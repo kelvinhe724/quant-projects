@@ -654,6 +654,15 @@ check("an iron fly whose paragraph buys the wings passes at level 3 and fails at
       results["fly3"][0] and not results["fly2"][0] and not results["bare3"][0]
       and any("defined-risk" in s and "FAILS at level 2" in s for s in results["fly2"][1]))
 check("a put credit spread that buys the lower put passes at level 3", results["pcs3"][0], results["pcs3"][1][-1][:90])
+# a buy that closes the short is not a wing: the desk's own straddle with its exit rule written down must stay uncovered
+BUYBACK = NAKED + "- Buy back the call and put at 21 DTE.\n"
+CLOSEBY = "- Traded: XSP options.\n- Sell 1 ATM XSP straddle each cycle; close it by buying the call and put back before expiry.\n"
+FLY_EXIT = FLY + "- Buy back the fly at 21 DTE.\n"
+_bb, _cb, _fe = venue(BUYBACK, 3), venue(CLOSEBY, 3), venue(FLY_EXIT, 3)
+check("a naked straddle whose paragraph buys the legs back at 21 DTE still fails at level 3 as uncovered",
+      not _bb[0] and any("uncovered" in s for s in _bb[1]), _bb[1][-1][:90])
+check("'close it by buying the call and put back' is not a wing either", not _cb[0] and any("uncovered" in s for s in _cb[1]), _cb[1][-1][:90])
+check("an iron fly that buys its wings and also buys the fly back at 21 DTE still passes at level 3", _fe[0], _fe[1][-1][:90])
 check("'sell a naked call, not covered' fails as uncovered with the sentence quoted",
       not results["call3"][0] and any('uncovered' in s and 'Sell a naked call, not covered."' in s
                                       for s in results["call3"][1]))
@@ -687,7 +696,6 @@ check("a straddle that buys only a call fails naming the naked put",
       half["strad"][1][-1][:90])
 
 shutil.rmtree(tmp)
-n_fail = checks.count(False)
 # --- r1-peek-audit (reviewer): a cell that is exactly 0 on the audit date must still move, so a leak that reads only
 # zero cells (index volume, halted names) is refused; the multiplicative factor alone would leave 0 at 0
 _raw0 = copy.deepcopy(raw) if "copy" in dir() else None
@@ -702,5 +710,6 @@ try:
 except PeekError as e:
     check("a leak that reads only zero cells on the audit date is refused by the audit", "zero_leak" in str(e), str(e)[:60])
 
+n_fail = checks.count(False)   # after the last check: everything above counts toward the exit code
 print(f"\n{len(checks) - n_fail} of {len(checks)} checks passed")
 sys.exit(1 if n_fail else 0)
