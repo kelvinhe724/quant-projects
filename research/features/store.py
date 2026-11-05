@@ -54,7 +54,7 @@ class Raw:
         # ponytail: a common monotone map preserves order statistics (ranks), so the factors must differ per cell
         g = np.random.default_rng(self.calendar.get_loc(date))
         for v in frames.values():
-            v.loc[date] = v.loc[date].fillna(1.0).to_numpy() * g.uniform(0.5, 2.0, v.shape[1])
+            v.loc[date] = v.loc[date].fillna(1.0).to_numpy() * g.uniform(0.5, 2.0, v.shape[1]) + 1.0  # +1.0: a cell that is exactly 0 (index volume, halted names) must still move
         series = {k: v.copy() for k, v in self.series.items()}
         for v in series.values():
             v.loc[date] = (v.loc[date] if pd.notna(v.loc[date]) else 0.0) + 1.0
