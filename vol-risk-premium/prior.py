@@ -160,11 +160,11 @@ def main(open_window=False):
                          "(PREREG.md §4; write reports/spread-frozen.json from measure_spread.py first)")
 
     def fn(start, end):
-        frozen = lock.read()["n_trials"]  # the count the open froze, before the row logged here
+        b = lock.read()  # n_trials and var_sharpe as the open froze them, before the row logged here
         row, r = score(df, start, end, 0, sp)
         reg.record("VRP", {"basis": BASIS, "spread": sp, "cap": CAP, "offset": 0, "path": "sized",
                            "window": "untouched"}, ["XSP"], (start, end), r, code=CODE)
-        row["dsr"] = reg.dsr(r, n_trials=frozen)
+        row["dsr"] = reg.dsr(r, n_trials=b["n_trials"], var_sharpe=b["var_sharpe"])
         row["clears"] = bool(row["sized_sharpe"] > 0)
         return row
 

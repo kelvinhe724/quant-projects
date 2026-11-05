@@ -197,6 +197,35 @@ check("forward mark: a 0/0 quoted straddle is no quote (nan), not a mid of 0", n
 _mid1 = _fwd.mark(_chain.assign(bid=[9.0, 5.0], ask=[9.5, 5.5]), 780.0, pd.Timestamp("2026-11-02"))
 check("forward mark: a quoted straddle marks at the mid", abs(_mid1[1] - 14.5) < 1e-9)
 
+# forward track: a session with an XSP chain but no SPY spot ("no mark") books nothing and loses nothing: both legs
+# catch up at the next fully marked session against the last mid and the last SPY that were booked
+_days = pd.bdate_range("2026-11-16", "2026-11-20")
+_mids, _spys = [15.0, 14.5, 14.0, 13.6, 13.8], [500.0, 502.0, 502.0, 505.0, 503.0]   # SPY flat into day 3: same hedge
+
+
+def _xsp(d, mid):
+    return pd.DataFrame({"snapshot": [d] * 2, "expiry": [pd.Timestamp("2026-12-18")] * 2, "strike": [780.0] * 2,
+                         "cp": ["C", "P"], "bid": [mid / 2 - 0.1] * 2, "ask": [mid / 2 + 0.1] * 2, "T": [0.09] * 2,
+                         "spot": [780.0] * 2, "impliedVolatility": [0.15] * 2})
+
+
+_saved = (_fwd.sessions, _fwd.vix_closes)
+_fwd.vix_closes = lambda a, b: pd.Series(15.0, index=pd.bdate_range(a, b))
+_books = []
+for _drop in (False, True):
+    _sp = pd.Series(_spys, index=_days)
+    _sp = _sp.drop(_days[2]) if _drop else _sp
+    _fwd.sessions = lambda t, _sp=_sp: ({d: _xsp(d, m) for d, m in zip(_days, _mids)}, _sp)
+    with tempfile.TemporaryDirectory() as _ft:
+        _books.append(_fwd.run(out=_ft)[1])
+_fwd.sessions, _fwd.vix_closes = _saved
+_full, _gap = _books
+check("forward: a SPY-less session mid-cycle books the same total P&L as the fully marked path "
+      f"({_gap.pnl.sum():.6f} vs {_full.pnl.sum():.6f}), no NaN pnl row, status 'no mark' with no stored mid",
+      np.isclose(_gap.pnl.sum(), _full.pnl.sum(), rtol=0, atol=1e-9) and not _gap.pnl.isna().any()
+      and list(_gap.status) == ["open", "open", "no mark", "open", "open"] and np.isnan(_gap.straddle_mid.iloc[2])
+      and abs(_full.pnl_option.sum() - (_mids[0] - 0.2 - _mids[-1]) * 100) < 1e-9)
+
 # measure_spread: PREREG §4 freezes the median over the FIRST 10 sessions; zeroed legs are no quote
 import measure_spread as _ms
 _days = pd.bdate_range("2026-09-08", periods=24)   # after Labor Day, so every day is an NYSE session
