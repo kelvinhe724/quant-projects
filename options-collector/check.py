@@ -407,5 +407,108 @@ try:
 finally:
     data.requests.get, data.yf.Ticker = _get, _tk
 
+# branch r1-collector: a missing rate leaves no rates.csv, and a DTB3 backfill goes to a sidecar
+print("\nRATE RETRY AND BACKFILL\n")
+import contextlib
+import io
+
+import collect
+
+
+def _chain_r_from_rate():
+    def f(t, now, r):
+        q, spot, hd = fake_chain(t, now, R)
+        q["r"] = np.nan if r is None else r
+        return q, spot, hd
+    return f
+
+
+_nocaps = lambda n: pd.Series(dtype=float)
+_root_before = data.ROOT
+data.ROOT = Path(tempfile.mkdtemp()) / "raw"
+try:
+    D1, D2 = "2026-09-22", "2026-09-23"
+    with contextlib.redirect_stderr(io.StringIO()) as err:
+        collect_day(D1, NOW, tickers=["SPY"], fetch=_chain_r_from_rate(), rate=lambda d: (None, None, None), caps=_nocaps)
+    check("a rate of None leaves no rates.csv and says why",
+          not (data.day_dir(D1) / "rates.csv").exists() and "rate not recorded" in err.getvalue())
+    collect_day(D1, NOW, tickers=["SPY"], fetch=_chain_r_from_rate(), rate=lambda d: (0.04, "2026-09-21", "DTB3"), caps=_nocaps)
+    rr = pd.read_csv(data.day_dir(D1) / "rates.csv")
+    check("the next run fetches the rate again and writes rates.csv with it", len(rr) == 1 and rr["rate"].iloc[0] == 0.04)
+    collect_day(D1, NOW, tickers=["SPY"], fetch=_chain_r_from_rate(), rate=lambda d: (0.09, "2026-09-21", "DTB3"), caps=_nocaps)
+    check("a written rates.csv is never replaced", pd.read_csv(data.day_dir(D1) / "rates.csv")["rate"].iloc[0] == 0.04)
+
+    # an existing day: chain written with no rate, rates.csv empty (the 09-22 shape)
+    collect_day(D2, NOW, tickers=["SPY"], fetch=_chain_r_from_rate(), rate=lambda d: (None, None, None), caps=_nocaps)
+    d2 = data.day_dir(D2)
+    pd.DataFrame([{"date": D2, "series": None, "rate": None, "observation_date": None}]).to_csv(d2 / "rates.csv", index=False)
+    before = digest(d2)
+    asked = []
+    def _bf(obs, series="DTB3"):
+        def f(d):
+            asked.append(d)
+            return 0.04, obs, series
+        return f
+    with contextlib.redirect_stderr(io.StringIO()) as err:
+        out_same = collect.backfill_rate(D2, rate=_bf(D2))
+        out_irx = collect.backfill_rate(D2, rate=_bf("2026-09-22", "IRX"))
+    check("a backfill whose observation is the session day refuses and writes nothing",
+          out_same is None and not (d2 / "rates.backfill.csv").exists() and "refusing" in err.getvalue())
+    check("a backfill that came back from ^IRX refuses (DTB3 only)", out_irx is None and not (d2 / "rates.backfill.csv").exists())
+    check("the backfill asks for the day before the session", asked == ["2026-09-22", "2026-09-22"])
+    check("an empty-rate day summarises to nothing before the backfill",
+          surface.summarise_chain(pd.read_csv(d2 / "SPY.csv", parse_dates=["snapshot", "expiry", "lastTradeDate"]),
+                                  "SPY", D2, "close")[0].empty)
+    side = collect.backfill_rate(D2, rate=_bf("2026-09-22"))
+    after = digest(d2)
+    check("a prior-day DTB3 observation writes rates.backfill.csv with that observation",
+          side == d2 / "rates.backfill.csv" and pd.read_csv(side)["observation_date"].iloc[0] == "2026-09-22")
+    check("rates.csv and every chain file are byte-identical after the backfill",
+          {k: v for k, v in after.items() if k != "rates.backfill.csv"} == before and set(after) - set(before) == {"rates.backfill.csv"})
+    with contextlib.redirect_stderr(io.StringIO()):
+        check("a second backfill refuses (sidecar is write-once)", collect.backfill_rate(D2, rate=_bf("2026-09-22")) is None)
+    q2 = pd.read_csv(d2 / "SPY.csv", parse_dates=["snapshot", "expiry", "lastTradeDate"])
+    s2, _ = surface.summarise_chain(q2, "SPY", D2, "close")
+    h2 = surface.horizon_rows(s2, None, None)
+    check("summarise_chain reads the sidecar rate: SPY iv30 is not NaN", len(s2) and h2["iv30"].notna().all()
+          and (s2["r"] == 0.04).all())
+finally:
+    shutil.rmtree(data.ROOT.parent, ignore_errors=True)
+    data.ROOT = _root_before
+
+# branch r1-collector: the on-demand session spread table
+print("\nSESSION SPREADS\n")
+import session_spreads
+
+sp_root = Path(tempfile.mkdtemp())
+try:
+    for n, day in enumerate(("2026-10-05", "2026-10-06", "2026-10-07")):
+        h = 0.02 * (n + 1)  # half-spread at midday; it moves from day to day, the close/midday ratio does not
+        for sess, mult in (("open", 1), ("midday", 1), ("close", 2)):
+            d = sp_root / day if sess == "close" else sp_root / day / sess
+            d.mkdir(parents=True, exist_ok=True)
+            exp = pd.Timestamp(day) + pd.Timedelta(days=30)
+            rows = [(exp, k, 2.0 - h * mult, 2.0 + h * mult) for k in (100, 101, 92, 108)]
+            rows += [(exp, 100, 0.0, 0.0), (exp, 100, 0.0, 1.0)]  # no quote, bid 0: dropped and counted
+            rows += [(pd.Timestamp(day) + pd.Timedelta(days=60), 100, 0.0, 0.0)]  # outside 21-45 DTE: not counted
+            pd.DataFrame(rows, columns=["expiry", "strike", "bid", "ask"]).assign(spot=100.0).to_csv(d / "SPY.csv", index=False)
+    with contextlib.redirect_stdout(io.StringIO()) as printed:
+        tab = session_spreads.main(sp_root, sp_root / "out" / "session_spreads.csv")
+    ratios = tab[["close_over_midday_median", "close_over_midday_min", "close_over_midday_max"]]
+    check("close = 2x midday, open = midday: the close/midday ratio is 2.0 in every bucket",
+          len(tab) == 6 and ((ratios - 2.0).abs() < 1e-9).all().all())
+    pooled = tab.set_index(["moneyness", "session"])["median_rel_spread"]
+    check("open reads the same spread as midday and close reads twice that",
+          abs(pooled["ATM", "open"] - pooled["ATM", "midday"]) < 1e-12 and abs(pooled["OTM5-10", "close"] / pooled["OTM5-10", "midday"] - 2) < 1e-9)
+    check("the zero-bid and 0/0 rows are dropped and counted (2 x 3 sessions x 3 days = 18), the 60-day one is not",
+          "excluded 18 " in printed.getvalue() and (tab["n_quotes"] == 6).all() and (tab["n_days"] == 3).all()
+          and (tab["first_date"] == "2026-10-05").all() and (tab["last_date"] == "2026-10-07").all())
+    first = (sp_root / "out" / "session_spreads.csv").read_text().splitlines()[0]
+    check("the CSV opens with the quoted-not-fills header", first == "# " + session_spreads.HEADER
+          and "not fills" in first and "signed amendment" in first
+          and len(pd.read_csv(sp_root / "out" / "session_spreads.csv", comment="#")) == 6)
+finally:
+    shutil.rmtree(sp_root, ignore_errors=True)
+
 print(f"\n{sum(checks)}/{len(checks)} passed")
 raise SystemExit(0 if all(checks) else 1)

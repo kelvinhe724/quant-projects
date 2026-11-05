@@ -95,10 +95,23 @@ def slice_metrics(g):
             "skew_25d": put25 - call25}
 
 
+def _folder_rate(date, session):
+    """The rate for a chain that carries none: the day's rates.csv, else its rates.backfill.csv, else NaN."""
+    d = data.session_dir(date, session if session in data.SESSIONS else "close")  # "intraday" labels a close folder
+    for name in ("rates.csv", "rates.backfill.csv"):
+        try:
+            v = pd.read_csv(d / name)["rate"].iloc[0]
+        except (OSError, ValueError, IndexError, KeyError):
+            continue
+        if pd.notna(v):
+            return float(v)
+    return np.nan
+
+
 def summarise_chain(q, ticker, date, session):
     """One row per expiry for one ticker. Returns (rows, stale dict)."""
     st = stale_stats(q)
-    r = float(q["r"].iloc[0]) if q["r"].notna().any() else np.nan
+    r = float(q["r"].iloc[0]) if q["r"].notna().any() else _folder_rate(date, session)
     snapshot = str(q["snapshot"].iloc[0])
     spot = float(q["spot"].iloc[0])
     raw_n = q.groupby("expiry").size()
