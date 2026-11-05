@@ -626,6 +626,7 @@ def main():
         storage_checks(tmp)
         daily_feed_checks()
         feed_checks(tmp)
+        splice_checks(tmp)
         # bundle() writes last_run.json, so these run while REPORTS still points at the temp folder
         _q = collect.quality
         collect.quality = lambda: None
@@ -646,6 +647,48 @@ def main():
         shutil.rmtree(tmp, ignore_errors=True)
     print(f"\n{len(FAILS)} failures" if FAILS else "\nall checks passed")
     sys.exit(1 if FAILS else 0)
+
+
+# --- splice detector: fetch-boundary breaks in adj_close/close, flag only
+def splice_checks(tmp):
+    print("splices")
+    real = (lake.STORE, lake.REPORTS)
+    lake.STORE, lake.REPORTS = (os.path.join(tmp, "splice", d) for d in ("store", "reports"))
+    try:
+        days = pd.bdate_range("2020-01-01", "2020-03-31")
+        old, new = pd.Timestamp("2020-02-01"), pd.Timestamp("2020-04-01")
+        fetch = np.where(days <= "2020-02-14", old, new)
+        # two fetches: older rows at r = 1.0, newer at 0.9975, and a true ex-date step (r 0.9975 -> 0.9925) inside the newer one
+        r = np.where(days <= "2020-02-14", 1.0, np.where(days < "2020-03-10", 0.9975, 0.9925))
+        px = np.full(len(days), 100.0)
+        lake.write("equities_daily", "DIV", pd.DataFrame({"date": days, "ticker": "DIV", "close": px, "adj_close": px * r,
+                                                            "collected_at": fetch}))
+        # CTVA type: raw close more than halves across the fetch boundary, adjusted series moves with it (r flat)
+        cl = np.where(days <= "2020-02-14", 100.0, 40.0)
+        lake.write("equities_daily", "JMP", pd.DataFrame({"date": days, "ticker": "JMP", "close": cl, "adj_close": cl,
+                                                            "collected_at": fetch}))
+        # a part from one fetch with an ex-date step and a jump is not a splice
+        lake.write("equities_daily", "ONE", pd.DataFrame({"date": days, "ticker": "ONE", "close": cl, "adj_close": cl * r,
+                                                            "collected_at": old}))
+        s = quality.splices()
+        boundary = str(days[days > "2020-02-14"][0].date())
+        check("one adj splice, at the fetch boundary, none at the ex-date", s["adj"] == {"DIV": [boundary]}
+              and s["adj_count"] == 1, s["adj"])
+        check("a close jump across fetches is flagged, one inside a fetch is not", s["jump"] == {"JMP": [boundary]}
+              and s["jump_count"] == 1, s["jump"])
+        check("tolerance 1.0 flags nothing", quality.splices(tol=1.0)["adj_count"] == 0)
+        # on an otherwise clean lake (feeds stubbed fresh, one dataset) the splices ride along and touch neither ok nor problems
+        real_fp, real_ds = quality.feed_problems, dict(lake.DATASETS)
+        try:
+            quality.feed_problems = lambda *a, **k: []
+            lake.DATASETS = {"equities_daily": real_ds["equities_daily"]}
+            q = quality.report(now=pd.Timestamp("2020-04-02", tz="UTC"))
+        finally:
+            quality.feed_problems, lake.DATASETS = real_fp, real_ds
+        check("splices ride along without touching ok or problems",
+              q["splices"]["adj_count"] == 1 and q["ok"] and q["problems"] == [], (q["ok"], q["problems"]))
+    finally:
+        lake.STORE, lake.REPORTS = real
 
 
 if __name__ == "__main__":

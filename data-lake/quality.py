@@ -33,6 +33,8 @@ HISTORY_EVERY = pd.Timedelta(hours=23)   # one size entry a day is enough for a 
 DAILY_BARS = {"equities_daily": 0, "fred": 2}  # 2: the bond market closes on Columbus and Veterans Day while NYSE is open
 BOOKS_5M_MIN = 0.6     # share of the 288 five-minute snapshots kalshi_books_5m must hold on the last full UTC day
 CT = "America/Chicago"
+SPLICE_TOL = 1e-5      # adj_close/close may move this much between adjacent rows before a fetch boundary counts as a splice
+JUMP_TOL = 0.5         # a raw close that moves this much across a fetch boundary is a different series (the CTVA type)
 
 
 def newest(dataset, names):
@@ -75,6 +77,30 @@ def scan(dataset, names):
     rows = [{"after": str(r.after), "before": str(r.before), "missing": int(r.missing)}
             for r in g.sort_values("missing", ascending=False).head(10).itertuples()] if len(g) else []
     return rows, dupes
+
+
+def splices(tol=SPLICE_TOL, jump=JUMP_TOL):
+    """Fetch-boundary breaks in equities_daily, flag only: {"adj": {ticker: [dates]}, "jump": {...}, counts}.
+
+    Yahoo's adj_close is a snapshot from the fetch date, so r = adj_close/close steps where an older fetch meets a
+    newer one; a true ex-date step sits inside one fetch (one collected_at) and is not flagged. Dates are the later row.
+    """
+    out = {"adj": {}, "jump": {}}
+    for t in lake.parts("equities_daily"):
+        have = set(pq.ParquetFile(lake.part_path("equities_daily", t)).schema_arrow.names)
+        if not {"date", "close", "adj_close", "collected_at"} <= have:
+            continue
+        df = pd.read_parquet(lake.part_path("equities_daily", t), columns=["date", "close", "adj_close", "collected_at"])
+        df = df.sort_values("date")
+        fetch = df["collected_at"] != df["collected_at"].shift()   # True where a new fetch starts
+        fetch.iloc[0] = False
+        r, c = df["adj_close"] / df["close"], df["close"]
+        for key, step, lim in (("adj", r / r.shift() - 1, tol), ("jump", c / c.shift() - 1, jump)):
+            hit = df["date"][fetch & (step.abs() > lim)]
+            if len(hit):
+                out[key][t] = [str(d.date()) for d in hit]
+    out["adj_count"], out["jump_count"] = (sum(map(len, out[k].values())) for k in ("adj", "jump"))
+    return out
 
 
 def du(path):
@@ -224,6 +250,7 @@ def report(now=None):
         + feed_problems(now, out["datasets"])
     out["problems"] = feeds + ([disk_line(disk)] if disk["low"] else [])   # every reason ok is false, one line each
     out["ok"] = not out["problems"]
+    out["splices"] = splices()   # flag only: not a problem, does not touch ok
     out["summary"] = ("; ".join(feeds) or "all feeds fresh") + "; " + disk_line(disk)
     return out
 
@@ -236,6 +263,7 @@ def main():
         json.dump(r, fh, indent=1, default=str)
     os.replace(path + ".tmp", path)
     print(f"quality: {r['summary']}")
+    print(f"  splices: {r['splices']['adj_count']} adj_close fetch boundaries, {r['splices']['jump_count']} close jumps over {JUMP_TOL:.0%}")
     for n, d in r["datasets"].items():
         print(f"  {n:18s} parts {d['parts']:6d} rows {d['rows']:10d} last {d['last']}  "
               f"{'STALE' if d['stale'] else 'fresh'}  gaps {len(d['gaps'])} dupes {d['dupes']}")

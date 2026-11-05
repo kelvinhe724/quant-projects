@@ -135,6 +135,8 @@ Pulled from the Limitations sections of the largest projects. These are unfixed,
 
 **`data-lake/`.** Yahoo's adjusted close is a snapshot from the fetch date and incremental runs only refresh seven days, so after a dividend the older rows keep the old factor. Every project on the lake inherits this.
 
+`data-lake/quality.py` now flags the fetch-boundary splices this leaves (`splices` in `reports/status.json`: adj_close/close steps and raw-close jumps over 50% where two adjacent rows carry different `collected_at`); it is flag only and does not change `ok`. `risk-model/risk.py` `ensure_etfs` is a second writer to `equities_daily` with the same seven-day overlap, so it makes the same splices.
+
 **`vol-risk-premium/`.** Sixteen years with one true crash and no 1987 or 2008; the sample's worst day is a hard lower bound, not an estimate, and there is no margin model, so the -13.6% drawdown is optimistic in a way with no bound.
 
 **`crypto-basis/`.** The reports in `reports/` and the code disagree in one place the audit chose not to close: the walk-forward fold Sharpes are on 5-minute bar returns times sqrt(252), a different unit from every other Sharpe in the repository (the four test folds are -27.6, -25.6, -24.7, -25.9 on daily returns). Selection is internally consistent so the pick is unaffected, and the README carries the caveat.
