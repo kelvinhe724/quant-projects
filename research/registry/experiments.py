@@ -15,7 +15,11 @@ already counted once, and their Sharpes on short windows would set the
 variance. The deflated Sharpe is validate's deflated_sharpe_ratio (purgedcv)
 with that count and the variance of the counted daily Sharpes; a stream too
 close to constant to have a Sharpe is logged with a NaN Sharpe, counted, and
-left out of the variance.
+left out of the variance. The count assumes every evaluation went through
+the harness (no log=False) and that runs.jsonl was never edited by hand: a
+row that was never written, or was deleted, is a trial the count cannot see.
+Only walk_forward may write a fold stage (record refuses one without the
+private _fold flag), so a row cannot drop itself out of the count with a tag.
 
 use(path) attaches a default registry for the process: research.alpha.base's
 backtest, window_returns, walk_forward and Untouched.open log to it when they
@@ -119,6 +123,29 @@ def file_sha256(path):
         return hashlib.sha256(fh.read()).hexdigest()
 
 
+def _day(x):
+    """The calendar date of a window end or an index stamp (tz-aware stamps in their own zone); None if not a date."""
+    if isinstance(x, (int, float, np.integer, np.floating)):
+        return None
+    try:
+        return pd.Timestamp(x).date()
+    except (TypeError, ValueError):
+        return None
+
+
+def _check_window(raw, window):
+    """Refuse a dated stream whose first or last non-NaN date lies outside the declared window."""
+    have = raw.dropna().index
+    if not isinstance(have, pd.DatetimeIndex) or not len(have) or len(window) != 2:
+        return
+    w0, w1 = _day(window[0]), _day(window[1])
+    if w0 is None or w1 is None:
+        return
+    a, z = have[0].date(), have[-1].date()
+    if a < w0 or z > w1:
+        raise ValueError(f"the stream runs {a} to {z}, outside its declared window {w0} to {w1}")
+
+
 class Registry:
     def __init__(self, path):
         self.path = path
@@ -135,7 +162,7 @@ class Registry:
             body["stream"] = stream
         return hashlib.sha256(json.dumps(body, sort_keys=True, default=str).encode()).hexdigest()[:16]
 
-    def record(self, name, config, universe, window, returns, metrics=None, tags=None, code=None):
+    def record(self, name, config, universe, window, returns, metrics=None, tags=None, code=None, _fold=False):
         """Log one run and store its return stream; returns the entry with the trial count after it.
 
         code is code_hash() of the rule; left out, it is the hash of the file
@@ -143,9 +170,17 @@ class Registry:
         also carries a hash of the stream, so a rule edited where neither hash
         looks (a helper or a constant in another module) is a new row, not a
         replaced one.
+
+        A fold stage (walk_forward_train, walk_forward_test) is refused unless
+        walk_forward passes _fold, and a stream with a DatetimeIndex whose
+        first or last non-NaN date falls outside `window` is refused: the
+        window is what the untouched-window overlap check reads.
         """
-        code = code if code is not None else _caller_code()
+        if (tags or {}).get("stage") in FOLDS and not _fold:
+            raise ValueError(f"stage {tags['stage']!r} is written by walk_forward only; fold rows are not counted")
         raw = pd.Series(returns)
+        _check_window(raw, window)
+        code = code if code is not None else _caller_code()
         r = raw.dropna()
         r = r[r != 0]
         run_id = self.key(name, config, universe, window, code, panel_hash(raw.rename("return").to_frame()))
@@ -188,21 +223,29 @@ class Registry:
         """Distinct keys, fold rows left out, identical return streams counted once."""
         return int(len(self.counted()))
 
-    def dsr(self, returns, extra_trials=0, n_trials=None):
+    def var_sharpe(self, t=None):
+        """ddof=1 variance of the counted daily Sharpes, NaN Sharpes left out; 0.0 under two of them."""
+        t = self.counted() if t is None else t
+        s = t["sharpe_daily"].astype(float) if len(t) else pd.Series(dtype=float)
+        var = float(s.var(ddof=1)) if s.notna().sum() > 1 else 0.0
+        return var if np.isfinite(var) else 0.0
+
+    def dsr(self, returns, extra_trials=0, n_trials=None, var_sharpe=None):
         """PSR and DSR of one return series against every trial counted here.
 
-        n_trials replaces the registry's count (the count a lock froze at its open, so a read that logs
-        itself before calling dsr is deflated by the same number the lock holds); extra_trials is added
-        either way. NaN Sharpes count as trials but not in the variance; n_nan_sharpe says how many.
+        n_trials replaces the registry's count and var_sharpe its variance (the values a lock froze at its
+        open, so rows logged after the open, the read itself or a batch of near-clones that would shrink
+        the variance, cannot move the DSR of the one read); extra_trials is added either way. NaN Sharpes
+        count as trials but not in the variance; n_nan_sharpe says how many.
+        ponytail: rows padded in before the open (shuffled-median or near-clone trials that pull the
+        variance down) are still an open case; backlog item 1 (trial budget + effective-trial count).
         """
         r = pd.Series(returns).dropna()
         r = r[r != 0].to_numpy()
         t = self.counted()
         n = (len(t) if n_trials is None else int(n_trials)) + extra_trials
         s = t["sharpe_daily"].astype(float) if len(t) else pd.Series(dtype=float)
-        var = float(s.var(ddof=1)) if s.notna().sum() > 1 else 0.0
-        if not np.isfinite(var):
-            var = 0.0
+        var = self.var_sharpe(t) if var_sharpe is None else float(var_sharpe)
         return {"sharpe": float(r.mean() / r.std(ddof=1) * np.sqrt(252)),  # ddof=1, same as record() and validate.stats
                 "psr": float(validate.probabilistic_sharpe_ratio(r, 0.0)),
                 "dsr": float(validate.deflated_sharpe_ratio(r, max(n, 1), var)),
