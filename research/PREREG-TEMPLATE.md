@@ -52,7 +52,7 @@ Version 2 (2026-10-08) adds §2's tradability line and §2a–2b after the first
 - **Prior layer:** backtest window, untouched window (per `research.alpha.base.Untouched` — locked by hash, opened once), the number that must clear and what happens if it does not:
 - **Gate layer:** forward paper track — venue, mark source, minimum length, start date:
 - **Comparator:** the strategy's free twin (SPY or the vol-targeted 1/N of its universe, built from bars, named before signing), beta frozen on the pre-window; the gate reads active Sharpe and its t > 0 beside raw. The book's recorded path is optional, so a KILL halt never makes the answer INSUFFICIENT.
-- **Promotion rule, verbatim** (same shape as `framework/book/validate.py:328`):
+- **Promotion rule, verbatim** (same shape as `framework/book/validate.py:353`):
 - **Trial count:** every configuration that will be run, enumerated now; the DSR uses this count plus whatever else gets logged, never less.
 
 ## 6. Kill criteria — written before, applied without appeal
