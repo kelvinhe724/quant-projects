@@ -242,6 +242,75 @@ finally:
     _ms.lake.load = _zq
 check("spread freeze: a session whose put leg is quoted 0/0 is excluded, not measured",
       len(_tab) == 23 and _days[1].date() not in set(_tab.day))
+# branch r1-basis-clock: basis.py clock (usable sessions, lost-session reasons, session-60 date, XSP clause) on planted summaries
+import basis as _bs
+
+
+def _plant(root, rows, vix):
+    """rows {date: {ticker: iv30 or None}} -> <root>/<date>/ day folders + summary/<date>_horizons.csv; vix {date: close}."""
+    import pathlib
+    root = pathlib.Path(root)
+    (root / "summary").mkdir(parents=True, exist_ok=True)
+    for d, tk in rows.items():
+        (root / d).mkdir(exist_ok=True)
+        if tk:
+            pd.DataFrame([{"date": d, "ticker": k, "iv30": np.nan if v is None else v / 100, "stale": False}
+                          for k, v in tk.items()]).to_csv(root / "summary" / f"{d}_horizons.csv", index=False)
+    pd.DataFrame({"date": pd.to_datetime(list(vix)), "series": "VIXCLS", "value": list(vix.values()),
+                  "collected_at": pd.Timestamp("2026-12-31")}).to_parquet(root / "vix.parquet")
+    return root, root / "vix.parquet"
+
+
+with tempfile.TemporaryDirectory() as _tmp:
+    _signed = [("2026-09-04", 11.5943, 14.53), ("2026-09-09", 13.3449, 16.46), ("2026-09-10", 14.3907, 17.84),
+               ("2026-09-11", 12.5395, 15.84), ("2026-09-17", 12.4779, 15.44), ("2026-09-29", 13.4068, 16.04),
+               ("2026-09-30", 13.6189, 16.34), ("2026-10-02", 12.6602, 15.31), ("2026-10-05", 12.7401, 15.52),
+               ("2026-10-06", 12.5583, 15.01)]
+    _r, _v = _plant(_tmp + "/a", {d: {"SPY": iv} for d, iv, _ in _signed}, {d: x for d, _, x in _signed})
+    _t, _ = _bs.table(_r, _v, "2026-09-04")
+    _u = _t[_t.reason == "ok"]
+    check(f"basis: the 10 signed rows give n == 10 and mean 2.900 +/- 0.005 (n {len(_u)}, mean {_u.basis.mean():.4f})",
+          len(_u) == 10 and abs(_u.basis.mean() - 2.900) < 0.005)
+
+    # Thanksgiving week: 11-25 has no SPY row, 11-26 is a holiday that still has a row, 11-27 is NaN iv30, 12-01 has no folder
+    _good = {"2026-11-23": 13.0, "2026-11-24": 14.5, "2026-11-30": 12.0, "2026-12-02": 16.0}
+    _rows = {d: {"SPY": iv, "QQQ": 20.0} for d, iv in _good.items()}
+    _rows.update({"2026-11-25": {"QQQ": 20.0}, "2026-11-26": {"SPY": 15.0}, "2026-11-27": {"SPY": None}})
+    _vix = {d: iv + 3.0 for d, iv in _good.items()}
+    _vix.update({"2026-11-25": 18.0, "2026-11-26": 18.0, "2026-11-27": 18.0})
+    _r, _v = _plant(_tmp + "/b", _rows, _vix)
+    _t, _f = _bs.table(_r, _v, "2026-11-23")
+    _u = _t[_t.reason == "ok"]
+    _tally = {k: int((_t.reason == k).sum()) for k in _bs.REASONS}
+    check("basis: the holiday-dated row, the missing-SPY row, the NaN iv30 and the folderless session are all excluded",
+          list(_u.index) == list(_good) and "2026-11-26" not in _t.index
+          and _tally == {"no-folder": 1, "empty": 0, "no-SPY": 2, "no-rate": 0})
+    check(f"basis: VIX = iv30 + 3.0 gives a mean of +3.00 (got {_u.basis.mean():.4f})", abs(_u.basis.mean() - 3.0) < 1e-9)
+    # hand count: 4 usable, last folder 12-02, so sessions 5..8 are 12-03, 12-04, 12-07, 12-08
+    check("basis: the projected session-8 date is the hand-counted 2026-12-08", _bs.project(_t, _f[-1], target=8) == "2026-12-08")
+
+    _d = pd.bdate_range("2026-11-02", periods=10).strftime("%Y-%m-%d")
+    for _gap, _want in ((0.4, True), (0.1, False)):
+        _r, _v = _plant(_tmp + f"/x{_gap}", {d: {"SPY": 13.0, "^XSP": 13.0 + _gap} for d in _d}, {d: 16.0 for d in _d})
+        _t, _ = _bs.table(_r, _v, "2026-11-02")
+        _x = _bs.xsp(_t, _r)
+        check(f"basis: XSP {_gap} above SPY over {_x['n']} sessions flags {_want} (mean gap {_x['mean']:.3f})",
+              _x["n"] == 10 and abs(_x["mean"] - _gap) < 1e-9 and _x["flag"] is _want)
+
+    # pending cover: 3 ok sessions then 4 no-rate (no VIX yet) sessions; the target-th session must land inside the planted range
+    _d = list(pd.bdate_range("2026-11-02", periods=7).strftime("%Y-%m-%d"))
+    _r, _v = _plant(_tmp + "/p", {d: {"SPY": 13.0} for d in _d}, {d: 16.0 for d in _d[:3]})
+    _t, _f = _bs.table(_r, _v, "2026-11-02")
+    _p = {k: _bs.project(_t, _f[-1], target=k) for k in (4, 7, 8)}
+    check(f"basis: pending days cover the target: ok+1 -> first pending day, ok+pending -> last pending day, beyond -> after the range ({_p})",
+          (_t.reason == "no-rate").sum() == 4 and _p[4] == _d[3] and _p[7] == _d[6] and _p[8] > _d[6] and _p[8] < "2026-12-31")
+    # the reviewer's live case: 27 then 28 with pending covering both must be in order and before session 60
+    _d = list(pd.bdate_range("2026-09-01", periods=33).strftime("%Y-%m-%d"))
+    _r, _v = _plant(_tmp + "/q", {d: {"SPY": 13.0} for d in _d}, {d: 16.0 for d in _d[:25]})
+    _t, _f = _bs.table(_r, _v, "2026-09-01")
+    _a, _b, _c = (_bs.project(_t, _f[-1], target=k) for k in (27, 28, 60))
+    check(f"basis: target 27 < 28 < 60 with pending covering 27 and 28 ({_a}, {_b}, {_c})",
+          _d[0] <= _a < _b <= _d[-1] < _c)
 
 print(f"\n{sum(checks)}/{len(checks)} passed")
 raise SystemExit(0 if all(checks) else 1)
