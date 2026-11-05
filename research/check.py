@@ -580,6 +580,23 @@ check("every options line says paper level; live approval not verified",
 check("a covered call on held SPY shares passes at level 1 and fails at level 0",
       results["cc1"][0] and not results["cc0"][0], results["cc1"][1][-1][:90])
 
+# r1-venue-truth: sold types come from the sold clause and structure name only; each must be bought, same type
+half = {k: venue("- Traded: XSP options.\n- " + b + "\n", 3) for k, b in {
+    "half": "Sell 1 XSP iron condor and buy the 10-delta call wing.",
+    "both": "Sell 1 XSP iron condor and buy the 10-delta call and put wings.",
+    "fly": "Sell 1 XSP iron fly and buy both wings.",
+    "pcs": "Sell a put credit spread, buying the lower put.",
+    "strad": "Sell 1 XSP straddle and buy a call."}.items()}
+check("an iron condor that buys only the call wing fails at level 3 naming the naked put",
+      not half["half"][0] and any("uncovered put," in s and "iron condor" in s for s in half["half"][1]),
+      half["half"][1][-1][:90])
+check("an iron condor that buys the call and put wings passes at level 3", half["both"][0], half["both"][1][-1][:90])
+check("an iron fly that buys both wings passes at level 3", half["fly"][0], half["fly"][1][-1][:90])
+check("'sell a put credit spread, buying the lower put' passes at level 3", half["pcs"][0], half["pcs"][1][-1][:90])
+check("a straddle that buys only a call fails naming the naked put",
+      not half["strad"][0] and any("uncovered put," in s and "straddle" in s for s in half["strad"][1]),
+      half["strad"][1][-1][:90])
+
 shutil.rmtree(tmp)
 n_fail = checks.count(False)
 print(f"\n{len(checks) - n_fail} of {len(checks)} checks passed")

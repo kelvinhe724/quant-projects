@@ -73,6 +73,7 @@ OPTION = re.compile(r"^(?:options?|straddles?|strangles?|calls?|puts?)$", re.I)
 # a sold leg Alpaca can hold: a defined-risk structure (level 3) or a covered call / cash-secured put (level 1)
 STRUCTURE = re.compile(r"\biron\s+(?:fly|flies|butterfl(?:y|ies)|condors?)\b|\bbutterfl(?:y|ies)\b|\bcondors?\b"
                        r"|\bvertical(?:\s+spreads?)?\b|\bcredit\s+spreads?\b", re.I)
+BOTH = re.compile(r"\b(?:iron|condors?|butterfl(?:y|ies)|straddles?|strangles?)\b", re.I)
 COVERED = re.compile(r"\bcovered\s+calls?\b|\bcash-secured\s+puts?\b", re.I)
 BUY = re.compile(r"(?<![\w-])(?:buy(?:s|ing)?|bought|long)(?![\w-])", re.I)
 LEVEL = {"defined": 3, "covered": 1}  # Alpaca: 1 covered call / cash-secured put, 2 long call/put, 3 spreads
@@ -162,16 +163,41 @@ def bought(para):
     return out
 
 
+def sold(sent):
+    """Option types a sentence sells: per sell verb, its clause up to the next buy verb or clause break; a both-sided
+    structure (iron, condor, butterfly, straddle, strangle) is call and put whatever else it names. A sentence whose
+    sell clauses name nothing (a back reference: "straddles, sold ...") falls back to the sentence minus its buy clauses."""
+    def clause(m):
+        rest = sent[m.end():]
+        return rest[:min([len(rest)] + [x.start() for x in re.finditer(CLAUSE, rest)]
+                         + [x.start() for x in BUY.finditer(rest)])]
+
+    def types(text):
+        return {"call", "put"} if BOTH.search(text) else option_types(text)
+    out = set()
+    for m in VERB.finditer(sent):
+        if not m.group(0).lower().startswith("weight") and not NEGATION & {
+                w.lower() for w, _ in words(sent[:m.start()])[-3:]}:
+            out |= types(clause(m))
+    if not out:
+        rest = sent
+        for m in reversed(list(BUY.finditer(sent))):
+            rest = rest[:m.start()] + rest[m.end() + len(clause(m)):]
+        out = types(rest)
+    return out
+
+
 def sold_kind(sent, para):
-    """'defined', 'covered' or 'uncovered' for a sentence that sells an option."""
-    if STRUCTURE.search(sent):
-        sold, buys = option_types(sent), bought(para)
-        if buys and sold <= buys:
-            return "defined"
+    """'defined', 'covered' or 'uncovered[ <types>]' for a sentence that sells an option: defined needs every sold
+    type bought (same type) somewhere in the paragraph."""
+    types, buys = sold(sent), bought(para)
+    if types <= buys and (types or STRUCTURE.search(sent) and buys):
+        return "defined"
     for m in COVERED.finditer(sent):
         if not NEGATION & {w.lower() for w, _ in words(sent[:m.start()])[-2:]}:
             return "covered"
-    return "uncovered"
+    left = sorted(types - buys)
+    return "uncovered" + (" " + " and ".join(left) if left else "")
 
 
 def legs(text, names):
@@ -271,7 +297,7 @@ def tradability(text):
             structure_ok &= good
             what = {"defined": "defined-risk, needs level 3",
                     "covered": "covered call / cash-secured put, needs level 1"}.get(
-                kind, "uncovered, Alpaca allows no uncovered short options at any level")
+                kind, f"{kind}, Alpaca allows no uncovered short options at any level")
             opt_lines.append(f"sold option ({what}) {'passes' if good else 'FAILS'} at level {lvl}: "
                              f'"{clip(sent, 80)}"; paper level; live approval not verified')
         ok &= structure_ok
