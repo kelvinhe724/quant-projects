@@ -46,10 +46,12 @@ def table(src=SRC, vix=VIX, first=FIRST):
 def project(t, last_folder, target=TARGET):
     """Date of usable session `target`, assuming every later session is usable and trailing no-rate days get their VIX."""
     ok = t[t.reason == "ok"]
-    pending = len(t[(t.reason == "no-rate") & (t.index > (ok.index[-1] if len(ok) else ""))])
-    need = target - len(ok) - pending
-    if len(ok) >= target:
+    pend = t[(t.reason == "no-rate") & (t.index > (ok.index[-1] if len(ok) else ""))].index
+    need = target - len(ok) - len(pend)
+    if len(ok) >= target:  # target already met (pending 0 or not): it is the target-th ok session
         return ok.index[target - 1]
+    if need <= 0:  # pending no-VIX days cover the rest: target lands on the (target - len(ok))-th pending day, never a future date
+        return pend[target - len(ok) - 1]
     return nyse(pd.Timestamp(last_folder) + pd.Timedelta(days=1), pd.Timestamp(last_folder) + pd.Timedelta(days=400))[need - 1].strftime("%Y-%m-%d")
 
 

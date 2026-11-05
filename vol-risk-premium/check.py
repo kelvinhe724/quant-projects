@@ -252,5 +252,20 @@ with tempfile.TemporaryDirectory() as _tmp:
         check(f"basis: XSP {_gap} above SPY over {_x['n']} sessions flags {_want} (mean gap {_x['mean']:.3f})",
               _x["n"] == 10 and abs(_x["mean"] - _gap) < 1e-9 and _x["flag"] is _want)
 
+    # pending cover: 3 ok sessions then 4 no-rate (no VIX yet) sessions; the target-th session must land inside the planted range
+    _d = list(pd.bdate_range("2026-11-02", periods=7).strftime("%Y-%m-%d"))
+    _r, _v = _plant(_tmp + "/p", {d: {"SPY": 13.0} for d in _d}, {d: 16.0 for d in _d[:3]})
+    _t, _f = _bs.table(_r, _v, "2026-11-02")
+    _p = {k: _bs.project(_t, _f[-1], target=k) for k in (4, 7, 8)}
+    check(f"basis: pending days cover the target: ok+1 -> first pending day, ok+pending -> last pending day, beyond -> after the range ({_p})",
+          (_t.reason == "no-rate").sum() == 4 and _p[4] == _d[3] and _p[7] == _d[6] and _p[8] > _d[6] and _p[8] < "2026-12-31")
+    # the reviewer's live case: 27 then 28 with pending covering both must be in order and before session 60
+    _d = list(pd.bdate_range("2026-09-01", periods=33).strftime("%Y-%m-%d"))
+    _r, _v = _plant(_tmp + "/q", {d: {"SPY": 13.0} for d in _d}, {d: 16.0 for d in _d[:25]})
+    _t, _f = _bs.table(_r, _v, "2026-09-01")
+    _a, _b, _c = (_bs.project(_t, _f[-1], target=k) for k in (27, 28, 60))
+    check(f"basis: target 27 < 28 < 60 with pending covering 27 and 28 ({_a}, {_b}, {_c})",
+          _d[0] <= _a < _b <= _d[-1] < _c)
+
 print(f"\n{sum(checks)}/{len(checks)} passed")
 raise SystemExit(0 if all(checks) else 1)
