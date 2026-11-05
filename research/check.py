@@ -14,6 +14,7 @@ import importlib.util
 import json
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
 import types
@@ -525,6 +526,21 @@ acked = prereg_check.provenance(PLANTED.replace("ACK", "fx/README.md published 2
 silent = prereg_check.provenance(PLANTED.replace("ACK", "none"), repo)
 check("the same window hit passes provenance when section 2a names it and fails when it does not",
       acked[0] and not silent[0] and any("fx/README.md" in s for s in acked[1]), acked[1][-1])
+git_repo = os.path.join(tmp, "gitrepo")  # README published 2020-06-01; the draft below is in no commit
+os.makedirs(os.path.join(git_repo, "fx"))
+shutil.copy(os.path.join(repo, "fx", "README.md"), os.path.join(git_repo, "fx", "README.md"))
+for cmd in (["init", "-q"], ["add", "."], ["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "fx"]):
+    subprocess.run(["git", *cmd], cwd=git_repo, check=True, env={**os.environ, "GIT_COMMITTER_DATE": "2020-06-01T12:00:00Z",
+                                                                  "GIT_AUTHOR_DATE": "2020-06-01T12:00:00Z"})
+draft = lambda ack, today=None: prereg_check.provenance(PLANTED.replace("ACK", ack), git_repo, None, today)
+silent_d, acked_d = draft("none"), draft("fx/README.md first published 2020-06-01, a second look")
+early = draft("none", today="2019-01-01")
+check("an uncommitted draft is locked today: a README range overlapping its window fails provenance unless 2a names "
+      "it, and the message says uncommitted and gives today as the lock date",
+      not silent_d[0] and acked_d[0] and "uncommitted" in silent_d[1][0] and str(pd.Timestamp.now().date()) in silent_d[1][0]
+      and any("not in 2a" in s for s in silent_d[1]), silent_d[1][0][-90:])
+check("the lock date of an uncommitted draft is today, not 'every hit': a hit first published after it passes",
+      early[0], early[1][-1][:70])
 ok, lines = prereg_check.power(PLANTED)
 check("power: no edge clears Sharpe 1.0 over 252 sessions 15.9% of the time and over 126 sessions 24.0% "
       "(1 - N(bar x sqrt(N/252))); a 2b with a stated rate and a decision rule passes",

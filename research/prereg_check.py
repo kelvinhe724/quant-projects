@@ -22,7 +22,8 @@ Three items, each printed PASS or FAIL with its evidence:
                  paragraph, table row or JSON object as one of the instruments, each dated by
                  the commit that first published it. FAIL if one predates the
                  pre-registration's commit and section 2a names neither its file nor its
-                 commit.
+                 commit. A draft not yet committed is locked today: any hit published before
+                 now is a second look 2a must name.
   3 power        section 2b's no-edge pass rate and decision rule, beside the pass rate
                  recomputed by normal approximation from the track length (in sessions) and
                  the Sharpe bar ("Sharpe above X", "Sharpe of at least X", "Sharpe >= X",
@@ -348,7 +349,8 @@ def history_pattern(window):
             rf'|"({years})-[0-9]{{2}}-[0-9]{{2}}')
 
 
-def provenance(text, root=ROOT, prereg=None):
+def provenance(text, root=ROOT, prereg=None, today=None):
+    """today: the lock date of an uncommitted draft (default now); a hit published before it is a second look."""
     s = sections(text)
     win = untouched(s.get("5"))
     if win is None:
@@ -368,13 +370,19 @@ def provenance(text, root=ROOT, prereg=None):
         for f in paths:
             found |= overlaps(f, git("show", f"{h}:{f}", root=root), win, terms)
     commit, when = committed(prereg, root) if prereg else (None, None)
+    uncommitted = when is None
+    lock = when if when is not None else (pd.Timestamp(today) if today is not None else pd.Timestamp.now(tz="UTC"))
+    if lock.tzinfo is None:
+        lock = lock.tz_localize("UTC")
     ack, ok = s.get("2a", ""), True
     lines = [f"{head}; instruments {', '.join(terms)}; pre-registration "
-             + (f"added in {commit} {when}" if commit else "not committed, so every hit predates it")]
+             + (f"added in {commit} {when}" if commit else
+                f"is uncommitted, so the lock date is today, {lock.date()}: every hit published before it is a second "
+                "look that section 2a must name")]
     by_file = {}
     for f, show, needle in sorted(found):
         h, t = first_published(f, needle, root)
-        before = when is None or (t is not None and t < when)
+        before = t < lock if t is not None else uncommitted  # ponytail: a hit in no commit (working tree) is before only for a draft
         named = re.search(rf"(?<![\w/.-]){re.escape(f)}", ack) is not None or bool(h and h in ack)
         ok &= not (before and not named)
         by_file.setdefault(f, []).append((t, h, before, named, show))
