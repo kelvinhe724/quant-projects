@@ -197,5 +197,51 @@ check("forward mark: a 0/0 quoted straddle is no quote (nan), not a mid of 0", n
 _mid1 = _fwd.mark(_chain.assign(bid=[9.0, 5.0], ask=[9.5, 5.5]), 780.0, pd.Timestamp("2026-11-02"))
 check("forward mark: a quoted straddle marks at the mid", abs(_mid1[1] - 14.5) < 1e-9)
 
+# measure_spread: PREREG §4 freezes the median over the FIRST 10 sessions; zeroed legs are no quote
+import measure_spread as _ms
+_days = pd.bdate_range("2026-09-08", periods=24)   # after Labor Day, so every day is an NYSE session
+
+
+def _snap(widths, zero_day=None):
+    rows = []
+    for d, w in zip(_days, widths):
+        for cp in "CP":
+            z = d == zero_day and cp == "P"
+            rows.append({"ticker": "^XSP", "snapshot": d + pd.Timedelta(hours=16), "expiry": "2026-10-16", "strike": 600.0,
+                         "cp": cp, "bid": 0.0 if z else 10 - w / 2, "ask": 0.0 if z else 10 + w / 2, "T": 32 / 365,
+                         "spot": 600.0, "impliedVolatility": 0.15})
+    return pd.DataFrame(rows)
+
+
+def _run_main(widths, tmp):
+    old = _ms.lake.load, _ms.FROZEN
+    _ms.lake.load, _ms.FROZEN = (lambda *a, **k: _snap(widths)), os.path.join(tmp, "f.json")
+    try:
+        _ms.main(min_sessions=10)
+        return json.load(open(_ms.FROZEN))
+    finally:
+        _ms.lake.load, _ms.FROZEN = old
+
+
+with tempfile.TemporaryDirectory() as tmp:
+    # straddle mid 20, spread 2*w: w=0.1 -> 1.0% of mid, w=0.8 -> 8.0%; first 10 at 1.0%, the other 14 at 8.0%
+    _fz = _run_main([0.1] * 10 + [0.8] * 14, tmp)
+    check(f"spread freeze: the first 10 sessions set it, wide later sessions do not (spread {_fz['spread']:.4f}, "
+          f"all-session median {_fz['all_sessions_median']:.4f})",
+          _fz["spread"] == 0.015 and abs(_fz["measured_median"] - 0.01) < 1e-9 and _fz["sessions_used"] == 10
+          and _fz["first"] == str(_days[0].date()) and _fz["last"] == str(_days[9].date())
+          and _fz["all_sessions_median"] > 0.0150)
+with tempfile.TemporaryDirectory() as tmp:
+    _fz = _run_main([0.4] * 10 + [0.1] * 14, tmp)   # first 10 at 4.0%: measured beats the 1.5% floor
+    check("spread freeze: a first-10 median above 1.5% is frozen as measured", abs(_fz["spread"] - 0.04) < 1e-9)
+_zq = _ms.lake.load
+_ms.lake.load = lambda *a, **k: _snap([0.1] * 24, zero_day=_days[1])
+try:
+    _tab = _ms.atm_straddles("^XSP", "2026-09-01", "2026-12-01")
+finally:
+    _ms.lake.load = _zq
+check("spread freeze: a session whose put leg is quoted 0/0 is excluded, not measured",
+      len(_tab) == 23 and _days[1].date() not in set(_tab.day))
+
 print(f"\n{sum(checks)}/{len(checks)} passed")
 raise SystemExit(0 if all(checks) else 1)
