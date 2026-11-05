@@ -219,8 +219,9 @@ def lake_summary(path=LAKE_STATUS, now=None):
     age = (now - pd.Timestamp(st["generated_at"]).tz_convert("UTC")).total_seconds() / 3600
     stale = [k for k, v in st.get("datasets", {}).items() if v.get("stale")]
     dupes = [k for k, v in st.get("datasets", {}).items() if v.get("dupes")]
-    return {"ok": bool(st.get("ok")), "summary": st.get("summary", ""), "stale": stale, "dupes": dupes,
-            "age_hours": age, "generated_at": st["generated_at"],
+    problems = st.get("problems") or []    # every reason quality.py found; a status.json from before it has none
+    return {"ok": bool(st.get("ok")) and not problems, "summary": st.get("summary", ""), "stale": stale, "dupes": dupes,
+            "problems": problems, "age_hours": age, "generated_at": st["generated_at"],
             "last": {k: v.get("last") for k, v in st.get("datasets", {}).items()}}
 
 
@@ -377,7 +378,9 @@ def build_alerts(book, lake, health, recon, kalshi, now=None, kill=None):
             a.append({"kind": "daemon", "msg": f"kalshi shadow: no mark for {age:.0f}h"})
     elif "error" in kalshi:
         a.append({"kind": "daemon", "msg": f"kalshi ledger unreadable: {kalshi['error']}"})
-    if not lake.get("ok"):
+    if lake.get("problems"):
+        a += [{"kind": "feed", "msg": f"data lake: {p}"} for p in lake["problems"]]
+    elif not lake.get("ok"):
         a.append({"kind": "feed", "msg": "data lake: " + (", ".join(lake["stale"]) + " stale" if lake.get("stale")
                                                      else lake.get("summary", "not ok"))})
     if lake.get("age_hours") is None or lake["age_hours"] > LAKE_STATUS_MAX_AGE_H:

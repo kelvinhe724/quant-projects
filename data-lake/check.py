@@ -1,5 +1,5 @@
 """Offline checks on the loader, PIT filter, gap detector, CIK map, book deltas, 8-K parsing,
-the 5-minute Kalshi books, options sessions and the storage guard.
+the 5-minute Kalshi books, options sessions, the storage guard and the feed problems behind status.json's ok.
 
 Runs against a temporary store with planted data; the real store is never touched.
 Run: ../.venv/bin/python3 check.py   (exits 1 on any failure)
@@ -386,6 +386,118 @@ def daily_feed_checks():
         collect.requests.get, collect.FRED_SERIES, collect.time.sleep, collect.yf.download, collect.universe = real
         shutil.rmtree(os.path.join(lake.STORE, "equities_daily"), ignore_errors=True)
         shutil.rmtree(os.path.join(lake.STORE, "fred"), ignore_errors=True)
+def plant_5m(day_slots):
+    """kalshi_books_5m: the first `day_slots` five-minute snapshots of 2026-11-04 UTC, then every one up to 12:55 on 11-05."""
+    reset_books()
+    day = pd.date_range("2026-11-04", periods=day_slots, freq="5min", tz="UTC")
+    ts = day.append(pd.date_range("2026-11-05", "2026-11-05 12:55", freq="5min", tz="UTC"))
+    df = pd.DataFrame({"ts": ts, "ticker": "A", "side": "yes", "price": 0.3, "size": 1.0, "reason": "wide_book"})
+    for h, g in df.groupby(df.ts.dt.strftime("%Y-%m-%d/%H")):
+        lake.write("kalshi_books_5m", h, g, keys=["ts", "ticker", "side", "price"])
+
+
+def plant_l2(venues):
+    """crypto_l2 rows in the 12:00 UTC hour of 2026-11-05: okx on BTC for the last two minutes, bybit on ETH at 12:30."""
+    shutil.rmtree(os.path.join(lake.STORE, "crypto_l2"), ignore_errors=True)
+    spans = {"okx": ("BTCUSDT", "2026-11-05 12:58:00", 120), "bybit": ("ETHUSDT", "2026-11-05 12:30:00", 60)}
+    rows = [pd.DataFrame({"ts": pd.date_range(t0, periods=n, freq="1s", tz="UTC"), "symbol": sym, "venue": v,
+                          "bid_px_1": 1.0, "ask_px_1": 1.1}) for v, (sym, t0, n) in spans.items() if v in venues]
+    lake.write("crypto_l2", "2026-11-05/12", pd.concat(rows, ignore_index=True))
+
+
+def feed_checks(tmp):
+    """What freshness by newest row missed: a failed nightly step, a missing daily bar, a dead venue, a thin 5-minute day."""
+    print("feed problems")
+    now = pd.Timestamp("2026-11-05 13:00", tz="UTC")       # 07:00 CT Thursday: Wednesday's bar is due
+    opt = lake._options()
+    real = (lake.STORE, lake.REPORTS, opt.ROOT, quality.free_bytes, collect.quality)
+    lake.STORE, lake.REPORTS, opt.ROOT = (os.path.join(tmp, "feeds", d) for d in ("store", "reports", "raw"))
+    opt.ROOT = Path(opt.ROOT)
+    quality.free_bytes, collect.quality = (lambda: 10 ** 12), (lambda: None)
+    try:
+        # a complete day: every dataset fresh, both venues, a full 5-minute day, a clean nightly run
+        b = pd.bdate_range("2026-10-26", "2026-11-04")
+        lake.write("equities_daily", "SPY", pd.DataFrame({"date": b, "ticker": "SPY", "close": 1.0}))
+        lake.write("fred", "DGS10", pd.DataFrame({"date": b[:-1], "series": "DGS10", "value": 4.0}))
+        ts = pd.Timestamp("2026-11-05 12:30", tz="UTC")
+        lake.write("kalshi_markets", "2026-11-05", pd.DataFrame({"ts": [ts], "ticker": ["A"]}))
+        lake.write("kalshi_books", "2026-11-05", pd.DataFrame({"ts": [ts], "ticker": ["A"], "side": ["yes"], "price": [0.3],
+                                                                 "size": [1.0]}), keys=["ts", "ticker", "side", "price"])
+        lake.write("edgar_8k", "2026-11-04", pd.DataFrame({"filed": [pd.Timestamp("2026-11-04")], "ticker": ["A"],
+                                                            "accession": ["x"]}), keys=["accession"])
+        m = pd.date_range("2026-11-04 23:00", periods=60, freq="1min", tz="UTC")
+        lake.write("crypto_klines_1m", "2026-11", pd.DataFrame({"ts": m, "symbol": "BTCUSDT", "close": 1.0}))
+        lake.write("crypto_bookdepth", "2026-11", pd.DataFrame({"ts": m, "symbol": "BTCUSDT", "percentage": 1.0, "depth": 1.0}),
+                   keys=["ts", "symbol", "percentage"])
+        plant_options(opt, "2026-11-04", "close", 1.0)
+        plant_l2(["okx", "bybit"])
+        plant_5m(288)
+
+        def step_ok():
+            pass
+
+        def equities():
+            raise RuntimeError("equities: yfinance returned nothing\nsecond line of the traceback text")
+        rc = collect.bundle(step_ok, command="daily")
+        r = quality.report(now)
+        check("a complete day stays ok, with an empty problems list", rc == 0 and r["ok"] and r["problems"] == []
+              and r["summary"].startswith("all feeds fresh"), r["problems"])
+
+        # a planted failed step in the nightly run
+        rc = collect.bundle(step_ok, equities, command="daily")
+        with open(os.path.join(lake.REPORTS, "last_run.json")) as fh:
+            run = json.load(fh)["daily"]
+        check("bundle() still exits 1 on a failed step and records every step with the error's first line",
+              rc == 1 and run["command"] == "daily" and run["started"] <= run["finished"]
+              and run["steps"] == [{"step": "step_ok", "status": "ok"}, {"step": "equities", "status": "failed",
+                                   "error": "RuntimeError: equities: yfinance returned nothing"}], run)
+        collect.bundle(step_ok, command="kalshi-books")
+        r = quality.report(now)
+        check("a failed nightly step turns ok false and names the step, though every feed is fresh",
+              not r["ok"] and r["problems"] == ["daily run " + run["started"][:16] + "Z: equities failed: "
+                                                "RuntimeError: equities: yfinance returned nothing"]
+              and not any(d["stale"] for d in r["datasets"].values()), r["problems"])
+        check("the 5-minute job's own entry does not overwrite the nightly one",
+              set(json.load(open(os.path.join(lake.REPORTS, "last_run.json")))) == {"daily", "kalshi-books"})
+        collect.bundle(step_ok, command="daily")
+        check("the next clean nightly run clears it", quality.report(now)["ok"])
+
+        # a dead venue: the other one keeps crypto_l2's newest row fresh
+        plant_l2(["okx"])
+        r = quality.report(now)
+        check("a venue with no rows in 24 hours turns ok false while crypto_l2 still reads fresh",
+              not r["ok"] and r["problems"] == ["crypto_l2 bybit: no rows in 24h"] and not r["datasets"]["crypto_l2"]["stale"],
+              r["problems"])
+        plant_l2(["okx", "bybit"])
+
+        # the missing daily bar: due at 06:00 CT the next day, the NYSE calendar's holidays excluded
+        shutil.rmtree(os.path.join(lake.STORE, "equities_daily"))
+        lake.write("equities_daily", "SPY", pd.DataFrame({"date": b[:-1], "ticker": "SPY", "close": 1.0}))
+        eq = lambda t, last="2026-11-03": [p for p in quality.feed_problems(pd.Timestamp(t, tz="UTC"),
+                                           {"equities_daily": {"last": last}, "fred": {"last": "2030-01-01"}})
+                                           if p.startswith("equities_daily")]
+        r = quality.report(now)
+        check("Wednesday's bar missing at 07:00 CT Thursday turns ok false",
+              not r["ok"] and r["problems"] == ["equities_daily: no 2026-11-04 bar (last 2026-11-03)"], r["problems"])
+        check("... but not at 05:59 CT, before it is due", eq("2026-11-05 11:59") == [] and len(eq("2026-11-05 12:00")) == 1)
+        check("Thanksgiving is not a session: Wednesday's bar is the one due on Friday morning",
+              eq("2026-11-27 13:00", "2026-11-25") == [], eq("2026-11-27 13:00", "2026-11-25"))
+        check("fred may trail one session: Tuesday's rate is enough on Thursday morning",
+              not any(p.startswith("fred") for p in r["problems"]))
+        lake.write("equities_daily", "SPY", pd.DataFrame({"date": b, "ticker": "SPY", "close": 1.0}))
+
+        # a thin 5-minute day: 60% of 288 is 172.8 snapshots
+        plant_5m(172)
+        r = quality.report(now)
+        check("172 of 288 snapshots on the last full UTC day turns ok false",
+              not r["ok"] and r["problems"] == ["kalshi_books_5m: 172 of 288 snapshots on 2026-11-04, under 60%"], r["problems"])
+        plant_5m(173)
+        check("173 does not", quality.report(now)["ok"])
+        reset_books()
+        r = quality.report(now + pd.Timedelta(days=1))
+        check("no 5-minute rows in 24 hours is its own problem", "kalshi_books_5m: no rows in 24h" in r["problems"], r["problems"])
+    finally:
+        lake.STORE, lake.REPORTS, opt.ROOT, quality.free_bytes, collect.quality = real
 
 
 def main():
@@ -513,23 +625,25 @@ def main():
         options_session_checks(tmp)
         storage_checks(tmp)
         daily_feed_checks()
+        feed_checks(tmp)
+        # bundle() writes last_run.json, so these run while REPORTS still points at the temp folder
+        _q = collect.quality
+        collect.quality = lambda: None
+        try:
+            ok_rc = collect.bundle(lambda: None)
+            def boom():
+                raise RuntimeError("vendor down")
+            bad_rc = collect.bundle(lambda: None, boom, lambda: None)
+        finally:
+            collect.quality = _q
+        if not (ok_rc == 0 and bad_rc == 1):
+            FAILS.append(f"bundle exit codes: ok {ok_rc}, failing step {bad_rc}")
+        else:
+            print("  ok  a bundle exits 0 when every step ran and 1 when one failed, after quality()")
     finally:
         lake.STORE, lake.INTERVALS, lake.REPORTS = real_store, real_intervals, real_reports
         lake._options().ROOT = real_opt_root
         shutil.rmtree(tmp, ignore_errors=True)
-    _q = collect.quality
-    collect.quality = lambda: None
-    try:
-        ok_rc = collect.bundle(lambda: None)
-        def boom():
-            raise RuntimeError("vendor down")
-        bad_rc = collect.bundle(lambda: None, boom, lambda: None)
-    finally:
-        collect.quality = _q
-    if not (ok_rc == 0 and bad_rc == 1):
-        FAILS.append(f"bundle exit codes: ok {ok_rc}, failing step {bad_rc}")
-    else:
-        print("  ok  a bundle exits 0 when every step ran and 1 when one failed, after quality()")
     print(f"\n{len(FAILS)} failures" if FAILS else "\nall checks passed")
     sys.exit(1 if FAILS else 0)
 

@@ -85,7 +85,10 @@ idempotent: a rerun rewrites the same parts with the same keys.
 
 `collect.py daily` runs equities, fred, edgar, archive and then `quality.py`;
 `collect.py hourly` runs kalshi and `quality.py`. A feed that raises is logged
-and the others still run.
+and the others still run. Before `quality.py`, each of the three jobs records
+its run in `reports/last_run.json`, one entry per command (`daily`, `hourly`,
+`kalshi-books`): `started`, `finished` and every step as `ok` or `failed` with
+the first line of the error.
 
 Venues, recorded on 2026-09-05 from this machine: Binance.com REST and
 websocket both answer 451 (restricted location); data.binance.vision serves
@@ -139,7 +142,7 @@ reports `kalshi_books_5m` stale, as it does for any feed that has never run.
 `quality.py` writes `reports/status.json`:
 
 ```json
-{"generated_at": "...", "ok": true, "summary": "all feeds fresh",
+{"generated_at": "...", "ok": true, "summary": "all feeds fresh", "problems": [],
  "datasets": {"crypto_l2": {"parts": 1, "rows": 336, "last": "2026-09-05 01:15:35+00:00",
                             "stale": false, "gaps": [{"after": "...", "before": "...", "missing": 30}],
                             "dupes": 0}, ...}}
@@ -157,6 +160,22 @@ stale after 15 minutes, and its gaps are judged on the snapshot clock (a ticker
 entering or leaving the wide set is not a gap). The `options` entry is judged
 on the close session only and also lists the latest day of each session under
 `sessions`, so a dead open or midday job shows as an old date or null.
+
+**Problems.** The newest row is not the whole story: on 2026-11-05 the nightly
+run failed on DNS (equities, fred, edgar, archive), crypto_l2 had been OKX only
+since Bybit's last row at 2026-10-16 20:10Z, and `kalshi_books_5m` held 149 to
+223 of its 288 snapshots on most days, while `status.json` said `ok` and "all
+feeds fresh". `problems` now lists every reason `ok` is false, one line each,
+and `ok` is `problems == []`. Besides a stale feed, duplicates and a low disk:
+a failed step in the latest `daily` entry of `last_run.json` (it clears on the
+next clean run); `equities_daily` (SPY) without the last NYSE session's bar
+after 06:00 CT the next calendar day, and `fred` (DGS10) more than one session
+behind that, since FRED posts a day's rates the next afternoon, after the
+nightly run (the calendar is `framework/book/universe.py`'s NYSE holidays);
+any venue in `collect.VENUES` with no `crypto_l2` row in the last 24 hours;
+`kalshi_books_5m` with no row in the last 24 hours or fewer than 60% of 288
+five-minute snapshots on the last full UTC day. `summary` joins the same lines.
+The desk report prints each problem as its own lake alert.
 
 **Storage guard.** `status.json` also carries a `disk` block: for every
 directory under `store/` (registered or not; a stray `crypto_l2 2` copy is
@@ -191,6 +210,11 @@ and its schema against the hourly books, and failed snapshots exiting 1 through
 by default, `session=` the others, and the old single-file layout. The storage
 guard is checked on planted history, free space and a stray directory. 97
 checks, exits 1 on any failure.
+guard is checked on planted history, free space and a stray directory. A
+planted complete day stays `ok` with no problems; a failed nightly step, a dead
+venue under a fresh newest row, a missing daily bar (due at 06:00 CT, Thanksgiving
+skipped), and 172 of 288 five-minute snapshots (173 passes) each turn it false.
+102 checks, exits 1 on any failure.
 
 ## Limitations
 
@@ -230,8 +254,11 @@ checks, exits 1 on any failure.
   run. The three-day lookback is what makes that safe.
 - **The L2 store is one venue at a time.** Keys are `(ts, symbol)`, so if the
   daemon fell back to OKX and Bybit came back in the same second, one would
-  overwrite the other. In practice a fallback lasts until the next
-  disconnect. Sampling is wall-clock, not exchange time, and the row is the
+  overwrite the other. A fallback never returns to Bybit while the daemon
+  lives: the failure count resets only when a stream ends cleanly, which a
+  run without `--seconds` never does. So `problems` shows
+  `crypto_l2 bybit: no rows in 24h` from the day after a fallback until the
+  daemon restarts. Sampling is wall-clock, not exchange time, and the row is the
   book as of the last message before the second ticked, with no sequence
   numbers or checksum verification, so a dropped delta corrupts the book
   until the next reconnect. A 5-second silence forces one.

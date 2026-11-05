@@ -391,9 +391,11 @@ def ledger_rows(equities, alpaca=None, hashes=None):
     return report.read_ledger(path)
 
 
-def status_json(ok=True, stale=(), age_h=0.5):
+def status_json(ok=True, stale=(), age_h=0.5, problems=None):
     d = {"generated_at": (NOW - pd.Timedelta(hours=age_h)).tz_convert("UTC").isoformat(), "ok": ok,
          "summary": "all feeds fresh" if ok else "stale", "datasets": {"fred": {"stale": False, "dupes": 0, "last": "x"}}}
+    if problems is not None:
+        d["problems"] = problems
     for k in stale:
         d["datasets"][k] = {"stale": True, "dupes": 0, "last": "x"}
     path = os.path.join(tmp, f"status{len(os.listdir(tmp))}.json")
@@ -575,6 +577,18 @@ check("write: dated md and json, latest.json and alerts.json, three headline lin
       os.path.exists(md) and md.endswith("2026-09-05.md") and os.path.exists(os.path.join(tmp, "reports", "daily", "2026-09-05.json"))
       and len(latest["headline"]) == 3 and latest["headline"][2].startswith("no alerts") and alerts_file["alerts"] == []
       and "## Alerts" in open(md).read(), str(latest["headline"]))
+PROBLEMS = ["daily run 2026-11-05T03:31Z: equities failed: RuntimeError: equities: yfinance returned nothing",
+            "crypto_l2 bybit: no rows in 24h"]
+for ok in (False, True):   # True: a status.json that says ok next to problems is still not ok
+    r = report.build(NOW, ledger_path=os.path.join(tmp, "ledger0.csv"), kalshi_path=kdb,
+                     lake_path=status_json(ok=ok, problems=PROBLEMS), launchctl_text=LC, do_replay=False,
+                     kill_path=os.path.join(tmp, "no-KILL"))
+    check(f"lake problems (status ok={ok}): one feed alert each and the headline says lake NOT ok, not lake ok",
+          [a["msg"] for a in r["alerts"]] == ["data lake: " + p for p in PROBLEMS]
+          and "lake NOT ok" in r["headline"][1] and "lake ok" not in r["headline"][1], str(r["alerts"]))
+r = report.build(NOW, ledger_path=os.path.join(tmp, "ledger0.csv"), kalshi_path=kdb, lake_path=status_json(problems=[]),
+                 launchctl_text=LC, do_replay=False, kill_path=os.path.join(tmp, "no-KILL"))
+check("an empty problems list is lake ok with no alert", r["alerts"] == [] and "lake ok" in r["headline"][1], str(r["alerts"]))
 check("report never touches keys: read_env and AlpacaBroker are not imported into report.py",
       "read_env" not in dir(report) and "AlpacaBroker" not in dir(report))
 
