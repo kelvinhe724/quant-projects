@@ -1,0 +1,47 @@
+{
+ "hourly": {
+  "command": "hourly",
+  "started": "2026-11-05T17:53:31+00:00",
+  "finished": "2026-11-05T17:53:39+00:00",
+  "steps": [
+   {
+    "step": "kalshi",
+    "status": "ok"
+   }
+  ]
+ },
+ "kalshi-books": {
+  "command": "kalshi-books",
+  "started": "2026-11-05T18:29:27+00:00",
+  "finished": "2026-11-05T18:30:55+00:00",
+  "steps": [
+   {
+    "step": "kalshi_books",
+    "status": "ok"
+   }
+  ]
+ },
+ "daily": {
+  "command": "daily",
+  "started": "2026-11-05T11:36:05+00:00",
+  "finished": "2026-11-05T11:38:38+00:00",
+  "steps": [
+   {
+    "step": "equities",
+    "status": "ok"
+   },
+   {
+    "step": "fred",
+    "status": "ok"
+   },
+   {
+    "step": "edgar",
+    "status": "ok"
+   },
+   {
+    "step": "archive",
+    "status": "ok"
+   }
+  ]
+ }
+}
