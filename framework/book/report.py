@@ -37,6 +37,8 @@ ALERTS = os.path.join(REPORTS, "alerts.json")
 KALSHI_LEDGER = os.path.join(ROOT, "kalshi-desk", "ledger.sqlite")
 LAKE_STATUS = os.path.join(ROOT, "data-lake", "reports", "status.json")
 DAEMON_LOG = os.path.join(REPORTS, "daemon.log")
+EXITS_LOG = os.path.expanduser("~/.config/healthchecks/exits.log")  # '<iso utc> <slug> <rc> <raw_rc>' per run, from hc-run.sh
+OFFLINE = 75  # EX_TEMPFAIL: hc-run.sh relabels a failed job's exit 75 when the host cannot reach hc-ping.com
 RISK = book_config().risk  # the overlay's own limits: 3x gross, half at 15% dd, kill at 25%
 LIMITS = Limits()          # the broker layer's hard limits: gross, per name, daily loss
 JOBS = ("com.kelvinhe.premia-book", "com.kelvinhe.desk-report", "com.kelvinhe.kalshi-shadow",
@@ -242,6 +244,30 @@ def launchd_jobs(text=None):
     return {j: jobs.get(j, {"pid": None, "status": None, "loaded": False}) for j in JOBS}
 
 
+def exit_counts(now, path=None):
+    """{slug: {75: n, 1: n}} for the Chicago day before `now`, from the exits log; {} if the log is missing.
+
+    Rows are stamped in UTC, so a 02:30 CT battle that failed lands on the next UTC date: convert each row before comparing."""
+    day = (pd.Timestamp(now).tz_convert(CT) - pd.Timedelta(days=1)).date()
+    n = {}
+    try:
+        lines = open(EXITS_LOG if path is None else path).read().splitlines()
+    except OSError:
+        return {}
+    for line in lines:
+        t = line.split()
+        if len(t) < 3 or t[2] not in ("75", "1"):
+            continue
+        try:
+            when = pd.Timestamp(t[0]).tz_convert(CT).date()
+        except (ValueError, TypeError):
+            continue  # an unparsable or tz-naive stamp is not a run we can place on a day
+        if when == day:
+            c = n.setdefault(t[1], {})
+            c[int(t[2])] = c.get(int(t[2]), 0) + 1
+    return n
+
+
 def daemon_health(ledger, now=None, launchctl_text=None, log_path=DAEMON_LOG):
     now = pd.Timestamp.now(tz=ET) if now is None else pd.Timestamp(now).tz_convert(ET)
     shadow = ledger[ledger.book == "shadow"]
@@ -388,9 +414,14 @@ def build_alerts(book, lake, health, recon, kalshi, now=None, kill=None):
     for label, j in jobs.items():
         if j.get("loaded") is False:
             a.append({"kind": "daemon", "msg": f"{label} is not loaded in launchd"})
+        elif j.get("status") == OFFLINE:
+            a.append({"kind": "daemon", "msg": f"{label} last attempt offline: session not collected"})
         elif j.get("status") and not (label in KEEPALIVE and j.get("pid") and j["status"] < 0):
             # a positive status with a live pid is a crash loop and still alerts
             a.append({"kind": "daemon", "msg": f"{label} last exit status {j['status']}"})
+    if (n := exit_counts(now)):
+        a.append({"kind": "daemon", "msg": "yesterday's offline (75) and failed (1) runs: " + "; ".join(
+            f"{slug} {c.get(OFFLINE, 0)}x75 {c.get(1, 0)}x1" for slug, c in sorted(n.items()))})
     if kalshi.get("last_mark"):
         age = (now - pd.Timestamp(kalshi["last_mark"]).tz_convert("UTC")).total_seconds() / 3600
         if age > 6:

@@ -1262,5 +1262,38 @@ check("PREREG template: the Comparator line names the free twin, a pre-window be
       in _tmpl and "active Sharpe and its t > 0 beside raw" in _tmpl)
 
 
+# ---- offline-report: status 75 reads offline, and yesterday's 75s and 1s per slug come from the exits log
+_book0 = {"equity": 1.0, "sleeves": {}, "drawdown": 0.0, "gross": 0.0}
+_dm = lambda: [x["msg"] for x in report.build_alerts(_book0, {"ok": True}, {"jobs": report.launchd_jobs(
+    LC.replace("-\t0\tcom.kelvinhe.lake-daily", "-\t75\tcom.kelvinhe.lake-daily"))}, {}, {"last_mark": NOW.isoformat()}, NOW)
+    if x["kind"] == "daemon"]
+_elog0, _etmp = report.EXITS_LOG, tempfile.mkdtemp()
+try:
+    report.EXITS_LOG = os.path.join(_etmp, "no-exits.log")
+    _dm_missing = _dm()
+    report.EXITS_LOG = os.path.join(_etmp, "exits.log")
+    _yd = str((NOW.tz_convert("UTC") - pd.Timedelta(days=1)).date())
+    open(report.EXITS_LOG, "w").write(
+        f"{_yd}T10:20:01Z lake-daily 75 1\n{_yd}T12:50:01Z lake-daily 75 1\n{_yd}T23:30:01Z lake-daily 1 1\n"
+        f"{_yd}T10:00:00Z premia-book 0 0\n2000-01-01T00:00:00Z lake-daily 75 1\n")
+    _dm_count = _dm()
+    # the Chicago day, not the UTC day: a 03:30Z row dated today is 22:30 CT yesterday (counts); dated yesterday it is the day before (does not)
+    _td = str(NOW.tz_convert("America/Chicago").date())
+    open(report.EXITS_LOG, "w").write(
+        f"{_td}T03:30:00Z lake-daily 75 1\n{_yd}T03:30:00Z lake-daily 1 1\nnot-a-time lake-daily 75 1\n")
+    _dm_ct = _dm()
+finally:
+    report.EXITS_LOG = _elog0
+check("launchd alerts: a last exit status of 75 reads 'last attempt offline: session not collected', not the generic text",
+      "com.kelvinhe.lake-daily last attempt offline: session not collected" in _dm_missing
+      and not any("last exit status" in m for m in _dm_missing), str(_dm_missing))
+check("exits log: two 75s and one 1 for a slug yesterday give one count line; other days and clean runs do not count",
+      _dm_count[-1] == "yesterday's offline (75) and failed (1) runs: lake-daily 2x75 1x1", str(_dm_count))
+check("exits log: a missing log adds no alert line and the other alerts are unchanged",
+      _dm_missing == ["com.kelvinhe.lake-daily last attempt offline: session not collected"], str(_dm_missing))
+check("exits log: 'yesterday' is the Chicago day: a 03:30Z row dated today counts, one dated yesterday does not, an unparsable stamp is skipped",
+      _dm_ct[-1] == "yesterday's offline (75) and failed (1) runs: lake-daily 1x75 0x1", str(_dm_ct))
+
+
 print(f"\n{sum(checks)}/{len(checks)} checks passed")
 sys.exit(0 if all(checks) else 1)
