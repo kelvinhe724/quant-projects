@@ -11,8 +11,13 @@ Three items, each printed PASS or FAIL with its evidence:
                  to the name after the verb, else the one before, else every name in the
                  sentence, then the paragraph, then section 2. FAIL on tradable=False, on a
                  short of a name Alpaca will not short or does not list as easy to borrow, on
-                 any sold or written option leg ("Alpaca allows no uncovered short options")
-                 unless its sentence says covered, and when no leg was verified at all.
+                 a sold or written option leg its structure does not cover at the paper
+                 account's options_trading_level (get_account; a failed read is unverified,
+                 FAIL): defined-risk (an iron fly/butterfly/condor or vertical/credit spread,
+                 with a buy of the same option type in its paragraph) needs level 3, "covered
+                 call" / "cash-secured put" level 1, anything else is uncovered and fails at
+                 every level; XSP/SPX are index options, verified only by that structure; and
+                 FAIL when no leg was verified at all.
                  Upper-case words on the STOP list that are live Alpaca assets are printed
                  as a notice, since they were not read as instruments.
   2 provenance   every date range in README.md, */README.md, REFUSALS.md, */reports/*.json,
@@ -65,6 +70,13 @@ VERB = re.compile(r"(?<![\w-])(?:short(?:s|ed|ing)?|sell(?:s|ing)?|sold|writ(?:e
 NOT_A_SHORT = {"term", "window", "windows", "history", "sample", "track", "period", "run", "horizon", "list", "span",
                "rate", "rates", "interest", "end", "squeeze", "version", "answer"}
 OPTION = re.compile(r"^(?:options?|straddles?|strangles?|calls?|puts?)$", re.I)
+# a sold leg Alpaca can hold: a defined-risk structure (level 3) or a covered call / cash-secured put (level 1)
+STRUCTURE = re.compile(r"\biron\s+(?:fly|flies|butterfl(?:y|ies)|condors?)\b|\bbutterfl(?:y|ies)\b|\bcondors?\b"
+                       r"|\bvertical(?:\s+spreads?)?\b|\bcredit\s+spreads?\b", re.I)
+COVERED = re.compile(r"\bcovered\s+calls?\b|\bcash-secured\s+puts?\b", re.I)
+BUY = re.compile(r"(?<![\w-])(?:buy(?:s|ing)?|bought|long)(?![\w-])", re.I)
+LEVEL = {"defined": 3, "covered": 1}  # Alpaca: 1 covered call / cash-secured put, 2 long call/put, 3 spreads
+INDEX = {"XSP", "SPX"}
 NEGATION = {"no", "never", "not", "without", "cannot", "can't", "nor", "none", "impossible", "isn't", "won't",
             "doesn't", "don't", "refuses", "refused", "unavailable"}
 STOPWORDS = {"and", "or", "then", "when", "while", "but", "if", "until", "unless", "buy", "buys", "bought", "buying",
@@ -131,10 +143,41 @@ def words(text):
     return [(m.group(0), m.start()) for m in re.finditer(r"[\w'&]+(?:[-/][\w']+)*", text)]
 
 
-def legs(text, names):
-    """What sections 2-3 do with each leg: ({ticker: first sentence that shorts it}, [sentences selling options]).
+def option_types(text):
+    """{'call', 'put'} a phrase names; a straddle, strangle, wing, iron, butterfly or condor with neither named is both."""
+    named = {t for t in ("call", "put") if re.search(rf"\b{t}s?\b", text, re.I)}
+    return named or ({"call", "put"} if re.search(r"\b(?:straddle|strangle|wing|iron|butterfl|condor)", text, re.I)
+                     else set())
 
-    `names` are the section 2 tickers, the last resort for a short that names no leg.
+
+def bought(para):
+    """Option types the paragraph buys (buy/bought/long, not negated), read to the end of the verb's clause."""
+    out = set()
+    for sent in re.split(r"(?<=[.;!?])\s+", para):
+        for m in BUY.finditer(sent):
+            if NEGATION & {w.lower() for w, _ in words(sent[:m.start()])[-3:]}:
+                continue
+            stop = min([len(sent)] + [m.end() + x.start() for x in re.finditer(CLAUSE, sent[m.end():])])
+            out |= option_types(sent[m.end():stop])
+    return out
+
+
+def sold_kind(sent, para):
+    """'defined', 'covered' or 'uncovered' for a sentence that sells an option."""
+    if STRUCTURE.search(sent):
+        sold, buys = option_types(sent), bought(para)
+        if buys and sold <= buys:
+            return "defined"
+    for m in COVERED.finditer(sent):
+        if not NEGATION & {w.lower() for w, _ in words(sent[:m.start()])[-2:]}:
+            return "covered"
+    return "uncovered"
+
+
+def legs(text, names):
+    """What sections 2-3 do with each leg: ({ticker: first sentence that shorts it}, [(kind, sentence selling options)]).
+
+    kind is sold_kind's. `names` are the section 2 tickers, the last resort for a short that names no leg.
     """
     shorts, options = {}, []
     for para in paragraphs(text):
@@ -155,10 +198,11 @@ def legs(text, names):
                         break
                     after.append(w)
                 back = [w for w, _ in words(sent[:m.start()])][-3:]
-                if any(OPTION.match(w) for w in after) or (not verb.startswith("weight") and not tickers(" ".join(after))
-                                                            and any(OPTION.match(w) for w in back)):
-                    if not re.search(r"\bcovered\b", sent, re.I):
-                        options.append(sent)
+                if any(OPTION.match(w) for w in after) or STRUCTURE.search(sent[m.end():stop]) or (
+                        not verb.startswith("weight") and not tickers(" ".join(after))
+                        and any(OPTION.match(w) for w in back)):
+                    if (kind := sold_kind(sent, para), sent) not in options:
+                        options.append((kind, sent))
                     continue
                 named = (tickers(" ".join(after))[:1] or tickers(" ".join(back))[-1:] or tickers(sent)
                          or tickers(para) or list(names))
@@ -196,6 +240,12 @@ def asset(symbol):
                                                                     "easy_to_borrow")}}
 
 
+def options_level():
+    """(options_trading_level, options_approved_level) of the paper account: one GET, keys never printed."""
+    a = client().get_account()
+    return a.get("options_trading_level"), a.get("options_approved_level")
+
+
 def tradability(text):
     secs = sections(text)
     sec = secs.get("2")
@@ -203,9 +253,37 @@ def tradability(text):
         return False, ["no section 2 (universe and instrument) to read"]
     names = tickers(sec)
     shorts, options = legs(sec + "\n\n" + secs.get("3", ""), names)
-    lines, ok, verified = [], True, 0
+    lines, ok, verified, opt_lines, structure_ok = [], True, 0, [], False
+    if options:
+        try:
+            lvl, approved = options_level()
+            if lvl is None:
+                raise ValueError("the account record has no options_trading_level")
+            lvl = int(lvl)
+            opt_lines.append(f"options level {lvl} (approved {approved}): paper level; live approval not verified")
+        except Exception as e:  # no keys, no network: unverified is not a pass
+            lvl = None
+            opt_lines.append(f"options level: Alpaca account read failed ({type(e).__name__}: {clip(str(e), 90)}), "
+                             "so every sold option is unverified; paper level; live approval not verified")
+        structure_ok = lvl is not None
+        for kind, sent in options:
+            good = lvl is not None and kind in LEVEL and lvl >= LEVEL[kind]
+            structure_ok &= good
+            what = {"defined": "defined-risk, needs level 3",
+                    "covered": "covered call / cash-secured put, needs level 1"}.get(
+                kind, "uncovered, Alpaca allows no uncovered short options at any level")
+            opt_lines.append(f"sold option ({what}) {'passes' if good else 'FAILS'} at level {lvl}: "
+                             f'"{clip(sent, 80)}"; paper level; live approval not verified')
+        ok &= structure_ok
     stop = [w for w in dict.fromkeys(re.findall(r"(?<![\w-])[A-Z]{2,5}(?![\w-])", sec)) if w in STOP]
     for t in list(dict.fromkeys(names + list(shorts))) + stop:
+        if t in INDEX:
+            verified += structure_ok
+            lines.append(f"{t}: index option (no Alpaca index quotes; marks from collector); "
+                         + ("verified by its option structure" if structure_ok else "not verified: no sold-option "
+                            "structure passed")
+                         + (f'; planned short not checked: "{clip(shorts[t], 70)}"' if t in shorts else ""))
+            continue
         try:
             a = asset(t)
         except Exception as e:  # no keys, no network: unverified is not a pass
@@ -230,10 +308,7 @@ def tradability(text):
                      f"easy_to_borrow={a['easy_to_borrow']} marginable={a['marginable']}; "
                      + (f'planned short: "{clip(shorts[t], 80)}"' if t in shorts else "no short planned")
                      + "".join(f" -> {x}" for x in bad))
-    if options:
-        ok = False
-        lines.append(f"options leg sold or written: Alpaca allows no uncovered short options "
-                     f'({len(options)} sentences, first: "{clip(options[0], 80)}")')
+    lines += opt_lines
     if not verified:
         ok = False
         lines.append("no leg verified: no Alpaca equity/ETF in section 2 passes its flags; other venues are not "
