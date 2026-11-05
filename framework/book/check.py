@@ -520,7 +520,7 @@ check("kalshi: settled P&L through paper.stats on a read-only connection, open c
       and "demo" not in k["books"], str(sb))
 check("kalshi: a missing ledger is reported, not raised", "error" in report.kalshi_summary(os.path.join(tmp, "no.sqlite")))
 
-r = report.build(NOW, ledger_path=os.path.join(tmp, "ledger0.csv"), kalshi_path=kdb, lake_path=status_json(),
+r = report.build(NOW, ledger_path=os.path.join(tmp, "ledger0.csv"), kalshi_path=kdb, lake_path=status_json(), log_path=os.path.join(tmp, "none"),
                  launchctl_text=LC, do_replay=False, kill_path=os.path.join(tmp, "no-KILL"))
 md = report.write(r, os.path.join(tmp, "reports"))
 latest = json.load(open(os.path.join(tmp, "reports", "latest.json")))

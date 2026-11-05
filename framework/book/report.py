@@ -469,7 +469,7 @@ def render_md(r):
     return "\n".join(L)
 
 
-def build(now=None, ledger_path=LEDGER, kalshi_path=KALSHI_LEDGER, lake_path=LAKE_STATUS, launchctl_text=None,
+def build(now=None, ledger_path=LEDGER, kalshi_path=KALSHI_LEDGER, lake_path=LAKE_STATUS, launchctl_text=None, log_path=DAEMON_LOG,
           do_replay=True, kill_path=KILL):
     now = pd.Timestamp.now(tz=CT) if now is None else pd.Timestamp(now).tz_convert(CT)
     ledger = read_ledger(ledger_path)
@@ -479,7 +479,7 @@ def build(now=None, ledger_path=LEDGER, kalshi_path=KALSHI_LEDGER, lake_path=LAK
     risk = ledoit_wolf_var(positions, cached_returns(list(positions)), book.get("equity") or CAPITAL)
     kalshi = kalshi_summary(kalshi_path)
     lake = lake_summary(lake_path, now)
-    health = daemon_health(ledger, now, launchctl_text)
+    health = daemon_health(ledger, now, launchctl_text, log_path)
     recon = reconciliation(ledger)
     kill = kill_status(kill_path)
     alerts = build_alerts(book, lake, health, recon, kalshi, now, kill)
