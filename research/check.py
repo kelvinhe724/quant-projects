@@ -621,6 +621,71 @@ old_hash = hashlib.sha256(json.dumps({k: old_body.get(k) for k in old_keys}, sor
 check("a lock body without var_sharpe hashes exactly as before the key existed, so existing locks still verify",
       Untouched.digest(old_body) == old_hash)
 
+# r1-venue-truth: sold options against the paper account's options level, with a stubbed client (never the live one)
+def venue(body, level, assets=None):
+    acct = (lambda: (_ for _ in ()).throw(ConnectionError("stub: account read refused"))) if level is None else (
+        lambda: {"options_trading_level": level, "options_approved_level": level})
+    real = prereg_check.client, prereg_check.asset
+    prereg_check.client = lambda: types.SimpleNamespace(get_account=acct)
+    prereg_check.asset = lambda sym: (assets or {}).get(sym)
+    try:
+        return prereg_check.tradability("# planted\n\n## 2. Universe and instrument\n" + body)
+    finally:
+        prereg_check.client, prereg_check.asset = real
+
+
+NAKED = "- Traded: XSP options, cash-settled.\n- Sell 1 ATM XSP straddle each cycle, delta-hedged daily.\n"
+FLY = "- Traded: XSP options.\n- Sell 1 XSP iron fly at the money each cycle. Buy the call and put wings 50 points out.\n"
+BARE_FLY = "- Traded: XSP options.\n- Sell 1 XSP iron fly at the money each cycle.\n"
+PCS = ("- Traded: XSP options.\n- Sell one XSP put credit spread each cycle: sell the 30-delta put and buy the "
+       "20-delta put, same expiry.\n")
+CALL = "- Traded: XSP options.\n- Sell a naked call, not covered.\n"
+SPY = {"SPY": {"name": "SPDR S&P 500 ETF Trust", "asset_class": "us_equity", "tradable": True, "shortable": True,
+               "marginable": True, "easy_to_borrow": True}}
+CC = "- Traded: SPY shares and options.\n- Hold 100 SPY shares and sell one covered call against them each month.\n"
+results = {k: venue(b, lvl, a) for k, (b, lvl, a) in {
+    "naked3": (NAKED, 3, None), "fly3": (FLY, 3, None), "fly2": (FLY, 2, None), "bare3": (BARE_FLY, 3, None),
+    "pcs3": (PCS, 3, None), "call3": (CALL, 3, None), "down": (FLY, None, None), "cc1": (CC, 1, SPY),
+    "cc0": (CC, 0, SPY)}.items()}
+check("a naked short XSP straddle fails tradability at options level 3 as uncovered",
+      not results["naked3"][0] and any("uncovered" in s and "straddle" in s for s in results["naked3"][1]),
+      results["naked3"][1][-1][:90])
+check("an iron fly whose paragraph buys the wings passes at level 3 and fails at level 2; without the wings it fails",
+      results["fly3"][0] and not results["fly2"][0] and not results["bare3"][0]
+      and any("defined-risk" in s and "FAILS at level 2" in s for s in results["fly2"][1]))
+check("a put credit spread that buys the lower put passes at level 3", results["pcs3"][0], results["pcs3"][1][-1][:90])
+check("'sell a naked call, not covered' fails as uncovered with the sentence quoted",
+      not results["call3"][0] and any('uncovered' in s and 'Sell a naked call, not covered."' in s
+                                      for s in results["call3"][1]))
+check("a failing get_account is FAIL (unverified), never PASS",
+      not results["down"][0] and any("account read failed" in s and "unverified" in s for s in results["down"][1]))
+check("XSP prints the index-option line, verified only with a passing structure",
+      any("XSP: index option (no Alpaca index quotes; marks from collector); verified" in s for s in results["fly3"][1])
+      and any("XSP: index option" in s and "not verified" in s for s in results["naked3"][1])
+      and not any("not an Alpaca equity/ETF" in s for s in results["fly3"][1]))
+check("every options line says paper level; live approval not verified",
+      all("paper level; live approval not verified" in s for r in results.values() for s in r[1] if "option" in s
+          and "index option" not in s and "Traded" not in s))
+check("a covered call on held SPY shares passes at level 1 and fails at level 0",
+      results["cc1"][0] and not results["cc0"][0], results["cc1"][1][-1][:90])
+
+# r1-venue-truth: sold types come from the sold clause and structure name only; each must be bought, same type
+half = {k: venue("- Traded: XSP options.\n- " + b + "\n", 3) for k, b in {
+    "half": "Sell 1 XSP iron condor and buy the 10-delta call wing.",
+    "both": "Sell 1 XSP iron condor and buy the 10-delta call and put wings.",
+    "fly": "Sell 1 XSP iron fly and buy both wings.",
+    "pcs": "Sell a put credit spread, buying the lower put.",
+    "strad": "Sell 1 XSP straddle and buy a call."}.items()}
+check("an iron condor that buys only the call wing fails at level 3 naming the naked put",
+      not half["half"][0] and any("uncovered put," in s and "iron condor" in s for s in half["half"][1]),
+      half["half"][1][-1][:90])
+check("an iron condor that buys the call and put wings passes at level 3", half["both"][0], half["both"][1][-1][:90])
+check("an iron fly that buys both wings passes at level 3", half["fly"][0], half["fly"][1][-1][:90])
+check("'sell a put credit spread, buying the lower put' passes at level 3", half["pcs"][0], half["pcs"][1][-1][:90])
+check("a straddle that buys only a call fails naming the naked put",
+      not half["strad"][0] and any("uncovered put," in s and "straddle" in s for s in half["strad"][1]),
+      half["strad"][1][-1][:90])
+
 shutil.rmtree(tmp)
 n_fail = checks.count(False)
 # --- r1-peek-audit (reviewer): a cell that is exactly 0 on the audit date must still move, so a leak that reads only
