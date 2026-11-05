@@ -131,12 +131,14 @@ def run(ticker="^XSP", out=None, units=UNITS):
             valid = [m for m in prev if not pd.isna(m["straddle_mid"])]
             last_mid = valid[-1]["straddle_mid"] if valid else c["entry_mid"]   # "no quote" sessions carry no mid
             last_sh = prev[-1]["hedge_shares"] if prev else 0.0
-            last_spy = prev[-1]["spy"] if prev else spy.get(pd.Timestamp(c["start"]), np.nan)
+            hedged = [m for m in prev if not pd.isna(m["spy"])]                  # "no mark" sessions carry no spy
+            last_spy = hedged[-1]["spy"] if hedged else spy.get(pd.Timestamp(c["start"]), np.nan)
             spy_now = spy.get(day, np.nan)
             if np.isnan(spy_now):
-                new_m.append({"date": day, "start": c["start"], "spot": spot, "spy": spy_now, "straddle_mid": smid,
-                              "hedge_shares": last_sh, "pnl_option": np.nan, "pnl_hedge": np.nan, "cost": np.nan,
-                              "pnl": np.nan, "status": "no mark"})
+                # no SPY spot: book nothing; both legs catch up at the next fully marked session, so the mid is not kept
+                new_m.append({"date": day, "start": c["start"], "spot": spot, "spy": spy_now, "straddle_mid": np.nan,
+                              "hedge_shares": last_sh, "pnl_option": 0.0, "pnl_hedge": 0.0, "cost": 0.0,
+                              "pnl": 0.0, "status": "no mark"})
                 continue
             if np.isnan(smid):
                 # no option quote: the hedge still moved, so book it; the option leg is booked against the last valid
