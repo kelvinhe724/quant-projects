@@ -371,7 +371,7 @@ def provenance(text, root=ROOT, prereg=None, today=None):
             found |= overlaps(f, git("show", f"{h}:{f}", root=root), win, terms)
     commit, when = committed(prereg, root) if prereg else (None, None)
     uncommitted = when is None
-    lock = when if when is not None else (pd.Timestamp(today) if today is not None else pd.Timestamp.now(tz="UTC"))
+    lock = when if when is not None else (pd.Timestamp(today) if today is not None else pd.Timestamp.now(tz="America/Chicago"))  # the desk's day, not UTC: the battle runs in the Chicago evening
     if lock.tzinfo is None:
         lock = lock.tz_localize("UTC")
     ack, ok = s.get("2a", ""), True

@@ -537,7 +537,7 @@ silent_d, acked_d = draft("none"), draft("fx/README.md first published 2020-06-0
 early = draft("none", today="2019-01-01")
 check("an uncommitted draft is locked today: a README range overlapping its window fails provenance unless 2a names "
       "it, and the message says uncommitted and gives today as the lock date",
-      not silent_d[0] and acked_d[0] and "uncommitted" in silent_d[1][0] and str(pd.Timestamp.now().date()) in silent_d[1][0]
+      not silent_d[0] and acked_d[0] and "uncommitted" in silent_d[1][0] and str(pd.Timestamp.now(tz="America/Chicago").date()) in silent_d[1][0]
       and any("not in 2a" in s for s in silent_d[1]), silent_d[1][0][-90:])
 check("the lock date of an uncommitted draft is today, not 'every hit': a hit first published after it passes",
       early[0], early[1][-1][:70])
