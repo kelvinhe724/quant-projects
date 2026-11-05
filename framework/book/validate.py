@@ -159,6 +159,34 @@ def falsify(bars, alloc):
     }
 
 
+def free_twin(bars, instruments, target_vol=0.10):
+    """The vol-targeted 1/N of `instruments`, from bars only: the daily-rebalanced 1/N return scaled to
+    `target_vol` by the sleeves' 60-day EWMA vol, lagged one day, capped at 3x. Never a recorded path."""
+    eq = bars.close[list(instruments)].pct_change().mean(axis=1)
+    return eq * (target_vol / ex_ante_vol(eq).shift(1)).clip(upper=3.0)
+
+
+def active(track, twin, pre):
+    """A track against its free twin. Beta is OLS (with intercept) on sessions up to and including `pre`
+    only, then frozen; the gate window is every session after `pre`. Rows are the union of both sides'
+    sessions, so a session missing on either side is a NaN row, never 0. A side statistic for the gate
+    (research/PREREG-TEMPLATE.md section 5 Comparator), not wired into any signed promotion rule.
+
+    Returns beta, raw_sharpe (the track alone), active_sharpe = sharpe(track - beta * twin), its t
+    (mean over standard error of the active rows), n_obs and the active rows themselves.
+    """
+    d = pd.concat({"y": track, "x": twin}, axis=1).loc[:pre].dropna()
+    beta = float(np.polyfit(d["x"], d["y"], 1)[0])
+    idx = track.index.union(twin.index)
+    y, x = track.reindex(idx), twin.reindex(idx)
+    after = idx > pre
+    rows = (y - beta * x)[after]
+    n = int(rows.notna().sum())
+    s = sharpe(rows)
+    return {"beta": beta, "raw_sharpe": sharpe(y[after]), "active_sharpe": s,
+            "t": s * np.sqrt(n / 252), "n_obs": n, "rows": rows}
+
+
 def attribution(returns, bars, instruments, target_vol=0.10):
     """Regress a sleeve's live net returns on owning its universe.
 
@@ -173,9 +201,8 @@ def attribution(returns, bars, instruments, target_vol=0.10):
 
     r = returns.loc[returns.ne(0).idxmax():]
     eq = bars.close[list(instruments)].pct_change().mean(axis=1)
-    scale = (target_vol / ex_ante_vol(eq).shift(1)).clip(upper=3.0)
     out = {}
-    for name, x in (("1/N", eq), ("1/N vol-targeted", eq * scale)):
+    for name, x in (("1/N", eq), ("1/N vol-targeted", free_twin(bars, instruments, target_vol))):
         d = pd.DataFrame({"y": r, "x": x.reindex(r.index)}).dropna()
         lags = int(4 * (len(d) / 100) ** (2 / 9))
         fit = sm.OLS(d["y"], sm.add_constant(d["x"])).fit(cov_type="HAC", cov_kwds={"maxlags": lags})

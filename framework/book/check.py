@@ -1078,5 +1078,47 @@ check("every currency's rate series ends on the same month",
 check("rate panel has no trailing all-NaN row", _rates.iloc[-1].notna().all())
 
 
+# --- r1-free-twin: free twin and active Sharpe (side statistic, not a promotion rule) ---
+from framework.book.strategies import ex_ante_vol
+from framework.book.validate import active, free_twin
+from research.prereg_check import no_edge_pass_rate
+
+_tw = free_twin(trending, ["UP", "DOWN", "FLAT"])
+_eq = trending.close[["UP", "DOWN", "FLAT"]].pct_change().mean(axis=1)
+check("free twin: the 1/N built from bars, scaled to 10% by the lagged 60-day EWMA vol, capped at 3x",
+      np.allclose(_tw.dropna(), (_eq * (0.10 / ex_ante_vol(_eq).shift(1)).clip(upper=3.0)).dropna())
+      and abs(_tw.std() * np.sqrt(252) - 0.10) < 0.03, f"realised vol {_tw.std() * np.sqrt(252):.3f}")
+_rng = np.random.default_rng(20261105)
+PATHS, PRE, GATE, TW_VOL = 5_000, 500, 126, 0.10 / np.sqrt(252)
+_idx = pd.RangeIndex(PRE + GATE)
+_x = _rng.normal(0.8 / np.sqrt(252) * TW_VOL, TW_VOL, (PATHS, PRE + GATE))  # twin Sharpe 0.8 a year
+_y = _x + _rng.normal(0, 0.5 * TW_VOL, (PATHS, PRE + GATE))  # zero alpha, beta 1
+_res = [active(pd.Series(_y[i], _idx), pd.Series(_x[i], _idx), PRE - 1) for i in range(PATHS)]
+_raw = np.mean([r["raw_sharpe"] > 1.0 for r in _res])
+_act = np.mean([r["active_sharpe"] > 1.0 for r in _res])
+_null = no_edge_pass_rate(GATE, 1.0)
+check("active: a zero-alpha track on a Sharpe-0.8 twin clears a raw Sharpe bar of 1.0 on 35%+ of 126-session paths",
+      _raw >= 0.35, f"raw pass {_raw:.3f}, {PATHS} seeded paths")
+check("active: with beta estimated on a 500-session pre-window, the active pass rate is the no-edge rate +/-3 points",
+      abs(_act - _null) <= 0.03 and all(r["n_obs"] == GATE for r in _res),
+      f"active pass {_act:.3f}, no-edge {_null:.3f}, mean beta {np.mean([r['beta'] for r in _res]):.3f}")
+_xn = pd.Series(_x[0], _idx).copy()
+_xn.iloc[PRE + 10] = np.nan
+_r0 = active(pd.Series(_y[0], _idx), _xn, PRE - 1)
+_r1 = active(pd.Series(_y[0], _idx).drop(PRE + 20), pd.Series(_x[0], _idx), PRE - 1)
+check("active: a session missing on either side is a NaN row, never 0, and drops out of n_obs",
+      np.isnan(_r0["rows"].loc[PRE + 10]) and _r0["n_obs"] == GATE - 1
+      and np.isnan(_r1["rows"].loc[PRE + 20]) and _r1["n_obs"] == GATE - 1)
+_bump = _y[0].copy()
+_bump[PRE:] += 0.05
+check("active: beta is fit on the pre-window only, so moving gate-window returns leaves it unchanged",
+      _r0["beta"] == active(pd.Series(_bump, _idx), _xn, PRE - 1)["beta"])
+_tmpl = open(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+                          "research", "PREREG-TEMPLATE.md")).read()
+check("PREREG template: the Comparator line names the free twin, a pre-window beta and active Sharpe beside raw",
+      "- **Comparator:** the strategy's free twin (SPY or the vol-targeted 1/N of its universe, built from bars"
+      in _tmpl and "active Sharpe and its t > 0 beside raw" in _tmpl)
+
+
 print(f"\n{sum(checks)}/{len(checks)} checks passed")
 sys.exit(0 if all(checks) else 1)
