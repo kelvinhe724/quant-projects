@@ -1,8 +1,8 @@
 {
  "hourly": {
   "command": "hourly",
-  "started": "2026-11-05T17:53:31+00:00",
-  "finished": "2026-11-05T17:53:39+00:00",
+  "started": "2026-11-06T04:43:23+00:00",
+  "finished": "2026-11-06T04:43:32+00:00",
   "steps": [
    {
     "step": "kalshi",
@@ -12,19 +12,20 @@
  },
  "kalshi-books": {
   "command": "kalshi-books",
-  "started": "2026-11-05T18:29:27+00:00",
-  "finished": "2026-11-05T18:30:55+00:00",
+  "started": "2026-11-06T08:01:34+00:00",
+  "finished": "2026-11-06T08:34:20+00:00",
   "steps": [
    {
     "step": "kalshi_books",
-    "status": "ok"
+    "status": "failed",
+    "error": "RuntimeError: kalshi_books_5m: only 71 of 300 books came back"
    }
   ]
  },
  "daily": {
   "command": "daily",
-  "started": "2026-11-05T11:36:05+00:00",
-  "finished": "2026-11-05T11:38:38+00:00",
+  "started": "2026-11-06T03:41:01+00:00",
+  "finished": "2026-11-06T04:44:26+00:00",
   "steps": [
    {
     "step": "equities",
