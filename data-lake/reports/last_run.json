@@ -1,8 +1,8 @@
 {
  "hourly": {
   "command": "hourly",
-  "started": "2026-11-08T08:49:23+00:00",
-  "finished": "2026-11-08T08:49:31+00:00",
+  "started": "2026-11-08T17:51:15+00:00",
+  "finished": "2026-11-08T17:51:24+00:00",
   "steps": [
    {
     "step": "kalshi",
@@ -12,8 +12,8 @@
  },
  "kalshi-books": {
   "command": "kalshi-books",
-  "started": "2026-11-08T08:58:08+00:00",
-  "finished": "2026-11-08T08:59:36+00:00",
+  "started": "2026-11-08T18:27:59+00:00",
+  "finished": "2026-11-08T18:29:28+00:00",
   "steps": [
    {
     "step": "kalshi_books",
