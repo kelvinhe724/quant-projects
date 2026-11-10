@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-11-10T08:16:06.880370+00:00",
+ "generated_at": "2026-11-10T18:18:13.885168+00:00",
  "datasets": {
   "equities_daily": {
    "parts": 695,
@@ -36,8 +36,8 @@
   },
   "kalshi_markets": {
    "parts": 51,
-   "rows": 4085000,
-   "last": "2026-11-10 08:15:57+00:00",
+   "rows": 4135000,
+   "last": "2026-11-10 18:18:05+00:00",
    "stale": false,
    "gaps": [
     {
@@ -95,8 +95,8 @@
   },
   "kalshi_books": {
    "parts": 51,
-   "rows": 4877817,
-   "last": "2026-11-10 08:15:57+00:00",
+   "rows": 4948363,
+   "last": "2026-11-10 18:18:05+00:00",
    "stale": false,
    "gaps": [
     {
@@ -153,9 +153,9 @@
    "dupes": 0
   },
   "kalshi_books_5m": {
-   "parts": 411,
-   "rows": 13047149,
-   "last": "2026-11-10 08:09:14+00:00",
+   "parts": 421,
+   "rows": 13435040,
+   "last": "2026-11-10 18:15:40+00:00",
    "stale": false,
    "gaps": [
     {
@@ -189,11 +189,6 @@
      "missing": 6
     },
     {
-     "after": "2026-11-09 16:54:17+00:00",
-     "before": "2026-11-09 17:10:38+00:00",
-     "missing": 2
-    },
-    {
      "after": "2026-11-09 19:51:21+00:00",
      "before": "2026-11-09 20:00:26+00:00",
      "missing": 1
@@ -215,9 +210,9 @@
    "dupes": 0
   },
   "crypto_l2": {
-   "parts": 1143,
-   "rows": 6143064,
-   "last": "2026-11-10 08:15:28+00:00",
+   "parts": 1153,
+   "rows": 6215118,
+   "last": "2026-11-10 18:17:33+00:00",
    "stale": false,
    "gaps": [
     {
@@ -297,87 +292,87 @@
    "gaps": [],
    "dupes": 0,
    "sessions": {
-    "open": "2026-11-09",
+    "open": "2026-11-10",
     "midday": "2026-11-09",
     "close": "2026-11-09"
    }
   }
  },
  "disk": {
-  "bytes": 3072403417,
-  "free_bytes": 68491902976,
-  "window_days": 6.24,
-  "growth_per_day": 52607497.66234557,
-  "runway_days": 1301.9418527679538,
+  "bytes": 3107374837,
+  "free_bytes": 67919106048,
+  "window_days": 6.66,
+  "growth_per_day": 54554902.83881097,
+  "runway_days": 1244.967959134217,
   "low": false,
   "datasets": {
+   "kalshi_books": {
+    "bytes": 16337054,
+    "growth_per_day": 391174.18410591927,
+    "runway_days": 173628.80478229455
+   },
+   "equities_daily": {
+    "bytes": 154830140,
+    "growth_per_day": 13553.022076267576,
+    "runway_days": 5011362.459663648
+   },
    "kalshi_books_5m": {
-    "bytes": 34863349,
-    "growth_per_day": 1794510.8920782518,
-    "runway_days": 38167.44901262674
+    "bytes": 35893468,
+    "growth_per_day": 1836503.3108771103,
+    "runway_days": 36982.83887958904
+   },
+   "crypto_klines_1m": {
+    "bytes": 213847783,
+    "growth_per_day": 212983.95202004217,
+    "runway_days": 318893.06872101186
    },
    "crypto_perp_klines_1m": {
     "bytes": 179085950,
     "growth_per_day": 0.0,
     "runway_days": null
    },
+   "edgar_8k": {
+    "bytes": 209357855,
+    "growth_per_day": 856170.6490443397,
+    "runway_days": 79328.9353282684
+   },
+   "crypto_l2": {
+    "bytes": 1757987932,
+    "growth_per_day": 36870366.975994125,
+    "runway_days": 1842.1055069026395
+   },
+   "options": {
+    "bytes": 389349592,
+    "growth_per_day": 12273982.12872878,
+    "runway_days": 5533.583586456989
+   },
+   "crypto_bookdepth": {
+    "bytes": 97051511,
+    "growth_per_day": 1103091.5664715925,
+    "runway_days": 61571.59397496771
+   },
    "fred": {
     "bytes": 2085528,
-    "growth_per_day": 131.96214215833342,
-    "runway_days": 519026910.7167167
+    "growth_per_day": 123.68005084273197,
+    "runway_days": 549151666.6205449
    },
-   "crypto_funding": {
-    "bytes": 157655,
+   "okx_trades_1m": {
+    "bytes": 4724580,
     "growth_per_day": 0.0,
     "runway_days": null
    },
-   "crypto_l2": {
-    "bytes": 1731978795,
-    "growth_per_day": 35174031.109983146,
-    "runway_days": 1947.2292715565525
-   },
-   "options": {
-    "bytes": 382159398,
-    "growth_per_day": 11944398.27397416,
-    "runway_days": 5734.227995832834
-   },
-   "kalshi_books": {
-    "bytes": 16120662,
-    "growth_per_day": 382713.9141973216,
-    "runway_days": 178963.71267203678
-   },
-   "equities_daily": {
-    "bytes": 154830140,
-    "growth_per_day": 14460.584497799415,
-    "runway_days": 4736454.6700323885
-   },
    "kalshi_markets": {
-    "bytes": 45268882,
-    "growth_per_day": 979542.8099757702,
-    "runway_days": 69922.31710392954
-   },
-   "edgar_8k": {
-    "bytes": 209357855,
-    "growth_per_day": 913503.1246441399,
-    "runway_days": 74977.19616742569
-   },
-   "crypto_klines_1m": {
-    "bytes": 213847783,
-    "growth_per_day": 227246.1756152658,
-    "runway_days": 301399.58479195146
+    "bytes": 45794460,
+    "growth_per_day": 996953.3694419554,
+    "runway_days": 68126.66282076735
    },
    "crypto_l2 2": {
     "bytes": 871329,
     "growth_per_day": 0.0,
     "runway_days": null
    },
-   "crypto_bookdepth": {
-    "bytes": 97051511,
-    "growth_per_day": 1176958.81523756,
-    "runway_days": 58193.96744326643
-   },
-   "okx_trades_1m": {
-    "bytes": 4724580,
+   "crypto_funding": {
+    "bytes": 157655,
     "growth_per_day": 0.0,
     "runway_days": null
    }
@@ -1688,5 +1683,5 @@
   "adj_count": 445,
   "jump_count": 4
  },
- "summary": "crypto_l2 bybit: no rows in 24h; lake 3.1 GB, +53 MB/day, disk full in 1,302 days"
+ "summary": "crypto_l2 bybit: no rows in 24h; lake 3.1 GB, +55 MB/day, disk full in 1,245 days"
 }
