@@ -1,10 +1,10 @@
 {
- "generated_at": "2026-11-12T17:36:40.519904+00:00",
+ "generated_at": "2026-11-13T07:17:41.152599+00:00",
  "datasets": {
   "equities_daily": {
    "parts": 695,
-   "rows": 3457868,
-   "last": "2026-11-10 00:00:00",
+   "rows": 3458579,
+   "last": "2026-11-12 00:00:00",
    "stale": false,
    "gaps": [
     {
@@ -17,8 +17,8 @@
   },
   "fred": {
    "parts": 20,
-   "rows": 193636,
-   "last": "2026-11-09 00:00:00",
+   "rows": 193655,
+   "last": "2026-11-10 00:00:00",
    "stale": false,
    "gaps": [
     {
@@ -35,20 +35,15 @@
    "dupes": 0
   },
   "kalshi_markets": {
-   "parts": 53,
-   "rows": 4250000,
-   "last": "2026-11-12 17:36:33+00:00",
+   "parts": 54,
+   "rows": 4315000,
+   "last": "2026-11-13 07:17:33+00:00",
    "stale": false,
    "gaps": [
     {
      "after": "2026-11-12 01:37:00+00:00",
      "before": "2026-11-12 16:36:19+00:00",
      "missing": 14
-    },
-    {
-     "after": "2026-11-06 04:43:23+00:00",
-     "before": "2026-11-06 18:54:14+00:00",
-     "missing": 13
     },
     {
      "after": "2026-11-07 09:41:27+00:00",
@@ -59,11 +54,6 @@
      "after": "2026-11-10 23:53:13+00:00",
      "before": "2026-11-11 06:09:30+00:00",
      "missing": 5
-    },
-    {
-     "after": "2026-11-06 19:54:37+00:00",
-     "before": "2026-11-07 00:39:35+00:00",
-     "missing": 4
     },
     {
      "after": "2026-11-10 18:18:05+00:00",
@@ -88,26 +78,26 @@
     {
      "after": "2026-11-11 23:09:54+00:00",
      "before": "2026-11-12 01:37:00+00:00",
+     "missing": 1
+    },
+    {
+     "after": "2026-11-13 04:38:48+00:00",
+     "before": "2026-11-13 06:17:21+00:00",
      "missing": 1
     }
    ],
    "dupes": 0
   },
   "kalshi_books": {
-   "parts": 53,
-   "rows": 5098354,
-   "last": "2026-11-12 17:36:33+00:00",
+   "parts": 54,
+   "rows": 5172609,
+   "last": "2026-11-13 07:17:33+00:00",
    "stale": false,
    "gaps": [
     {
      "after": "2026-11-12 01:37:00+00:00",
      "before": "2026-11-12 16:36:19+00:00",
      "missing": 14
-    },
-    {
-     "after": "2026-11-06 04:43:23+00:00",
-     "before": "2026-11-06 18:54:14+00:00",
-     "missing": 13
     },
     {
      "after": "2026-11-07 09:41:27+00:00",
@@ -118,11 +108,6 @@
      "after": "2026-11-10 23:53:13+00:00",
      "before": "2026-11-11 06:09:30+00:00",
      "missing": 5
-    },
-    {
-     "after": "2026-11-06 19:54:37+00:00",
-     "before": "2026-11-07 00:39:35+00:00",
-     "missing": 4
     },
     {
      "after": "2026-11-10 18:18:05+00:00",
@@ -148,14 +133,19 @@
      "after": "2026-11-11 23:09:54+00:00",
      "before": "2026-11-12 01:37:00+00:00",
      "missing": 1
+    },
+    {
+     "after": "2026-11-13 04:38:48+00:00",
+     "before": "2026-11-13 06:17:21+00:00",
+     "missing": 1
     }
    ],
    "dupes": 0
   },
   "kalshi_books_5m": {
-   "parts": 453,
-   "rows": 14235322,
-   "last": "2026-11-12 17:32:21+00:00",
+   "parts": 467,
+   "rows": 14696665,
+   "last": "2026-11-13 07:14:28+00:00",
    "stale": false,
    "gaps": [
     {
@@ -184,43 +174,33 @@
      "missing": 15
     },
     {
-     "after": "2026-11-11 18:25:10+00:00",
-     "before": "2026-11-11 19:28:47+00:00",
-     "missing": 12
-    },
-    {
      "after": "2026-11-12 15:17:53+00:00",
      "before": "2026-11-12 16:03:16+00:00",
+     "missing": 8
+    },
+    {
+     "after": "2026-11-13 04:58:53+00:00",
+     "before": "2026-11-13 05:44:26+00:00",
      "missing": 8
     }
    ],
    "dupes": 0
   },
   "edgar_8k": {
-   "parts": 990,
-   "rows": 12095,
-   "last": "2026-11-10 00:00:00",
+   "parts": 991,
+   "rows": 12142,
+   "last": "2026-11-12 00:00:00",
    "stale": false,
    "gaps": [],
    "dupes": 0
   },
   "crypto_l2": {
-   "parts": 1198,
-   "rows": 6375190,
-   "last": "2026-11-12 17:36:03+00:00",
+   "parts": 1212,
+   "rows": 6468704,
+   "last": "2026-11-13 07:17:00+00:00",
    "stale": false,
    "gaps": [
     {
-     "after": "2026-11-12 01:37:19+00:00",
-     "before": "2026-11-12 03:36:32+00:00",
-     "missing": 7152
-    },
-    {
-     "after": "2026-11-12 01:37:19+00:00",
-     "before": "2026-11-12 03:36:32+00:00",
-     "missing": 7152
-    },
-    {
      "after": "2026-11-12 11:14:28+00:00",
      "before": "2026-11-12 12:47:52+00:00",
      "missing": 5603
@@ -229,16 +209,6 @@
      "after": "2026-11-12 11:14:28+00:00",
      "before": "2026-11-12 12:47:52+00:00",
      "missing": 5603
-    },
-    {
-     "after": "2026-11-12 07:09:54+00:00",
-     "before": "2026-11-12 08:10:44+00:00",
-     "missing": 3649
-    },
-    {
-     "after": "2026-11-12 07:09:54+00:00",
-     "before": "2026-11-12 08:10:44+00:00",
-     "missing": 3649
     },
     {
      "after": "2026-11-12 13:20:13+00:00",
@@ -251,115 +221,120 @@
      "missing": 3403
     },
     {
-     "after": "2026-11-12 05:09:00+00:00",
-     "before": "2026-11-12 05:53:01+00:00",
-     "missing": 2640
+     "after": "2026-11-12 09:49:19+00:00",
+     "before": "2026-11-12 10:30:32+00:00",
+     "missing": 2472
     },
     {
-     "after": "2026-11-12 05:09:00+00:00",
-     "before": "2026-11-12 05:53:01+00:00",
-     "missing": 2640
+     "after": "2026-11-12 09:49:19+00:00",
+     "before": "2026-11-12 10:30:32+00:00",
+     "missing": 2472
+    },
+    {
+     "after": "2026-11-13 04:59:50+00:00",
+     "before": "2026-11-13 05:39:57+00:00",
+     "missing": 2406
+    },
+    {
+     "after": "2026-11-13 04:59:50+00:00",
+     "before": "2026-11-13 05:39:57+00:00",
+     "missing": 2406
+    },
+    {
+     "after": "2026-11-12 10:36:23+00:00",
+     "before": "2026-11-12 11:14:28+00:00",
+     "missing": 2284
+    },
+    {
+     "after": "2026-11-12 10:36:23+00:00",
+     "before": "2026-11-12 11:14:28+00:00",
+     "missing": 2284
     }
    ],
    "dupes": 0
   },
   "crypto_klines_1m": {
    "parts": 35,
-   "rows": 2998080,
-   "last": "2026-11-11 23:59:00+00:00",
+   "rows": 3000960,
+   "last": "2026-11-12 23:59:00+00:00",
    "stale": false,
    "gaps": [],
    "dupes": 0
   },
   "crypto_bookdepth": {
    "parts": 4,
-   "rows": 6562752,
-   "last": "2026-11-10 23:59:30+00:00",
+   "rows": 6631872,
+   "last": "2026-11-11 23:59:31+00:00",
    "stale": false,
    "gaps": [],
    "dupes": 0
   },
   "options": {
    "parts": 8,
-   "rows": 350057,
-   "last": "2026-11-11 21:35:05",
+   "rows": 352206,
+   "last": "2026-11-12 21:35:05",
    "stale": false,
    "gaps": [],
    "dupes": 0,
    "sessions": {
     "open": "2026-11-12",
-    "midday": "2026-11-11",
-    "close": "2026-11-11"
+    "midday": "2026-11-12",
+    "close": "2026-11-12"
    }
   }
  },
  "disk": {
-  "bytes": 3207220954,
-  "free_bytes": 63821524992,
-  "window_days": 6.54,
-  "growth_per_day": 50655391.89407816,
-  "runway_days": 1259.9157287234614,
+  "bytes": 3258528712,
+  "free_bytes": 57784393728,
+  "window_days": 6.11,
+  "growth_per_day": 56944126.45511774,
+  "runway_days": 1014.7559954852331,
   "low": false,
   "datasets": {
-   "kalshi_markets": {
-    "bytes": 47208663,
-    "growth_per_day": 929515.9245187272,
-    "runway_days": 68661.03453261942
+   "crypto_funding": {
+    "bytes": 157655,
+    "growth_per_day": 0.0,
+    "runway_days": null
    },
    "edgar_8k": {
-    "bytes": 209504121,
-    "growth_per_day": 162153.53073607877,
-    "runway_days": 393587.02029051696
+    "bytes": 209924612,
+    "growth_per_day": 182047.11859114698,
+    "runway_days": 317414.49233138305
    },
    "okx_trades_1m": {
     "bytes": 4724580,
     "growth_per_day": 0.0,
     "runway_days": null
    },
-   "crypto_l2": {
-    "bytes": 1810599089,
-    "growth_per_day": 32758618.43241705,
-    "runway_days": 1948.2361603151105
-   },
-   "crypto_perp_klines_1m": {
-    "bytes": 179085950,
-    "growth_per_day": 0.0,
-    "runway_days": null
-   },
-   "fred": {
-    "bytes": 2085779,
-    "growth_per_day": 89.03297875661836,
-    "runway_days": 716830166.5662934
+   "options": {
+    "bytes": 444273612,
+    "growth_per_day": 13773306.374827916,
+    "runway_days": 4195.390137665616
    },
    "equities_daily": {
-    "bytes": 154880346,
-    "growth_per_day": 17706.242428189067,
-    "runway_days": 3604464.6542506106
+    "bytes": 154906989,
+    "growth_per_day": 17900.62532000901,
+    "runway_days": 3228065.651059106
    },
-   "options": {
-    "bytes": 429879042,
-    "growth_per_day": 13620627.647162827,
-    "runway_days": 4685.652280149807
+   "kalshi_markets": {
+    "bytes": 47861636,
+    "growth_per_day": 1022468.685007799,
+    "runway_days": 56514.585312272175
    },
-   "kalshi_books": {
-    "bytes": 16861784,
-    "growth_per_day": 364436.30549348897,
-    "runway_days": 175123.9490411864
+   "fred": {
+    "bytes": 2085957,
+    "growth_per_day": 99.68708742819835,
+    "runway_days": 579657759.2822177
    },
-   "crypto_funding": {
-    "bytes": 157655,
-    "growth_per_day": 0.0,
-    "runway_days": null
-   },
-   "crypto_klines_1m": {
-    "bytes": 214259241,
-    "growth_per_day": 217130.01831965006,
-    "runway_days": 293932.29681418126
+   "crypto_l2": {
+    "bytes": 1843707664,
+    "growth_per_day": 38504816.340736955,
+    "runway_days": 1500.7056056742133
    },
    "kalshi_books_5m": {
-    "bytes": 38023124,
-    "growth_per_day": 1655367.074400169,
-    "runway_days": 38554.30374264636
+    "bytes": 39252319,
+    "growth_per_day": 1843969.0202093439,
+    "runway_days": 31336.965586026927
    },
    "crypto_l2 2": {
     "bytes": 871329,
@@ -367,31 +342,27 @@
     "runway_days": null
    },
    "crypto_bookdepth": {
-    "bytes": 99080251,
-    "growth_per_day": 929747.6856232225,
-    "runway_days": 68643.9191824603
+    "bytes": 100090774,
+    "growth_per_day": 994815.9125486935,
+    "runway_days": 58085.51411281493
+   },
+   "crypto_klines_1m": {
+    "bytes": 214476951,
+    "growth_per_day": 198804.04328741078,
+    "runway_days": 290660.052846416
+   },
+   "kalshi_books": {
+    "bytes": 17108684,
+    "growth_per_day": 405898.647501034,
+    "runway_days": 142361.6316135983
+   },
+   "crypto_perp_klines_1m": {
+    "bytes": 179085950,
+    "growth_per_day": 0.0,
+    "runway_days": null
    }
   },
   "history": [
-   {
-    "at": "2026-11-05T03:31:16.242473+00:00",
-    "bytes": {
-     "crypto_l2": 1559119225,
-     "kalshi_books_5m": 25723234,
-     "options": 321611140,
-     "okx_trades_1m": 4724580,
-     "crypto_funding": 157655,
-     "crypto_l2 2": 871329,
-     "kalshi_markets": 40234262,
-     "kalshi_books": 14117521,
-     "crypto_perp_klines_1m": 179085950,
-     "crypto_bookdepth": 90979756,
-     "fred": 2084882,
-     "equities_daily": 154770314,
-     "edgar_8k": 204697992,
-     "crypto_klines_1m": 212628464
-    }
-   },
    {
     "at": "2026-11-06T04:43:32.048236+00:00",
     "bytes": {
@@ -524,15 +495,31 @@
      "edgar_8k": 209504121,
      "kalshi_books": 16823893
     }
+   },
+   {
+    "at": "2026-11-13T07:17:41.152599+00:00",
+    "bytes": {
+     "crypto_funding": 157655,
+     "edgar_8k": 209924612,
+     "okx_trades_1m": 4724580,
+     "options": 444273612,
+     "equities_daily": 154906989,
+     "kalshi_markets": 47861636,
+     "fred": 2085957,
+     "crypto_l2": 1843707664,
+     "kalshi_books_5m": 39252319,
+     "crypto_l2 2": 871329,
+     "crypto_bookdepth": 100090774,
+     "crypto_klines_1m": 214476951,
+     "kalshi_books": 17108684,
+     "crypto_perp_klines_1m": 179085950
+    }
    }
   ]
  },
  "problems": [
-  "daily run 2026-11-12T03:34Z: fred failed: ReadTimeout: HTTPSConnectionPool(host='fred.stlouisfed.org', port=443): Read timed out. (read timeout=60)",
-  "daily run 2026-11-12T03:34Z: edgar failed: ConnectionError: ('Connection aborted.', ConnectionResetError(54, 'Connection reset by peer'))",
-  "equities_daily: no 2026-11-11 bar (last 2026-11-10)",
   "crypto_l2 bybit: no rows in 24h",
-  "kalshi_books_5m: 165 of 288 snapshots on 2026-11-11, under 60%"
+  "kalshi_books_5m: 81 of 288 snapshots on 2026-11-12, under 60%"
  ],
  "ok": false,
  "splices": {
@@ -545,6 +532,9 @@
    ],
    "AAP": [
     "2026-09-28"
+   ],
+   "AAPL": [
+    "2026-10-15"
    ],
    "ABBV": [
     "2026-09-28",
@@ -636,6 +626,9 @@
    ],
    "AVY": [
     "2026-09-02"
+   ],
+   "AWK": [
+    "2026-10-15"
    ],
    "AXP": [
     "2026-09-28"
@@ -809,6 +802,9 @@
    "DGX": [
     "2026-09-28"
    ],
+   "DHI": [
+    "2026-10-15"
+   ],
    "DHR": [
     "2026-09-22"
    ],
@@ -881,11 +877,17 @@
     "2026-08-28",
     "2026-09-04"
    ],
+   "EXE": [
+    "2026-10-15"
+   ],
    "EXR": [
     "2026-09-04",
     "2026-09-15"
    ],
    "F": [
+    "2026-10-15"
+   ],
+   "FANG": [
     "2026-10-15"
    ],
    "FAST": [
@@ -909,6 +911,9 @@
    ],
    "FITB": [
     "2026-09-22"
+   ],
+   "FIX": [
+    "2026-10-15"
    ],
    "FLS": [
     "2026-09-15",
@@ -1065,6 +1070,9 @@
     "2026-09-15",
     "2026-09-24"
    ],
+   "IR": [
+    "2026-10-15"
+   ],
    "IRM": [
     "2026-09-04",
     "2026-09-15"
@@ -1091,6 +1099,9 @@
    ],
    "JPM": [
     "2026-09-28"
+   ],
+   "KBH": [
+    "2026-10-15"
    ],
    "KDP": [
     "2026-09-15",
@@ -1251,6 +1262,9 @@
    ],
    "MTCH": [
     "2026-09-25"
+   ],
+   "MTG": [
+    "2026-10-15"
    ],
    "MU": [
     "2026-09-28"
@@ -1455,6 +1469,9 @@
     "2026-09-15",
     "2026-09-25"
    ],
+   "RMD": [
+    "2026-10-15"
+   ],
    "ROL": [
     "2026-10-15"
    ],
@@ -1474,6 +1491,9 @@
    ],
    "RVTY": [
     "2026-09-28"
+   ],
+   "SBAC": [
+    "2026-10-15"
    ],
    "SIG": [
     "2026-09-28"
@@ -1550,6 +1570,9 @@
     "2026-10-15"
    ],
    "TGT": [
+    "2026-10-15"
+   ],
+   "TJX": [
     "2026-10-15"
    ],
    "TKO": [
@@ -1711,6 +1734,9 @@
    "ZBH": [
     "2026-09-22"
    ],
+   "ZION": [
+    "2026-10-15"
+   ],
    "ZTS": [
     "2026-09-28"
    ]
@@ -1729,8 +1755,8 @@
     "2026-09-25"
    ]
   },
-  "adj_count": 465,
+  "adj_count": 478,
   "jump_count": 4
  },
- "summary": "daily run 2026-11-12T03:34Z: fred failed: ReadTimeout: HTTPSConnectionPool(host='fred.stlouisfed.org', port=443): Read timed out. (read timeout=60); daily run 2026-11-12T03:34Z: edgar failed: ConnectionError: ('Connection aborted.', ConnectionResetError(54, 'Connection reset by peer')); equities_daily: no 2026-11-11 bar (last 2026-11-10); crypto_l2 bybit: no rows in 24h; kalshi_books_5m: 165 of 288 snapshots on 2026-11-11, under 60%; lake 3.2 GB, +51 MB/day, disk full in 1,260 days"
+ "summary": "crypto_l2 bybit: no rows in 24h; kalshi_books_5m: 81 of 288 snapshots on 2026-11-12, under 60%; lake 3.3 GB, +57 MB/day, disk full in 1,015 days"
 }
