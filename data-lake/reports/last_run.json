@@ -1,8 +1,8 @@
 {
  "hourly": {
   "command": "hourly",
-  "started": "2026-11-13T07:17:33+00:00",
-  "finished": "2026-11-13T07:17:41+00:00",
+  "started": "2026-11-14T08:36:11+00:00",
+  "finished": "2026-11-14T08:36:20+00:00",
   "steps": [
    {
     "step": "kalshi",
@@ -12,8 +12,8 @@
  },
  "kalshi-books": {
   "command": "kalshi-books",
-  "started": "2026-11-13T17:31:46+00:00",
-  "finished": "2026-11-13T17:40:56+00:00",
+  "started": "2026-11-14T08:54:52+00:00",
+  "finished": "2026-11-14T08:56:20+00:00",
   "steps": [
    {
     "step": "kalshi_books",
@@ -23,8 +23,8 @@
  },
  "daily": {
   "command": "daily",
-  "started": "2026-11-13T03:30:05+00:00",
-  "finished": "2026-11-13T03:33:36+00:00",
+  "started": "2026-11-14T03:30:05+00:00",
+  "finished": "2026-11-14T03:33:12+00:00",
   "steps": [
    {
     "step": "equities",
