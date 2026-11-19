@@ -190,6 +190,7 @@ check("prior: the real untouched window is locked on 2023-04-28, its hash verifi
 # forward track: a 0/0 quoted leg is "no quote" (nan), never a worthless straddle; 2026-10-21 booked +$1,599 on one
 import forward as _fwd
 _NODIV = pd.Series(dtype=float, index=pd.DatetimeIndex([]))         # no SPY ex-date: every run below stays offline and books price return only
+_SPYDIV = _fwd.spy_dividends                                         # the real fetch, exercised offline below
 _fwd.spy_dividends = lambda: _NODIV
 _chain = pd.DataFrame({"snapshot": ["2026-10-21 20:38:21"] * 2, "expiry": [pd.Timestamp("2026-11-02")] * 2,
                        "strike": [780.0, 780.0], "cp": ["C", "P"], "bid": [0.0, 0.0], "ask": [0.0, 0.0],
@@ -245,6 +246,9 @@ def _day(d):
                          "T": [0.0, 0.0], "spot": [_XSP[d][0]] * 2, "impliedVolatility": [0.12, 0.12]})
 
 
+_ALERT = {}          # run()'s alert flag from the last _late / _book call: what forward.py's exit status 2 is made from
+
+
 def _late(lake_days, close, spy_days=None, divs=_NODIV):
     """run() on the K780 book as of 10-30 with only `lake_days` in the lake; `close(ticker, day)` stubs Yahoo."""
     calls = []
@@ -258,7 +262,7 @@ def _late(lake_days, close, spy_days=None, divs=_NODIV):
         with tempfile.TemporaryDirectory() as tmp:
             pd.DataFrame([_K780]).to_csv(os.path.join(tmp, "cycles.csv"), index=False)
             pd.DataFrame([_M1030]).to_csv(os.path.join(tmp, "marks.csv"), index=False)
-            _fwd.run("^XSP", out=tmp)
+            _ALERT["late"] = _fwd.run("^XSP", out=tmp)[2]
             return (pd.read_csv(os.path.join(tmp, "cycles.csv")), pd.read_csv(os.path.join(tmp, "marks.csv")), calls)
     finally:
         _fwd.sessions, _fwd.vix_closes, _fwd.expiry_close, _fwd.spy_dividends = old
@@ -302,7 +306,7 @@ def _book(chains, spys, divs=_NODIV, vix=15.0, cycles=None, marks=None):
             if cycles is not None:
                 pd.DataFrame(cycles).to_csv(os.path.join(tmp, "cycles.csv"), index=False)
                 pd.DataFrame(marks).to_csv(os.path.join(tmp, "marks.csv"), index=False)
-            _fwd.run("^XSP", out=tmp)
+            _ALERT["book"] = _fwd.run("^XSP", out=tmp)[2]
             have = [os.path.exists(os.path.join(tmp, f)) for f in ("cycles.csv", "marks.csv")]
             return tuple(pd.read_csv(os.path.join(tmp, f), parse_dates=["date"] if f == "marks.csv" else ["start"])
                          if h else None for f, h in zip(("cycles.csv", "marks.csv"), have))
@@ -344,6 +348,48 @@ check("dividend: ex-dates before the hedge exists (incl. the entry day itself) o
 _c, _m, _calls = _late(["2026-11-02", "2026-11-03"], lambda t, d: _XSP["2026-11-02"], divs=None)
 check("dividend: a failed SPY dividend fetch writes no mark and settles nothing (the next run catches up)",
       list(_m.date) == ["2026-10-30"] and (_c.status == "open").all() and _calls == [])
+_flags = {"fetch failed": _ALERT["late"]}
+import yfinance as _yf
+_oldT = _yf.Ticker
+_got = []
+for _bad in ("raise", "empty"):
+    class _T:
+        def __init__(self, t): pass
+        @property
+        def dividends(self):
+            if _bad == "raise":
+                raise ConnectionError("planted")
+            return pd.Series(dtype=float)
+    _yf.Ticker = _T
+    try:
+        _got.append(_SPYDIV())
+    finally:
+        _yf.Ticker = _oldT
+check("dividend: spy_dividends() itself returns None when Yahoo raises and when it returns an empty series",
+      _got == [None, None])
+_cs = {d: _ch(d, m, 770.0) for d, m in zip(_dd, _mids)}
+_cs[_dd[2]] = _cs[_dd[2]].assign(bid=0.0, ask=0.0)                # 11-18, the ex-date, quoted 0/0: "no quote"
+_, _mq0 = _book(_cs, dict(zip(_dd, _spys)))
+_, _mq1 = _book(_cs, dict(zip(_dd, _spys)), divs=_ex)
+_dq = (_mq1.pnl_hedge - _mq0.pnl_hedge).round(9)
+check(f"dividend: an ex-date on a 'no quote' session is booked once on that row ({_dq.iloc[2]:+.2f}) and not again "
+      f"at the next full mark",
+      list(_mq1.status) == ["open", "open", "no quote", "open", "open"]
+      and np.isclose(_dq.iloc[2], _mq0.hedge_shares.iloc[1] * 1.80, atol=1e-9) and (_dq.drop(2) == 0).all())
+# Yahoo lagging: the fetch works but stops at 2026-09-18, and the 2026-12-18 quarterly ex-date is a session in the cycle
+_dz = _fwd.nyse_sessions("2026-12-15", "2026-12-21")
+_cz = {d: _ch(d, m, 770.0, expiry="2027-01-15") for d, m in zip(_dz, _mids)}
+_lag = pd.Series({pd.Timestamp("2026-06-18"): 1.904, pd.Timestamp("2026-09-18"): 1.889})
+_, _ml = _book(_cz, dict(zip(_dz, _spys)), divs=_lag)
+_flags["lag guard"] = _ALERT["book"]
+_, _mo = _book(_cz, dict(zip(_dz, _spys)), divs=pd.concat([_lag, pd.Series({pd.Timestamp("2026-12-18"): 1.90})]))
+_flags["12-18 posted"] = _ALERT["book"]
+_, _mn = _book(_cz, dict(zip(_dz, _spys)), divs=pd.concat([_lag, pd.Series({pd.Timestamp("2026-12-18"): 0.0})]))
+check(f"dividend: Yahoo's series ending 2026-09-18 writes no row for the 2026-12-18 session or after "
+      f"({_ml.date.dt.date.tolist()}); with 12-18 posted, 12-18 books shares x 1.90",
+      _ml.date.max() == pd.Timestamp("2026-12-17") and len(_ml) == 3 and len(_mo) == 5
+      and np.isclose(_mo.pnl_hedge.iloc[3] - _mn.pnl_hedge.iloc[3], _mo.hedge_shares.iloc[2] * 1.90, atol=1e-9)
+      and _mo.hedge_shares.iloc[2] != 0)
 
 # forward track, PREREG §6: a booked day below -10% of open notional (strike x 100 x units) flattens at the next close
 _fd = _fwd.nyse_sessions("2027-01-04", "2027-03-01")[:26]
@@ -386,6 +432,18 @@ check(f"flatten: the real worst day, -1,744.13 on 2026-11-05 = {1744.13 / 76_900
       _M1105["pnl"] > -0.10 * 769 * 100 and _m.status.tolist() == ["open", "open", "open"]
       and abs(_m.pnl_option.iloc[-1] - 420.0000000000003) < 1e-6 and abs(_m.pnl_hedge.iloc[-1] - -187.040250793026) < 1e-6
       and (_c.status == "open").all())
+_flags["real 11-06"] = _ALERT["book"]
+# §6 retire: K780 and K769 planted as flattened (10-08, 11-05), then the 11-06 session, flat; one flatten alone is no retire
+_fl = [dict(_K780, status="flattened"), dict(_K769, status="flattened")]
+_fm = [dict(_M1030, date=pd.Timestamp("2026-10-08"), status="flattened"), _M1104, dict(_M1105, status="flattened")]
+_c, _m = _book({_d6: _ch6}, {_d6: 735.2899780273438}, cycles=_fl, marks=_fm)
+_flags["2 flattens"] = _ALERT["book"]
+_book({_d6: _ch6}, {_d6: 735.2899780273438}, cycles=_fl, marks=[_M1104, dict(_M1105, status="flattened")])
+_flags["1 flatten"] = _ALERT["book"]
+check(f"exit status: run() raises its alert flag (forward.py exits 2) when the dividend fetch failed, the lag guard "
+      f"stopped marking or 2 flattens sit in 126 sessions, and not otherwise ({_flags})",
+      _flags == {"fetch failed": True, "lag guard": True, "12-18 posted": False, "real 11-06": False,
+                 "2 flattens": True, "1 flatten": False} and _m.status.iloc[-1] == "flat")
 
 # measure_spread: PREREG §4 freezes the median over the FIRST 10 sessions; zeroed legs are no quote
 import measure_spread as _ms

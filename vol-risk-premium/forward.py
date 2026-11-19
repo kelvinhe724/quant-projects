@@ -11,9 +11,13 @@ marked is never marked twice. Per unit: sizing is a separate, pre-registered rul
 
 The hedge is booked on SPY total return (PREREG.md §3, amendment 4): a mark adds shares x dividend for every
 SPY ex-date after the last mark that booked the hedge, with Yahoo's dividends fetched once per run; no
-dividends, no marks that run. §6 flatten: a booked day worse than -10% of the open notional (strike x 100 x
+dividends, no marks that run, and a session on or after an expected quarterly ex-date Yahoo has not posted
+stops that run's marking there. §6 flatten: a booked day worse than -10% of the open notional (strike x 100 x
 units) closes the cycle at the next marked session, straddle bought back at the mid plus the §4 spread and
-commission, hedge closed with its slippage; status 'flattened', and the entry rule decides the next cycle.
+commission, hedge closed with its slippage; status 'flattened', and the entry rule decides the next cycle. A
+catch-up mark after a 'no quote' or 'no mark' session books two or more sessions' P&L in one row, and it counts
+as one booked day for that trigger. run() returns an alert flag, and the script exits 2 on it, when this run
+skipped marking (dividend fetch failed, or an ex-date Yahoo has not posted) or the §6 retire condition holds.
 
 Run:  ../.venv/bin/python3 forward.py                 the XSP track -> reports/forward/
       ../.venv/bin/python3 forward.py --ticker SPY --dry   mechanics on SPY snapshots -> reports/forward-dry/
@@ -69,6 +73,14 @@ def spy_dividends():
         return None
     d.index = pd.DatetimeIndex(d.index).tz_localize(None).normalize()
     return d.astype(float)
+
+
+def expected_exdates(start, end):
+    """SPY's quarterly ex-dates expected in (start, end]: the third Friday of Mar/Jun/Sep/Dec, or the NYSE session
+    before it when that Friday is a holiday (2026-06-18). A guard on Yahoo lagging, not a dividend source."""
+    fris = pd.date_range(start, end + pd.Timedelta(days=7), freq="WOM-3FRI")
+    exp = [nyse_sessions(f - pd.Timedelta(days=7), f)[-1] for f in fris if f.month % 3 == 0]
+    return [x for x in exp if start < x <= end]
 
 
 def flatten_spread():
@@ -162,10 +174,11 @@ def run(ticker="^XSP", out=None, units=UNITS):
     days, spy = sessions(ticker)
     if not days:
         print(f"no {ticker} snapshots in the lake")
-        return cycles, marks
+        return cycles, marks, False
     divs = spy_dividends()
     if divs is None:
-        return cycles, marks      # append-only marks are never revisited, so none is written without the dividend
+        return cycles, marks, True   # append-only marks are never revisited, so none is written without the dividend
+    alert = False                   # set when this run skips marking or §6 says retire: __main__ exits 2 on it
     vix = vix_closes(min(days) - pd.Timedelta(days=7), max(days) + pd.Timedelta(days=1))
     done = set(marks.date) if len(marks) else set()
     new_c, new_m = [], []
@@ -192,6 +205,14 @@ def run(ticker="^XSP", out=None, units=UNITS):
             else:
                 spot, smid, T, settled = mark(chain, c["strike"], exp)
                 spy_now = spy.get(day, np.nan)
+            # Yahoo can lag the ex-date it has not posted yet; a mark booked without it is never revisited, so stop here
+            late = [x for x in expected_exdates(pd.Timestamp(c["start"]), mday)
+                    if not (abs(divs.index - x) <= pd.Timedelta(days=3)).any()]
+            if late:
+                print(f"SPY ex-date expected {late[0].date()} not in Yahoo's dividends yet: marking stops at "
+                      f"{mday.date()} this run, the next run catches up")
+                alert = True
+                break
             prev = [m for m in (list(marks.to_dict("records")) + new_m) if pd.Timestamp(m["start"]) == pd.Timestamp(c["start"])]
             valid = [m for m in prev if not pd.isna(m["straddle_mid"])]
             last_mid = valid[-1]["straddle_mid"] if valid else c["entry_mid"]   # "no quote" sessions carry no mid
@@ -272,14 +293,16 @@ def run(ticker="^XSP", out=None, units=UNITS):
         n_flat = sum(pd.Timestamp(d) in recent for d in marks.date[marks.status == "flattened"])
         if n_flat >= RETIRE_FLATTENS:
             print(f"RETIRE (PREREG.md §6): {n_flat} flatten events in the last {RETIRE_SESSIONS} sessions")
+            alert = True
     cycles.to_csv(cpath, index=False)
     marks.to_csv(mpath, index=False)
     print(f"{ticker}: {len(new_m)} sessions marked ({len(new_c)} cycles opened), {len(cycles)} cycles total, "
           f"P&L to date ${marks.pnl.sum():,.2f} per {units} unit(s) -> {out}")
-    return cycles, marks
+    return cycles, marks, alert
 
 
 if __name__ == "__main__":
     a = sys.argv[1:]
     t = a[a.index("--ticker") + 1] if "--ticker" in a else "^XSP"
-    run(t, out=os.path.join(HERE, "reports", "forward-dry") if "--dry" in a else None)
+    # exit 2 after the CSVs are written, so hc-run.sh reports the skipped mark or the retire line instead of a success
+    sys.exit(2 if run(t, out=os.path.join(HERE, "reports", "forward-dry") if "--dry" in a else None)[2] else 0)
