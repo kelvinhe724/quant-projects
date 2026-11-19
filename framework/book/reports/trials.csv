@@ -347,3 +347,43 @@ run_at,name,params,sharpe_daily,n_obs
 2026-11-19T03:42:13,book,"{""alloc"": ""mvo"", ""book"": ""v1+ewmac"", ""buffer"": 0.1, ""financing_spread_bps"": 50.0, ""kelly"": 0.5, ""max_gross"": 1.5, ""max_net"": 1.5, ""max_sleeve"": 0.75, ""oos"": ""quarterly refit"", ""rates"": ""eur-ecb gbp-oecd+sonia"", ""risk_aversion"": 1.0, ""target_vol"": 0.1, ""turnover"": 0.5}",0.029161787424929836,5202
 2026-11-19T03:42:14,book,"{""alloc"": ""mvo"", ""book"": ""ewmac-for-trend"", ""buffer"": 0.1, ""financing_spread_bps"": 50.0, ""kelly"": 0.5, ""max_gross"": 1.5, ""max_net"": 1.5, ""max_sleeve"": 0.75, ""oos"": ""quarterly refit"", ""rates"": ""eur-ecb gbp-oecd+sonia"", ""risk_aversion"": 1.0, ""target_vol"": 0.1, ""turnover"": 0.5}",0.02493581505686783,4890
 2026-11-19T03:42:15,book,"{""alloc"": ""mvo"", ""book"": ""beta+alpha"", ""buffer"": 0.1, ""financing_spread_bps"": 50.0, ""kelly"": 0.5, ""max_gross"": 1.5, ""max_net"": 1.5, ""max_sleeve"": 0.75, ""oos"": ""quarterly refit"", ""rates"": ""eur-ecb gbp-oecd+sonia"", ""risk_aversion"": 1.0, ""target_vol"": 0.1, ""turnover"": 0.5}",0.04284957850827445,5577
+2026-11-19T04:58:33,TrendETF,"{""alone"": true, ""buffer"": 0.1, ""rates"": ""eur-ecb gbp-oecd+sonia""}",0.029659095388398053,5577
+2026-11-19T04:58:33,FXCarryETF,"{""alone"": true, ""buffer"": 0.1, ""rates"": ""eur-ecb gbp-oecd+sonia""}",-0.017978804123232026,5072
+2026-11-19T04:58:33,CryptoTrend,"{""alone"": true, ""buffer"": 0.1, ""rates"": ""eur-ecb gbp-oecd+sonia""}",0.005513687328194038,798
+2026-11-19T04:58:33,ETFBeta,"{""alone"": true, ""buffer"": 0.1, ""rates"": ""eur-ecb gbp-oecd+sonia""}",0.0421294778194844,5849
+2026-11-19T04:58:33,EWMAC,"{""alone"": true, ""buffer"": 0.1, ""rates"": ""eur-ecb gbp-oecd+sonia""}",0.04122194843699157,5340
+2026-11-19T04:58:38,TrendETF,"{""buffer"": 0.1, ""lookback"": 3, ""rates"": ""eur-ecb gbp-oecd+sonia"", ""target"": 0.2}",0.02231208317758487,5765
+2026-11-19T04:58:43,TrendETF,"{""buffer"": 0.1, ""lookback"": 3, ""rates"": ""eur-ecb gbp-oecd+sonia"", ""target"": 0.4}",0.02231208317758487,5765
+2026-11-19T04:58:47,TrendETF,"{""buffer"": 0.1, ""lookback"": 6, ""rates"": ""eur-ecb gbp-oecd+sonia"", ""target"": 0.2}",0.0021823833788384337,5701
+2026-11-19T04:58:52,TrendETF,"{""buffer"": 0.1, ""lookback"": 6, ""rates"": ""eur-ecb gbp-oecd+sonia"", ""target"": 0.4}",0.0021823833788384337,5701
+2026-11-19T04:58:56,TrendETF,"{""buffer"": 0.1, ""lookback"": 9, ""rates"": ""eur-ecb gbp-oecd+sonia"", ""target"": 0.2}",0.03156929500982893,5639
+2026-11-19T04:59:01,TrendETF,"{""buffer"": 0.1, ""lookback"": 9, ""rates"": ""eur-ecb gbp-oecd+sonia"", ""target"": 0.4}",0.03156929500982893,5639
+2026-11-19T04:59:05,TrendETF,"{""buffer"": 0.1, ""lookback"": 12, ""rates"": ""eur-ecb gbp-oecd+sonia"", ""target"": 0.2}",0.029659095388398053,5577
+2026-11-19T04:59:10,TrendETF,"{""buffer"": 0.1, ""lookback"": 12, ""rates"": ""eur-ecb gbp-oecd+sonia"", ""target"": 0.4}",0.029659095388398053,5577
+2026-11-19T05:02:17,book,"{""alloc"": ""erc"", ""book"": ""beta+alpha"", ""buffer"": 0.1, ""oos"": ""quarterly refit"", ""rates"": ""eur-ecb gbp-oecd+sonia""}",0.049971413282068694,5577
+2026-11-19T05:02:17,book,"{""alloc"": ""equal"", ""book"": ""beta+alpha"", ""buffer"": 0.1, ""oos"": ""quarterly refit"", ""rates"": ""eur-ecb gbp-oecd+sonia""}",0.051065336621758675,5577
+2026-11-19T05:05:33,TrendETF,"{""alone"": true, ""buffer"": 0.1, ""kill"": true, ""rates"": ""eur-ecb gbp-oecd+sonia""}",0.029659095388398053,5577
+2026-11-19T05:05:33,FXCarryETF,"{""alone"": true, ""buffer"": 0.1, ""kill"": true, ""rates"": ""eur-ecb gbp-oecd+sonia""}",-0.01320679556776443,1871
+2026-11-19T05:05:33,CryptoTrend,"{""alone"": true, ""buffer"": 0.1, ""kill"": true, ""rates"": ""eur-ecb gbp-oecd+sonia""}",0.005513687328194038,798
+2026-11-19T05:05:33,ETFBeta,"{""alone"": true, ""buffer"": 0.1, ""kill"": true, ""rates"": ""eur-ecb gbp-oecd+sonia""}",0.03696483159970419,3174
+2026-11-19T05:05:33,EWMAC,"{""alone"": true, ""buffer"": 0.1, ""kill"": true, ""rates"": ""eur-ecb gbp-oecd+sonia""}",0.04122194843699157,5340
+2026-11-19T05:07:13,TrendETF,"{""buffer"": 0.1, ""rates"": ""eur-ecb gbp-oecd+sonia"", ""signs"": ""long_only"", ""v"": 1}",0.03892644330646484,5577
+2026-11-19T05:10:23,book,"{""alloc"": ""equal"", ""book"": ""beta+alpha"", ""buffer"": 0.1, ""cost_scale"": 1.0, ""rates"": ""eur-ecb gbp-oecd+sonia""}",0.04798106601153478,5849
+2026-11-19T05:13:36,book,"{""alloc"": ""equal"", ""book"": ""beta+alpha"", ""buffer"": 0.1, ""cost_scale"": 2.0, ""rates"": ""eur-ecb gbp-oecd+sonia""}",0.04334231987657966,5849
+2026-11-19T05:16:46,book,"{""alloc"": ""equal"", ""book"": ""beta+alpha"", ""buffer"": 0.1, ""cost_scale"": 4.0, ""rates"": ""eur-ecb gbp-oecd+sonia""}",0.035169625647015486,5849
+2026-11-19T05:19:58,book,"{""alloc"": ""equal"", ""book"": ""beta+alpha"", ""buffer"": 0.1, ""delay"": 1, ""rates"": ""eur-ecb gbp-oecd+sonia""}",0.04734441462525418,5848
+2026-11-19T05:23:07,book,"{""alloc"": ""equal"", ""book"": ""beta+alpha"", ""buffer"": 0.1, ""delay"": 2, ""rates"": ""eur-ecb gbp-oecd+sonia""}",0.04771207680289672,5847
+2026-11-19T05:26:19,book,"{""alloc"": ""equal"", ""book"": ""beta+alpha"", ""buffer"": 0.1, ""delay"": 5, ""rates"": ""eur-ecb gbp-oecd+sonia""}",0.04664722939538935,5844
+2026-11-19T05:36:33,EWMAC,"{""buffer"": 0.1, ""rates"": ""eur-ecb gbp-oecd+sonia"", ""speeds"": ""combined"", ""v"": 2}",0.04122194843699157,5340
+2026-11-19T05:36:33,EWMAC,"{""buffer"": 0.1, ""rates"": ""eur-ecb gbp-oecd+sonia"", ""speeds"": ""16/64"", ""v"": 2}",0.025182961859939963,5340
+2026-11-19T05:36:33,EWMAC,"{""buffer"": 0.1, ""rates"": ""eur-ecb gbp-oecd+sonia"", ""speeds"": ""32/128"", ""v"": 2}",0.04279943203669931,5340
+2026-11-19T05:36:33,EWMAC,"{""buffer"": 0.1, ""rates"": ""eur-ecb gbp-oecd+sonia"", ""speeds"": ""64/256"", ""v"": 2}",0.0382990020404248,5340
+2026-11-19T05:36:33,EWMAC,"{""buffer"": 0.1, ""rates"": ""eur-ecb gbp-oecd+sonia"", ""speeds"": ""combined"", ""v"": 2, ""window"": ""untouched""}",0.020223007953817238,1170
+2026-11-19T05:36:43,book,"{""alloc"": ""equal"", ""book"": ""v1"", ""buffer"": 0.1, ""rates"": ""eur-ecb gbp-oecd+sonia""}",0.019875712213231304,5577
+2026-11-19T05:39:57,book,"{""alloc"": ""equal"", ""book"": ""v1+ewmac"", ""buffer"": 0.1, ""rates"": ""eur-ecb gbp-oecd+sonia""}",0.033663719561456765,5577
+2026-11-19T05:43:05,book,"{""alloc"": ""equal"", ""book"": ""ewmac-for-trend"", ""buffer"": 0.1, ""rates"": ""eur-ecb gbp-oecd+sonia""}",0.03161180411487751,5340
+2026-11-19T05:46:19,book,"{""alloc"": ""equal"", ""book"": ""beta+alpha"", ""buffer"": 0.1, ""rates"": ""eur-ecb gbp-oecd+sonia""}",0.04798106601153478,5849
+2026-11-19T05:46:21,book,"{""alloc"": ""mvo"", ""book"": ""v1"", ""buffer"": 0.1, ""financing_spread_bps"": 50.0, ""kelly"": 0.5, ""max_gross"": 1.5, ""max_net"": 1.5, ""max_sleeve"": 0.75, ""oos"": ""quarterly refit"", ""rates"": ""eur-ecb gbp-oecd+sonia"", ""risk_aversion"": 1.0, ""target_vol"": 0.1, ""turnover"": 0.5}",0.015829280923449807,4261
+2026-11-19T05:46:21,book,"{""alloc"": ""mvo"", ""book"": ""v1+ewmac"", ""buffer"": 0.1, ""financing_spread_bps"": 50.0, ""kelly"": 0.5, ""max_gross"": 1.5, ""max_net"": 1.5, ""max_sleeve"": 0.75, ""oos"": ""quarterly refit"", ""rates"": ""eur-ecb gbp-oecd+sonia"", ""risk_aversion"": 1.0, ""target_vol"": 0.1, ""turnover"": 0.5}",0.029161787424929836,5202
+2026-11-19T05:46:22,book,"{""alloc"": ""mvo"", ""book"": ""ewmac-for-trend"", ""buffer"": 0.1, ""financing_spread_bps"": 50.0, ""kelly"": 0.5, ""max_gross"": 1.5, ""max_net"": 1.5, ""max_sleeve"": 0.75, ""oos"": ""quarterly refit"", ""rates"": ""eur-ecb gbp-oecd+sonia"", ""risk_aversion"": 1.0, ""target_vol"": 0.1, ""turnover"": 0.5}",0.02493581505686783,4890
+2026-11-19T05:46:23,book,"{""alloc"": ""mvo"", ""book"": ""beta+alpha"", ""buffer"": 0.1, ""financing_spread_bps"": 50.0, ""kelly"": 0.5, ""max_gross"": 1.5, ""max_net"": 1.5, ""max_sleeve"": 0.75, ""oos"": ""quarterly refit"", ""rates"": ""eur-ecb gbp-oecd+sonia"", ""risk_aversion"": 1.0, ""target_vol"": 0.1, ""turnover"": 0.5}",0.04284957850827445,5577

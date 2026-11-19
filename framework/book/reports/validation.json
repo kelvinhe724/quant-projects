@@ -11,7 +11,7 @@
     "dsr": 0.5465306732373928,
     "dsr_with_placebo": 0.49386178939324377,
     "n_trials": 70,
-    "n_runs_logged": 348,
+    "n_runs_logged": 388,
     "min_btl_years": 9.948833092044946,
     "backtest_years": 23.21031746031746,
     "min_trl_years": 4.809523809523809
@@ -393,7 +393,7 @@
         "vol_bound": 4,
         "kelly_scaled": 15,
         "budget_dropped": 4,
-        "registry_id": "1c1ca9bd9b885b22",
+        "registry_id": "49f96fb79c728d06",
         "dsr": 0.02322070262374444,
         "dsr_registry": 0.3389377324554061
       },
@@ -411,7 +411,7 @@
         "vol_bound": 44,
         "kelly_scaled": 5,
         "budget_dropped": 3,
-        "registry_id": "485698f63e49a190",
+        "registry_id": "268db3b666884121",
         "dsr": 0.10798505294426858,
         "dsr_registry": 0.6907536688274667
       },
@@ -429,7 +429,7 @@
         "vol_bound": 4,
         "kelly_scaled": 5,
         "budget_dropped": 3,
-        "registry_id": "64c05feec96699e8",
+        "registry_id": "0f466a0958cead2a",
         "dsr": 0.06739962306983271,
         "dsr_registry": 0.5751563071178715
       },
@@ -447,7 +447,7 @@
         "vol_bound": 38,
         "kelly_scaled": 2,
         "budget_dropped": 1,
-        "registry_id": "6c3349b663064773",
+        "registry_id": "3fa87d1d04c0d336",
         "dsr": 0.3960728293115293,
         "dsr_registry": 0.9356450075197599
       }
@@ -661,22 +661,22 @@
   },
   "cash_sweep": {
     "FXCarryETF": {
-      "sharpe": 0.12416252397050506,
-      "annual_return": 0.004708638277611588,
-      "annual_vol": 0.04661295162325782,
-      "max_drawdown": -0.3213782522355245,
-      "start": "2003-06-03",
+      "sharpe": 0.05553452132520078,
+      "annual_return": 0.0015241080609145197,
+      "annual_vol": 0.050052937243770246,
+      "max_drawdown": -0.32137825223552174,
+      "start": "2006-07-03",
       "end": "2026-08-31",
-      "n_obs": 5849
+      "n_obs": 5072
     },
     "v1 book": {
-      "sharpe": 0.5173640642068923,
-      "annual_return": 0.02092870343150155,
-      "annual_vol": 0.04172038542934396,
-      "max_drawdown": -0.09785203317714541,
-      "start": "2003-06-03",
+      "sharpe": 0.517354079048454,
+      "annual_return": 0.021415910979479813,
+      "annual_vol": 0.042725569825923834,
+      "max_drawdown": -0.09785203317714242,
+      "start": "2004-07-01",
       "end": "2026-08-31",
-      "n_obs": 5849
+      "n_obs": 5577
     },
     "beta+alpha book": {
       "sharpe": 0.7860216614225336,
@@ -689,5 +689,5 @@
     }
   },
   "panel_hash": "aa436bbc6c2e4712",
-  "run_at": "2026-11-19T03:45:47"
+  "run_at": "2026-11-19T05:49:51"
 }

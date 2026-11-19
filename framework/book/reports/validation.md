@@ -1,6 +1,6 @@
 # Validation
 
-Run 2026-11-19 03:45, panel hash `aa436bbc6c2e4712`, 2003-06-03 to 2026-08-31 (23.2 years), shadow cost model, kill switch off for backtests (see below).
+Run 2026-11-19 05:49, panel hash `aa436bbc6c2e4712`, 2003-06-03 to 2026-08-31 (23.2 years), shadow cost model, kill switch off for backtests (see below).
 
 ## Headline (book, live allocator, net)
 
@@ -8,7 +8,7 @@ Run 2026-11-19 03:45, panel hash `aa436bbc6c2e4712`, 2003-06-03 to 2026-08-31 (2
 |---|---|---|---|---|---|---|---|---|
 | 0.762 | 5.38% | 7.22% | -12.1% | 1.000 | 0.547 | 70 | 9.9 y (have 23.2) | 4.8 y |
 
-Live book `beta+alpha`. DSR uses n_trials = 70: every configuration this file runs on the real panel (sleeves, the trend grid, allocators, cost and delay variants, kill on, the EWMAC variants, the candidate books, the candidate allocator) is appended to `trials.csv` (348 rows so far) and identical return streams count once; the variance of their daily Sharpes is 3.74e-04. Trials are tagged with the engine settings ({'buffer': 0.1, 'rates': 'eur-ecb gbp-oecd+sonia'}), so the runs before the buffer moved into the engine and before the 2026-11-19 carry rate sources still count: they were looked at. The per-asset vol target is undone by the sleeve-level 10% target, so the trend grid is really four lookbacks. The 20 placebo draws are a null, not candidates; counting them too gives DSR 0.494. PSR is the probability the true Sharpe is above zero; DSR the same after deflating for selection. MinTRL is the track length needed to reject zero at 95%.
+Live book `beta+alpha`. DSR uses n_trials = 70: every configuration this file runs on the real panel (sleeves, the trend grid, allocators, cost and delay variants, kill on, the EWMAC variants, the candidate books, the candidate allocator) is appended to `trials.csv` (388 rows so far) and identical return streams count once; the variance of their daily Sharpes is 3.74e-04. Trials are tagged with the engine settings ({'buffer': 0.1, 'rates': 'eur-ecb gbp-oecd+sonia'}), so the runs before the buffer moved into the engine and before the 2026-11-19 carry rate sources still count: they were looked at. The per-asset vol target is undone by the sleeve-level 10% target, so the trend grid is really four lookbacks. The 20 placebo draws are a null, not candidates; counting them too gives DSR 0.494. PSR is the probability the true Sharpe is above zero; DSR the same after deflating for selection. MinTRL is the track length needed to reject zero at 95%.
 
 ## Allocator: ERC vs 1/N, out of sample
 
@@ -171,12 +171,12 @@ Kill off, from each one's first live day. Gross is the same path with costs and 
 | v1 book | 2004-07-01 | 0.396 | 0.316 | 0.013 | 0.044 | -0.137 | 2596 |
 | beta+alpha book | 2003-06-03 | 0.849 | 0.762 | 0.054 | 0.072 | -0.121 | 25761 |
 
-**Cash swept at the 3-month USD rate** (`financing="USD"`, 50 bps on negative cash). Includes the interest, so these compare to T-bills, not to zero:
+**Cash swept at the 3-month USD rate** (`financing="USD"`, 50 bps on negative cash). Includes the interest, so these compare to T-bills, not to zero; each row starts at its unswept first live day:
 
 | variant | sharpe | annual_return | annual_vol | max_drawdown |
 |---|---|---|---|---|
-| FXCarryETF | 0.124 | 0.005 | 0.047 | -0.321 |
-| v1 book | 0.517 | 0.021 | 0.042 | -0.098 |
+| FXCarryETF | 0.056 | 0.002 | 0.050 | -0.321 |
+| v1 book | 0.517 | 0.021 | 0.043 | -0.098 |
 | beta+alpha book | 0.786 | 0.058 | 0.075 | -0.107 |
 
 ## Signal vs beta
@@ -204,4 +204,4 @@ Backtests above run with `kill_dd=None`. With the live 25% kill on, the sleeves 
 
 Best of 100 random series, 750 days: DSR purgedcv 0.6855 vs archive 0.6848; PSR 0.9970 vs 0.9970. purgedcv is pinned at 0.1.5 in requirements.txt.
 
-Tearsheet: `reports/tearsheet.html` (quantstats, SPY benchmark). 3519s.
+Tearsheet: `reports/tearsheet.html` (quantstats, SPY benchmark). 3273s.

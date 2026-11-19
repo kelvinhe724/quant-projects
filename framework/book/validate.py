@@ -370,12 +370,13 @@ def main():
     whole = {**every, "v1 book": books_res["v1"], f"{allocate.LIVE_BOOK} book": book}
     sleeve_table = {k: window_stats(res, res.returns.ne(0).idxmax()) for k, res in whole.items()}
 
-    def swept(strats, allocations=None):
+    def swept(k, strats, allocations=None):
+        # cash earns from day one, so start each row at its unswept first live day, as the sleeves table does
         cfg = replace(book_config(kill=False, allocations=allocations), financing="USD", financing_spread_bps=50.0)
-        return stats(run(strats, bars, config=cfg).returns)
+        return stats(run(strats, bars, config=cfg).returns.loc[whole[k].returns.ne(0).idxmax():])
 
-    cash_sweep = {"FXCarryETF": swept(FXCarryETF()), "v1 book": swept(sleeves("v1")),
-                  f"{allocate.LIVE_BOOK} book": swept(sleeves(allocate.LIVE_BOOK), live)}
+    cash_sweep = {"FXCarryETF": swept("FXCarryETF", FXCarryETF()), "v1 book": swept("v1 book", sleeves("v1")),
+                  f"{allocate.LIVE_BOOK} book": swept(f"{allocate.LIVE_BOOK} book", sleeves(allocate.LIVE_BOOK), live)}
 
     # Every configuration above is now in trials.csv; count after, not before.
     tr = trials()
@@ -532,7 +533,7 @@ def main():
         md_table(sleeve_table, ("start", "sharpe_gross", "sharpe", "annual_return", "annual_vol", "max_drawdown",
                                 "trades")), "",
         "**Cash swept at the 3-month USD rate** (`financing=\"USD\"`, 50 bps on negative cash). Includes the "
-        "interest, so these compare to T-bills, not to zero:", "", md_table(cash_sweep), "",
+        "interest, so these compare to T-bills, not to zero; each row starts at its unswept first live day:", "", md_table(cash_sweep), "",
         "## Signal vs beta", "",
         "Each sleeve's live net returns regressed on its own universe: the daily-rebalanced 1/N return of its "
         "instruments, and that return scaled to the sleeves' 10% vol target (60-day EWMA vol, one-day lag, 3x "

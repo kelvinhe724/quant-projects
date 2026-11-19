@@ -109,7 +109,7 @@ def load_rates(cache=os.path.join(ROOT, "source-material", "fx-carry"), refresh=
                 raw = pd.read_csv(os.path.join(cache, f"{sid}.csv"), na_values=".", index_col=0, parse_dates=True)
                 s = raw.iloc[:, 0].astype(float)
             s = s.dropna()
-            parts.append(s[s.index > parts[-1].index[-1]] if parts else s)  # a later id only extends
+            parts.append(s[s.index > parts[-1].index[-1]] if parts and len(parts[-1]) else s)  # a later id only extends
         s = pd.concat(parts)
         s.index = s.index + pd.DateOffset(months=1)
         out[ccy] = s
