@@ -90,7 +90,7 @@ All four at 1/N of their sleeves, kill off, buffered engine, full cost model, fr
 
 What the choice means, stated plainly. (b) and (c) show that EWMAC adds 0.3 of in-sample Sharpe to the v1 book but almost nothing out of sample (0.46 and 0.40 against 0.40). (d) wins because of ETFBeta: the ETF universe held 1/N and vol-targeted scores 0.98 on the untouched window, which was a good four years to own everything. The book is a beta position with a trend overlay whose out-of-sample contribution is small and whose own promotion test failed. The DSR of 0.53 is the highest in this directory and it deflates a Sharpe that is mostly the market's; (a), (b) and (c) are all under 0.2, which is where a rule with no beta and this much selection lands. The untouched window is 4.7 years, and (d) was written after reading the full-panel attribution table, which includes that window: nothing was fit on it, but the idea of what to test came from a look that covered it. Anyone reading this as evidence of skill is reading it wrong; it is evidence that this ETF universe went up over 2022-2026 and that a rule-based book of it did not get in the way.
 
-With the live 25% kill on, ETFBeta would have been flattened on 2016-01-08 (the 2014-2016 commodity fall, inside a 1/N of 14 ETFs sized to 10% vol) and EWMAC never. Live, that parks half the book until it is restarted by hand; the backtests above run with the kill off.
+With the live 25% kill on, ETFBeta would have been flattened on 2016-01-07 (the 2014-2016 commodity fall, inside a 1/N of 14 ETFs sized to 10% vol) and EWMAC never. Live, that parks half the book until it is restarted by hand; the backtests above run with the kill off.
 
 ### Candidate allocator: cost-aware mean-variance (2026-09-05)
 
