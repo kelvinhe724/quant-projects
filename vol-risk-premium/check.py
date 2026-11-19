@@ -189,6 +189,8 @@ check("prior: the real untouched window is locked on 2023-04-28, its hash verifi
 
 # forward track: a 0/0 quoted leg is "no quote" (nan), never a worthless straddle; 2026-10-21 booked +$1,599 on one
 import forward as _fwd
+_NODIV = pd.Series(dtype=float, index=pd.DatetimeIndex([]))         # no SPY ex-date: every run below stays offline and books price return only
+_fwd.spy_dividends = lambda: _NODIV
 _chain = pd.DataFrame({"snapshot": ["2026-10-21 20:38:21"] * 2, "expiry": [pd.Timestamp("2026-11-02")] * 2,
                        "strike": [780.0, 780.0], "cp": ["C", "P"], "bid": [0.0, 0.0], "ask": [0.0, 0.0],
                        "T": [0.03, 0.03], "spot": [775.7, 775.7]})
@@ -243,10 +245,11 @@ def _day(d):
                          "T": [0.0, 0.0], "spot": [_XSP[d][0]] * 2, "impliedVolatility": [0.12, 0.12]})
 
 
-def _late(lake_days, close, spy_days=None):
+def _late(lake_days, close, spy_days=None, divs=_NODIV):
     """run() on the K780 book as of 10-30 with only `lake_days` in the lake; `close(ticker, day)` stubs Yahoo."""
     calls = []
-    old = _fwd.sessions, _fwd.vix_closes, getattr(_fwd, "expiry_close", None)
+    old = _fwd.sessions, _fwd.vix_closes, getattr(_fwd, "expiry_close", None), _fwd.spy_dividends
+    _fwd.spy_dividends = lambda: divs
     _fwd.sessions = lambda t: ({pd.Timestamp(d): _day(d) for d in lake_days},
                                pd.Series({pd.Timestamp(d): _XSP[d][1] for d in (spy_days or lake_days)}))
     _fwd.vix_closes = lambda s, e: pd.Series({pd.Timestamp("2026-10-30"): 16.0})
@@ -258,7 +261,7 @@ def _late(lake_days, close, spy_days=None):
             _fwd.run("^XSP", out=tmp)
             return (pd.read_csv(os.path.join(tmp, "cycles.csv")), pd.read_csv(os.path.join(tmp, "marks.csv")), calls)
     finally:
-        _fwd.sessions, _fwd.vix_closes, _fwd.expiry_close = old
+        _fwd.sessions, _fwd.vix_closes, _fwd.expiry_close, _fwd.spy_dividends = old
 
 
 _c, _m, _calls = _late(["2026-11-03"], lambda t, d: _XSP["2026-11-02"])
@@ -286,6 +289,103 @@ check(f"late settle: an expiry chain with no SPY ('no mark') settles next run in
       f"against the last non-NaN SPY: same pnl -94.47, no NaN ({list(zip(_m.date, _m.status, _m.pnl.round(2)))})",
       list(_m.status) == ["open", "no mark", "settled", "flat"] and _s.date.iloc[0] == "2026-11-02"
       and abs(_m.pnl.sum() - -94.4718092727617) < 1e-6 and not _m.pnl.isna().any() and len(_calls) == 1)
+
+# forward track, PREREG §3 amendment 4: the hedge books SPY total return, shares held into the ex-date x dividend
+def _book(chains, spys, divs=_NODIV, vix=15.0, cycles=None, marks=None):
+    """run() on planted sessions {day: chain} and SPY spots; returns (cycles, marks) as written to disk."""
+    old = _fwd.sessions, _fwd.vix_closes, _fwd.spy_dividends
+    _fwd.sessions = lambda t: (chains, pd.Series(spys).dropna())
+    _fwd.vix_closes = lambda a, b: (vix if isinstance(vix, pd.Series) else pd.Series(vix, index=pd.bdate_range(a, b)))
+    _fwd.spy_dividends = lambda: divs
+    try:
+        with tempfile.TemporaryDirectory() as tmp:
+            if cycles is not None:
+                pd.DataFrame(cycles).to_csv(os.path.join(tmp, "cycles.csv"), index=False)
+                pd.DataFrame(marks).to_csv(os.path.join(tmp, "marks.csv"), index=False)
+            _fwd.run("^XSP", out=tmp)
+            have = [os.path.exists(os.path.join(tmp, f)) for f in ("cycles.csv", "marks.csv")]
+            return tuple(pd.read_csv(os.path.join(tmp, f), parse_dates=["date"] if f == "marks.csv" else ["start"])
+                         if h else None for f, h in zip(("cycles.csv", "marks.csv"), have))
+    finally:
+        _fwd.sessions, _fwd.vix_closes, _fwd.spy_dividends = old
+
+
+def _ch(d, mid, spot=780.0, strike=780.0, expiry="2026-12-18"):
+    return pd.DataFrame({"snapshot": [d] * 2, "expiry": [pd.Timestamp(expiry)] * 2, "strike": [strike] * 2,
+                         "cp": ["C", "P"], "bid": [mid / 2 - 0.1] * 2, "ask": [mid / 2 + 0.1] * 2, "T": [0.09] * 2,
+                         "spot": [spot] * 2, "impliedVolatility": [0.15] * 2})
+
+
+_dd = pd.bdate_range("2026-11-16", "2026-11-20")
+_ex = pd.Series({pd.Timestamp("2026-11-18"): 1.80})
+for _spot, _sign in ((770.0, -1), (790.0, +1)):      # below the strike the hedge is short SPY, above it long
+    _cs = {d: _ch(d, m, _spot) for d, m in zip(_dd, _mids)}
+    _sp = dict(zip(_dd, _spys))
+    _, _m0 = _book(_cs, _sp)
+    _, _m1 = _book(_cs, _sp, divs=_ex)
+    _dh = (_m1.pnl_hedge - _m0.pnl_hedge).round(9)
+    _want = _m0.hedge_shares.iloc[1] * 1.80          # shares held into 11-18: struck at the 11-17 close
+    check(f"dividend: a 1.80 ex-date on 11-18 books shares x dividend = {_want:+.2f} on the 11-18 mark only, sign of "
+          f"the hedge ({_m0.hedge_shares.iloc[1]:+.1f} shares), nothing else moves",
+          np.isclose(_dh.iloc[2], _want, atol=1e-9) and (_dh.drop(2) == 0).all() and np.sign(_want) == _sign
+          and np.isclose(_m1.pnl.sum() - _m0.pnl.sum(), _want, atol=1e-9) and _m1.hedge_shares.equals(_m0.hedge_shares))
+_sp = dict(zip(_dd, _spys)); _sp[_dd[2]] = np.nan                 # 11-18 has no SPY spot: "no mark"
+_, _mg = _book({d: _ch(d, m, 770.0) for d, m in zip(_dd, _mids)}, _sp, divs=_ex)
+_, _mg0 = _book({d: _ch(d, m, 770.0) for d, m in zip(_dd, _mids)}, _sp)
+check("dividend: an ex-date on a 'no mark' session is booked at the next marked session at the shares held into it",
+      list(_mg.status) == ["open", "open", "no mark", "open", "open"] and _mg.pnl_hedge.iloc[2] == 0
+      and np.isclose(_mg.pnl_hedge.iloc[3] - _mg0.pnl_hedge.iloc[3], _mg0.hedge_shares.iloc[1] * 1.80, atol=1e-9))
+_out = pd.Series({pd.Timestamp("2026-09-19"): 1.75, pd.Timestamp("2026-11-16"): 1.80, pd.Timestamp("2026-12-18"): 1.85})
+_cs = {d: _ch(d, m) for d, m in zip(_dd, _mids)}
+_, _m0 = _book(_cs, dict(zip(_dd, _spys)))
+_, _m1 = _book(_cs, dict(zip(_dd, _spys)), divs=_out)
+check("dividend: ex-dates before the hedge exists (incl. the entry day itself) or after the last mark book exactly what "
+      "no dividend books", _m1.equals(_m0))
+_c, _m, _calls = _late(["2026-11-02", "2026-11-03"], lambda t, d: _XSP["2026-11-02"], divs=None)
+check("dividend: a failed SPY dividend fetch writes no mark and settles nothing (the next run catches up)",
+      list(_m.date) == ["2026-10-30"] and (_c.status == "open").all() and _calls == [])
+
+# forward track, PREREG §6: a booked day below -10% of open notional (strike x 100 x units) flattens at the next close
+_fd = _fwd.nyse_sessions("2027-01-04", "2027-03-01")[:26]
+_flat_mids = [15.0, 15.0, 101.0, 100.0] + [100.0] * 22       # day 2: (15 - 101) x 100 = -8,600 < -8,580 = -11% of 78,000
+_vix = pd.Series(15.0, index=_fd); _vix[_fd[21]] = 35.0      # the scheduled start (21 sessions on) has VIX 35: blocked
+_c, _m = _book({d: _ch(d, m, expiry="2027-03-19") for d, m in zip(_fd, _flat_mids)}, {d: 500.0 for d in _fd}, vix=_vix)
+_f = _m.iloc[3]
+_cost = abs(_m.hedge_shares.iloc[2]) * 500.0 * 1e-4 + 2 * 0.65 + _fwd.flatten_spread() * 100.0 * 100
+check(f"flatten: a -11% day ({_m.pnl.iloc[2]:,.2f} on 78,000) flattens at the next session: status 'flattened', "
+      f"bought back at mid 100 + {_fwd.flatten_spread():.2%} spread + commission + hedge slippage (cost {_f.cost:.2f}), "
+      f"hedge to zero",
+      _m.pnl.iloc[2] < -0.10 * 78_000 and _f.status == "flattened" and np.isclose(_f.cost, _cost, atol=1e-9)
+      and np.isclose(_f.pnl_option, 100.0, atol=1e-9) and _f.hedge_shares == 0
+      and np.isclose(_f.pnl, _f.pnl_option + _f.pnl_hedge - _cost, atol=1e-9) and _c.status.iloc[0] == "flattened")
+check(f"flatten: nothing opens before the next scheduled start and VIX <= 30 (flat sessions 4-20, VIX 35 blocks "
+      f"session 21, the next cycle opens on session 22: {_c.start.dt.date.tolist()})",
+      (_m.status.iloc[4:21] == "flat").all() and _m.status.iloc[21] == "no entry: VIX 35.0 > 30"
+      and len(_c) == 2 and _c.start.iloc[1] == _fd[22] and _c.status.iloc[1] == "open")
+_c, _m = _book({d: _ch(d, m, expiry="2027-03-19") for d, m in zip(_fd, [15.0, 15.0, 85.0, 84.0] + [84.0] * 22)},
+               {d: 500.0 for d in _fd})
+check(f"flatten: a -9% day ({_m.pnl.iloc[2]:,.2f} on 78,000) does nothing: one cycle, still open, no 'flattened' mark",
+      -0.10 * 78_000 < _m.pnl.iloc[2] < -0.08 * 78_000 and "flattened" not in set(_m.status)
+      and len(_c) == 1 and _c.status.iloc[0] == "open")
+# the real record's worst day, planted: K769 as booked through 2026-11-05 (-1,744.13), then the 11-06 session
+_K769 = {"start": pd.Timestamp("2026-11-04"), "expiry": pd.Timestamp("2026-11-30"), "strike": 769.0, "spot": 768.8599853515625,
+         "units": 1, "entry_bid": 20.87, "entry_mid": 21.09, "spread_pct": 0.0208629682313891, "iv": 0.1277171579742431,
+         "vix": 16.610000610351562, "monthly": False, "status": "open"}
+_M1104 = {"date": pd.Timestamp("2026-11-04"), "start": pd.Timestamp("2026-11-04"), "spot": 768.8599853515625,
+          "spy": 766.8099975585938, "straddle_mid": 21.09, "hedge_shares": 0.9338516009350554, "pnl_option": -22.0,
+          "pnl_hedge": 0.0, "cost": 1.3716086743833098, "pnl": -23.371608674383197, "status": "open"}
+_M1105 = {"date": pd.Timestamp("2026-11-05"), "start": pd.Timestamp("2026-11-04"), "spot": 735.3699951171875,
+          "spy": 733.0, "straddle_mid": 38.155, "hedge_shares": -81.67774911359413, "pnl_option": -1706.5,
+          "pnl_hedge": -31.573520347703088, "cost": 6.05543033237499, "pnl": -1744.1289506800783, "status": "open"}
+_d6 = pd.Timestamp("2026-11-06")
+_ch6 = _ch(_d6, 33.955, spot=737.6900024414062, strike=769.0, expiry="2026-11-30")
+_c, _m = _book({_d6: _ch6}, {_d6: 735.2899780273438}, cycles=[_K769], marks=[_M1104, _M1105])
+check(f"flatten: the real worst day, -1,744.13 on 2026-11-05 = {1744.13 / 76_900:.1%} of 76,900, is above the -10% line "
+      f"(-7,690) and 11-06 marks 'open' with the booked legs ({_m.status.tolist()}, option {_m.pnl_option.iloc[-1]:,.2f} "
+      f"vs 420.00, hedge {_m.pnl_hedge.iloc[-1]:,.2f} vs -187.04)",
+      _M1105["pnl"] > -0.10 * 769 * 100 and _m.status.tolist() == ["open", "open", "open"]
+      and abs(_m.pnl_option.iloc[-1] - 420.0000000000003) < 1e-6 and abs(_m.pnl_hedge.iloc[-1] - -187.040250793026) < 1e-6
+      and (_c.status == "open").all())
 
 # measure_spread: PREREG §4 freezes the median over the FIRST 10 sessions; zeroed legs are no quote
 import measure_spread as _ms
