@@ -1003,6 +1003,18 @@ except ValueError:
 check("an empty submit without targets (the daemon's kill path) is still allowed", dummy.submit([]) == [])
 check("daemon: after a halt the kill file gates the next run before any data is fetched",
       "killed()" in open(os.path.join(os.path.dirname(__file__), "daemon.py")).read().split("def run_once")[1].split("live_bars")[0])
+_kill0, _kd = daemon_mod.KILL, tempfile.mkdtemp()
+try:
+    daemon_mod.KILL = os.path.join(_kd, "KILL")
+    _es_none = daemon_mod.exit_status(False)
+    open(daemon_mod.KILL, "w").write("planted\n")
+    _es = (daemon_mod.exit_status(False), daemon_mod.exit_status(True))
+finally:
+    daemon_mod.KILL = _kill0
+check("daemon exit status: 3 after a real run with KILL present, 0 on a dry run with it, 0 without it; __main__ exits with it",
+      _es == (3, 0) and _es_none == 0
+      and "sys.exit(exit_status(dry))" in open(os.path.join(os.path.dirname(__file__), "daemon.py")).read(),
+      f"{_es} {_es_none}")
 
 print("\nDORMANT LIVE ADAPTERS\n")
 asked = []
