@@ -3,7 +3,8 @@
 ETFs come from yfinance through engine.load_yfinance (cached under
 source-material/framework/yf/), BTC and ETH from Alpaca's crypto data API,
 which needs no key (cached under source-material/framework/alpaca/), and the
-OECD 3-month rates from the fx-carry cache. Everything is aligned to the NYSE
+3-month rates (OECD from FRED, EUR from the ECB, GBP as SONIA) from the
+fx-carry cache. Everything is aligned to the NYSE
 calendar; a crypto bar on a NYSE date is that UTC day's bar, and weekend moves
 land in Monday's open.
 """
@@ -17,7 +18,7 @@ from pandas.tseries.holiday import (AbstractHolidayCalendar, GoodFriday, Holiday
 
 from framework.engine import Bars, load_fred, load_yfinance
 from framework.engine.data import (CACHE, CACHE_MAX_AGE_DAYS, DOWNLOAD_TRIES, DOWNLOAD_WAIT,
-                                   FIELDS, SUBSTITUTED, _cached_bars, clean_prices)
+                                   FIELDS, SUBSTITUTED, _cached_bars, clean_prices, load_ecb)
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DATA_START = "2003-06-01"
@@ -32,21 +33,29 @@ ETFS = {
     "FXE": "fx", "FXY": "fx", "FXB": "fx",
 }
 
-# Currency ETF -> (currency, FRED id of the OECD 3-month interbank rate).
+# Currency ETF -> (currency, source, series id). OECD 3-month interbank rates from FRED, except
+# (2026-11-19, outputs/2026-11-05_carry-rates-replacement.md; FRED's IR3TIB01EZM156N and
+# IR3TIB01GBM156N both stopped at 2026-01, and the dead files stay in the fx-carry cache):
+# - EUR is the ECB's own EURIBOR 3M monthly average, the number OECD republishes: within 1.24 bp
+#   of the dead FRED copy over all 385 overlapping months (2023-04, a revision), 11 months over 0.05 bp.
+# - GBP is a tuple, spliced: the OECD 3-month rate while it prints, then monthly-average SONIA (OECD
+#   immediate rate, equal to BoE IUMASOIA) for the months after. SONIA is overnight, not 3-month,
+#   and no basis is added; the history through 2026-01 is unchanged.
 FX_ETFS = {
-    "FXE": ("EUR", "IR3TIB01EZM156N"),
-    "FXY": ("JPY", "IR3TIB01JPM156N"),
-    "FXB": ("GBP", "IR3TIB01GBM156N"),
-    "FXA": ("AUD", "IR3TIB01AUM156N"),
-    "FXC": ("CAD", "IR3TIB01CAM156N"),
-    "FXF": ("CHF", "IR3TIB01CHM156N"),
+    "FXE": ("EUR", "ecb", "FM.M.U2.EUR.RT.MM.EURIBOR3MD_.HSTA"),
+    "FXY": ("JPY", "fred", "IR3TIB01JPM156N"),
+    "FXB": ("GBP", "fred", ("IR3TIB01GBM156N", "IRSTCI01GBM156N")),
+    "FXA": ("AUD", "fred", "IR3TIB01AUM156N"),
+    "FXC": ("CAD", "fred", "IR3TIB01CAM156N"),
+    "FXF": ("CHF", "fred", "IR3TIB01CHM156N"),
 }
-USD_RATE = "IR3TIB01USM156N"
-# ponytail: no per-currency splice. OECD publishes these with a lag that differs
+USD_RATE = ("fred", "IR3TIB01USM156N")
+# ponytail: one truncation, no lead. OECD publishes these with a lag that differs
 # by currency, so load_rates truncates every column to the last month they all
 # have. A uniform lag is a ranking the carry sleeve can trust; a mixed vintage
-# (current EUR/GBP against three-month-old everything else) is not. Splicing in
-# each currency's own overnight rate (ESTR, SONIA, TONAR, RBA cash, CORRA,
+# (current EUR/GBP against three-month-old everything else) is not, so the GBP
+# splice only stands in for a dead series and the cut still applies to it.
+# Moving all seven to overnight rates (ESTR, SONIA, TONAR, RBA cash, CORRA,
 # SARON, EFFR) is the upgrade if this sleeve ever carries real weight.
 CRYPTO = ["BTC/USD", "ETH/USD"]
 BENCHMARK = "SPY"
@@ -76,26 +85,32 @@ def sessions(start, end):
 
 
 def load_rates(cache=os.path.join(ROOT, "source-material", "fx-carry"), refresh=False):
-    """Monthly OECD 3-month rates in percent, one column per currency, USD included.
+    """Monthly 3-month rates in percent (GBP overnight, see FX_ETFS), one column per currency, USD included.
 
     FRED dates month M's average at the first of M. It is only knowable after
     M ends, so each value is dated the first day of M+1 here. The research
-    path reads the frozen fx-carry cache; refresh=True (the daemon) downloads
-    every series again into the engine's FRED cache.
+    path reads the frozen fx-carry cache ({id}.csv, FRED's shape whatever the
+    source); refresh=True (the daemon) downloads every series again into the
+    engine's cache through its source's loader.
 
     Every column is cut back to the last month all currencies have, so one
     cross-sectional rank is never a mix of vintages.
     """
-    ids = {c: sid for c, sid in FX_ETFS.values()}
+    ids = {c: (src, sid) for c, src, sid in FX_ETFS.values()}
     ids["USD"] = USD_RATE
     out = {}
-    for ccy, sid in ids.items():
-        if refresh:
-            s = load_fred(sid, refresh=True)
-        else:
-            raw = pd.read_csv(os.path.join(cache, f"{sid}.csv"), na_values=".", index_col=0, parse_dates=True)
-            s = raw.iloc[:, 0].astype(float)
-        s = s.dropna()
+    for ccy, (src, sids) in ids.items():
+        parts = []
+        for sid in (sids,) if isinstance(sids, str) else sids:
+            if refresh:
+                # looked up at call time so a check can point either loader at a planted cache
+                s = {"fred": load_fred, "ecb": load_ecb}[src](sid, refresh=True)
+            else:
+                raw = pd.read_csv(os.path.join(cache, f"{sid}.csv"), na_values=".", index_col=0, parse_dates=True)
+                s = raw.iloc[:, 0].astype(float)
+            s = s.dropna()
+            parts.append(s[s.index > parts[-1].index[-1]] if parts else s)  # a later id only extends
+        s = pd.concat(parts)
         s.index = s.index + pd.DateOffset(months=1)
         out[ccy] = s
     df = pd.DataFrame(out)

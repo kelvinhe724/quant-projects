@@ -1220,6 +1220,77 @@ check("every currency's rate series ends on the same month",
 check("rate panel has no trailing all-NaN row", _rates.iloc[-1].notna().all())
 
 
+# --- carry rate sources (2026-11-19): EUR from the ECB, GBP spliced onto SONIA ---
+# FRED's OECD EUR and GBP series stopped at 2026-01 and the min-truncation pinned
+# every rank there for ten months. Planted bodies, no network.
+import shutil as _sh
+import tempfile as _tf
+
+import requests as _rq
+
+from framework.engine import data as _ed
+
+_ECB = "FM.M.U2.EUR.RT.MM.EURIBOR3MD_.HSTA"
+check("EUR's rate is the ECB's EURIBOR 3M monthly average", uni.FX_ETFS["FXE"][1:] == ("ecb", _ECB))
+check("GBP's rate is the OECD 3-month spliced onto monthly SONIA, IRSTCI01GBM156N",
+      uni.FX_ETFS["FXB"][1:] == ("fred", ("IR3TIB01GBM156N", "IRSTCI01GBM156N")))
+_mo = pd.date_range("2025-01-01", "2026-10-01", freq="MS")
+_dead = _mo[_mo <= "2026-01-01"]
+_fred = {sid: pd.Series(3.0, _mo) for _, src, sid in uni.FX_ETFS.values() if src == "fred" and isinstance(sid, str)}
+_fred.update({uni.USD_RATE[1]: pd.Series(3.5, _mo), "IR3TIB01GBM156N": pd.Series(4.0, _dead),
+              "IRSTCI01GBM156N": pd.Series(3.7, _mo)})
+
+
+class _Resp:
+    def __init__(self, text, status=200):
+        self.text, self.status_code = text, status
+
+    def raise_for_status(self):
+        if self.status_code != 200:
+            raise _rq.HTTPError(str(self.status_code))
+
+
+def _planted(url, **_):
+    if url.startswith("https://data-api.ecb.europa.eu/service/data/FM/M.U2.EUR.RT.MM.EURIBOR3MD_.HSTA?"):
+        rows = "".join(f"{_ECB},M,U2,{d:%Y-%m},2.5,A\n" for d in _mo)
+        return _Resp("KEY,FREQ,REF_AREA,TIME_PERIOD,OBS_VALUE,OBS_STATUS\n" + rows)
+    sid = url.split("id=")[-1]
+    if "fred.stlouisfed.org" not in url or sid not in _fred:
+        return _Resp("not found", 404)
+    return _Resp("observation_date," + sid + "\n" + "".join(f"{d:%Y-%m-%d},{v}\n" for d, v in _fred[sid].items()))
+
+
+_rtmp = _tf.mkdtemp()
+_real = _rq.get, uni.load_fred, uni.load_ecb
+_rq.get = _planted
+uni.load_fred = lambda sid, refresh=False: _ed.load_fred(sid, cache=_rtmp, refresh=refresh)
+uni.load_ecb = lambda key, refresh=False: _ed.load_ecb(key, cache=_rtmp, refresh=refresh)
+try:
+    _cur = uni.load_rates(refresh=True)
+    _last = {c: _cur[c].last_valid_index() for c in _cur}
+    check("planted ECB + FRED panel: every currency's rate reaches rate-month 2026-10 (dated 2026-11-01)",
+          set(_last.values()) == {pd.Timestamp("2026-11-01")}, ", ".join(f"{c} {d.date()}" for c, d in _last.items()))
+    check("ECB months land on the first of the month and shift one month like FRED's",
+          _cur["EUR"].index.is_month_start.all() and _cur["EUR"].loc["2025-02-01"] == 2.5)
+    check("GBP keeps the 3-month rate through its last print, SONIA only after it, no basis",
+          _cur["GBP"].loc[:"2026-02-01"].eq(4.0).all() and _cur["GBP"].loc["2026-03-01":].eq(3.7).all())
+    _path = os.path.join(_rtmp, "ecb", f"{_ECB}.csv")
+    _before = open(_path).read()
+    _rq.get = lambda *a, **k: _Resp("<!doctype html>\n<html><title>Service Unavailable</title></html>")
+    _served = _ed.load_ecb(_ECB, cache=_rtmp, refresh=True)
+    check("ECB maintenance page (200 + HTML) never overwrites the cache; the cached series is served",
+          open(_path).read() == _before and len(_served) == len(_mo))
+    try:
+        _ed.load_ecb(_ECB, cache=_tf.mkdtemp(), refresh=True)
+        _raised = False
+    except _rq.RequestException:
+        _raised = True
+    check("ECB non-CSV body with no cached copy raises", _raised)
+finally:
+    _rq.get, uni.load_fred, uni.load_ecb = _real
+    _sh.rmtree(_rtmp, ignore_errors=True)
+
+
 # --- r1-free-twin: free twin and active Sharpe (side statistic, not a promotion rule) ---
 from framework.book.strategies import ex_ante_vol
 from framework.book.validate import active, free_twin

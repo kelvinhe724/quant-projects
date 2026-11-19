@@ -118,7 +118,7 @@ class FXCarryETF(Strategy):
     """
 
     def __init__(self, etfs=None, n_leg=N_LEG):
-        self.etfs = {t: c for t, (c, _) in universe.FX_ETFS.items()} if etfs is None else dict(etfs)
+        self.etfs = {t: c for t, (c, *_) in universe.FX_ETFS.items()} if etfs is None else dict(etfs)
         self.n_leg = n_leg
 
     def on_bar(self, asof, bars):

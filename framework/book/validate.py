@@ -35,7 +35,10 @@ PLACEBO_DRAWS = 20
 HOLDOUT = 0.2
 # Engine settings that change every configuration's return stream; logged
 # with each trial so a rerun after an engine change counts as a new look.
-ENGINE = {"buffer": book_config().risk.buffer}
+# "rates" names the carry rate sources (universe.FX_ETFS): change it whenever a
+# source changes, so the carry streams it moves are new trials and the old ones
+# stay counted. Absent on every run before 2026-11-19 (all-OECD).
+ENGINE = {"buffer": book_config().risk.buffer, "rates": "eur-ecb gbp-oecd+sonia"}
 PROMOTION = ("net Sharpe above zero on the untouched window, above TrendETF's on the same window, "
              "and a positive alpha t against the ETF universe there")
 ALLOCATOR_PROMOTION = ("the candidate allocator goes live only if its best book's Sharpe on the untouched window "
@@ -423,7 +426,7 @@ def main():
         f"variants, the candidate books, the candidate allocator) is appended to `trials.csv` ({head['n_runs_logged']} rows so far) and "
         f"identical return streams count once; the variance of their daily Sharpes is {var_sharpe:.2e}. Trials "
         f"are tagged with the engine settings ({ENGINE}), so the runs before the buffer moved into the engine "
-        "still count: they were looked at. The per-asset vol target is undone by the sleeve-level 10% target, so "
+        "and before the 2026-11-19 carry rate sources still count: they were looked at. The per-asset vol target is undone by the sleeve-level 10% target, so "
         f"the trend grid is really four lookbacks. The {fals['placebo']['draws']} placebo draws are a null, not "
         f"candidates; counting them too gives DSR {head['dsr_with_placebo']:.3f}. PSR is the probability the true "
         "Sharpe is above zero; DSR the same after deflating for selection. MinTRL is the track length needed to "
