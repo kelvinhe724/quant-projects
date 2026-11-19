@@ -178,7 +178,7 @@ def run(ticker="^XSP", out=None, units=UNITS):
     divs = spy_dividends()
     if divs is None:
         return cycles, marks, True   # append-only marks are never revisited, so none is written without the dividend
-    alert = False                   # set when this run skips marking or §6 says retire: __main__ exits 2 on it
+    alert = False                   # set when this run skips marking (a failed dividend fetch, the ex-date lag guard or a missing expiry close) or §6 says retire: __main__ exits 2 on it
     vix = vix_closes(min(days) - pd.Timedelta(days=7), max(days) + pd.Timedelta(days=1))
     done = set(marks.date) if len(marks) else set()
     new_c, new_m = [], []
@@ -200,6 +200,7 @@ def run(ticker="^XSP", out=None, units=UNITS):
                 if px is None:
                     print(f"cycle {pd.Timestamp(c['start']).date()}: expiry {exp.date()} not in the lake and no Yahoo "
                           f"close yet; left open, next run retries")
+                    alert = True   # a stall that persists must page like the lag guard: exit 2, not a quiet 0
                     break
                 mday, (spot, spy_now), smid, T, settled = exp, px, abs(px[0] - c["strike"]), 0.0, True
             else:

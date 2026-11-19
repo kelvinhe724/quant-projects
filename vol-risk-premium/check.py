@@ -269,6 +269,7 @@ def _late(lake_days, close, spy_days=None, divs=_NODIV):
 
 
 _c, _m, _calls = _late(["2026-11-03"], lambda t, d: _XSP["2026-11-02"])
+_lateok = _ALERT["late"]   # a late settle that found its close is no alert
 _s = _m[_m.status == "settled"]
 check(f"late settle: no 11-02 chain, 11-03 present -> one settled mark dated 2026-11-02 at spot 754.14, mid 25.86, "
       f"pnl -94.47 (got {list(zip(_s.date, _s.spot.round(2), _s.straddle_mid.round(2), _s.pnl.round(2)))})",
@@ -277,6 +278,7 @@ check(f"late settle: no 11-02 chain, 11-03 present -> one settled mark dated 202
       and (_c.status == "settled").all() and "2026-11-03" in set(_m.date)
       and not ((_m.date == "2026-11-03") & (_m.status == "settled")).any())
 _c, _m, _calls = _late(["2026-11-03"], lambda t, d: None)
+_noclose = _ALERT["late"]  # the stall path: no Yahoo close yet must alert
 check("late settle: no Yahoo close for the expiry yet -> no mark row written, the cycle stays open, the run retries",
       list(_m.date) == ["2026-10-30"] and (_c.status == "open").all() and len(_calls) == 1)
 _c, _m, _calls = _late(["2026-11-02"], lambda t, d: (_ for _ in ()).throw(AssertionError("Yahoo called")))
@@ -440,10 +442,11 @@ _c, _m = _book({_d6: _ch6}, {_d6: 735.2899780273438}, cycles=_fl, marks=_fm)
 _flags["2 flattens"] = _ALERT["book"]
 _book({_d6: _ch6}, {_d6: 735.2899780273438}, cycles=_fl, marks=[_M1104, dict(_M1105, status="flattened")])
 _flags["1 flatten"] = _ALERT["book"]
+_flags["no close yet"], _flags["late settle ok"] = _noclose, _lateok
 check(f"exit status: run() raises its alert flag (forward.py exits 2) when the dividend fetch failed, the lag guard "
-      f"stopped marking or 2 flattens sit in 126 sessions, and not otherwise ({_flags})",
+      f"stopped marking, the expiry close is still missing, or 2 flattens sit in 126 sessions, and not otherwise ({_flags})",
       _flags == {"fetch failed": True, "lag guard": True, "12-18 posted": False, "real 11-06": False,
-                 "2 flattens": True, "1 flatten": False} and _m.status.iloc[-1] == "flat")
+                 "2 flattens": True, "1 flatten": False, "no close yet": True, "late settle ok": False} and _m.status.iloc[-1] == "flat")
 
 # measure_spread: PREREG §4 freezes the median over the FIRST 10 sessions; zeroed legs are no quote
 import measure_spread as _ms
