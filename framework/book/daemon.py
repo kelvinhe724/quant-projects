@@ -266,7 +266,7 @@ def exit_status(dry_run):
     makes launchd and the premia-book healthcheck see the halt, every run until a human deletes the file.
     The same 3 as REFUSED: both need a human, and daemon.log says which.
     """
-    return 3 if not dry_run and killed(KILL) else 0
+    return 3 if not dry_run and killed() else 0  # broker.KILL, the path halt() writes and run_once gates on
 
 
 if __name__ == "__main__":
