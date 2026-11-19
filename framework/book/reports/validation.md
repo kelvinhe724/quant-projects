@@ -1,14 +1,14 @@
 # Validation
 
-Run 2026-10-08 03:15, panel hash `aa436bbc6c2e4712`, 2003-06-03 to 2026-08-31 (23.2 years), shadow cost model, kill switch off for backtests (see below).
+Run 2026-11-19 03:45, panel hash `aa436bbc6c2e4712`, 2003-06-03 to 2026-08-31 (23.2 years), shadow cost model, kill switch off for backtests (see below).
 
 ## Headline (book, live allocator, net)
 
 | Sharpe | ann. return | ann. vol | max drawdown | PSR | DSR | trials | MinBTL | MinTRL |
 |---|---|---|---|---|---|---|---|---|
-| 0.762 | 5.38% | 7.22% | -12.1% | 1.000 | 0.549 | 63 | 9.6 y (have 23.2) | 4.8 y |
+| 0.762 | 5.38% | 7.22% | -12.1% | 1.000 | 0.547 | 70 | 9.9 y (have 23.2) | 4.8 y |
 
-Live book `beta+alpha`. DSR uses n_trials = 63: every configuration this file runs on the real panel (sleeves, the trend grid, allocators, cost and delay variants, kill on, the EWMAC variants, the candidate books, the candidate allocator) is appended to `trials.csv` (308 rows so far) and identical return streams count once; the variance of their daily Sharpes is 3.85e-04. Trials are tagged with the engine settings ({'buffer': 0.1}), so the runs before the buffer moved into the engine still count: they were looked at. The per-asset vol target is undone by the sleeve-level 10% target, so the trend grid is really four lookbacks. The 20 placebo draws are a null, not candidates; counting them too gives DSR 0.490. PSR is the probability the true Sharpe is above zero; DSR the same after deflating for selection. MinTRL is the track length needed to reject zero at 95%.
+Live book `beta+alpha`. DSR uses n_trials = 70: every configuration this file runs on the real panel (sleeves, the trend grid, allocators, cost and delay variants, kill on, the EWMAC variants, the candidate books, the candidate allocator) is appended to `trials.csv` (348 rows so far) and identical return streams count once; the variance of their daily Sharpes is 3.74e-04. Trials are tagged with the engine settings ({'buffer': 0.1, 'rates': 'eur-ecb gbp-oecd+sonia'}), so the runs before the buffer moved into the engine and before the 2026-11-19 carry rate sources still count: they were looked at. The per-asset vol target is undone by the sleeve-level 10% target, so the trend grid is really four lookbacks. The 20 placebo draws are a null, not candidates; counting them too gives DSR 0.494. PSR is the probability the true Sharpe is above zero; DSR the same after deflating for selection. MinTRL is the track length needed to reject zero at 95%.
 
 ## Allocator: ERC vs 1/N, out of sample
 
@@ -128,10 +128,10 @@ Every book in `strategies.BOOKS` at 1/N of its sleeves, kill off, from 2005-06-0
 
 | variant | sharpe_gross | sharpe | dsr | annual_return | annual_vol | max_drawdown | turnover | oos_sharpe | oos_max_drawdown |
 |---|---|---|---|---|---|---|---|---|---|
-| v1 | 0.374 | 0.294 | 0.022 | 0.012 | 0.044 | -0.137 | 3.269 | 0.591 | -0.073 |
-| v1+ewmac | 0.651 | 0.529 | 0.174 | 0.028 | 0.056 | -0.115 | 7.769 | 0.471 | -0.089 |
-| ewmac-for-trend | 0.640 | 0.501 | 0.142 | 0.026 | 0.053 | -0.116 | 8.747 | 0.239 | -0.116 |
-| beta+alpha | 0.801 | 0.708 | 0.451 | 0.051 | 0.074 | -0.121 | 8.602 | 0.686 | -0.108 |
+| v1 | 0.375 | 0.295 | 0.021 | 0.012 | 0.044 | -0.137 | 3.280 | 0.595 | -0.073 |
+| v1+ewmac | 0.652 | 0.530 | 0.172 | 0.028 | 0.056 | -0.115 | 7.775 | 0.472 | -0.089 |
+| ewmac-for-trend | 0.641 | 0.502 | 0.142 | 0.026 | 0.053 | -0.116 | 8.755 | 0.241 | -0.116 |
+| beta+alpha | 0.801 | 0.708 | 0.448 | 0.051 | 0.074 | -0.121 | 8.602 | 0.686 | -0.108 |
 
 ERC vs 1/N gate on `beta+alpha`'s sleeves, quarterly refits, out of sample:
 
@@ -146,16 +146,38 @@ ERC vs 1/N gate on `beta+alpha`'s sleeves, quarterly refits, out of sample:
 
 ## Candidate allocator: cost-aware mean-variance
 
-`optimizer.py` on each book's sleeve streams: maximise mu'w - w'Sw / 2 - cost'|dw| over long-only sleeve weights, parameters {'risk_aversion': 1.0, 'target_vol': 0.1, 'max_gross': 1.5, 'max_net': 1.5, 'max_sleeve': 0.75, 'turnover': 0.5, 'kelly': 0.5, 'financing_spread_bps': 50.0} fixed before the run. mu is the trailing three-year mean, S Ledoit-Wolf (no `risk-model/` at run time), cost each sleeve's realised cost per traded notional times its gross. Quarterly refits, weights held for the next quarter, the move charged on its first day, leverage above 1 financed at data-lake fred/DTB3 plus the spread. Both columns are daily-rebalanced to their weights; the 1/N column here is that convention, the books table above is the engine's static 1/N, and the rule compares against the engine's. Every row is a logged trial and a research-registry run (4 there). Rule, written before the run: the candidate allocator goes live only if its best book's Sharpe on the untouched window beats the best 1/N book's there, net of reallocation costs and financing; otherwise 1/N stays live and the candidate is a documented trial.
+`optimizer.py` on each book's sleeve streams: maximise mu'w - w'Sw / 2 - cost'|dw| over long-only sleeve weights, parameters {'risk_aversion': 1.0, 'target_vol': 0.1, 'max_gross': 1.5, 'max_net': 1.5, 'max_sleeve': 0.75, 'turnover': 0.5, 'kelly': 0.5, 'financing_spread_bps': 50.0} fixed before the run. mu is the trailing three-year mean, S Ledoit-Wolf (no `risk-model/` at run time), cost each sleeve's realised cost per traded notional times its gross. Quarterly refits, weights held for the next quarter, the move charged on its first day, leverage above 1 financed at data-lake fred/DTB3 plus the spread. Both columns are daily-rebalanced to their weights; the 1/N column here is that convention, the books table above is the engine's static 1/N, and the rule compares against the engine's. Every row is a logged trial and a research-registry run (7 there). Rule, written before the run: the candidate allocator goes live only if its best book's Sharpe on the untouched window beats the best 1/N book's there, net of reallocation costs and financing; otherwise 1/N stays live and the candidate is a documented trial.
 
 | book | walk Sharpe mvo | walk Sharpe 1/N | DSR | DSR (registry) | untouched Sharpe mvo | untouched Sharpe 1/N (walk) | untouched Sharpe 1/N (engine) | mean leverage | turnover / refit | refits | budget bound | vol bound | Kelly scaled |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| v1 | 0.225 | 0.238 | 0.024 | 0.242 | 0.319 | 0.526 | 0.591 | 0.67 | 0.17 | 86 | 21 | 4 | 15 |
-| v1+ewmac | 0.458 | 0.483 | 0.109 | 0.574 | 0.213 | 0.498 | 0.471 | 1.05 | 0.25 | 86 | 19 | 44 | 5 |
-| ewmac-for-trend | 0.389 | 0.425 | 0.068 | 0.455 | -0.303 | 0.232 | 0.239 | 0.81 | 0.15 | 82 | 16 | 4 | 5 |
-| beta+alpha | 0.680 | 0.805 | 0.398 | 0.885 | 0.547 | 0.728 | 0.686 | 1.09 | 0.12 | 90 | 7 | 38 | 2 |
+| v1 | 0.225 | 0.239 | 0.023 | 0.339 | 0.319 | 0.533 | 0.595 | 0.67 | 0.17 | 86 | 21 | 4 | 15 |
+| v1+ewmac | 0.458 | 0.484 | 0.108 | 0.691 | 0.213 | 0.503 | 0.472 | 1.05 | 0.25 | 86 | 19 | 44 | 5 |
+| ewmac-for-trend | 0.389 | 0.426 | 0.067 | 0.575 | -0.303 | 0.238 | 0.241 | 0.81 | 0.15 | 82 | 16 | 4 | 5 |
+| beta+alpha | 0.680 | 0.805 | 0.396 | 0.936 | 0.547 | 0.728 | 0.686 | 1.09 | 0.12 | 90 | 7 | 38 | 2 |
 
 Best candidate book on the untouched window: `beta+alpha` at 0.547 against the best 1/N book `beta+alpha` at 0.686. **Promoted: no.** `allocate.LIVE_ALLOCATOR = "rule"`. The live book's candidate weight path is in `mvo_weights.csv`.
+
+## Sleeves and books alone, whole panel
+
+Kill off, from each one's first live day. Gross is the same path with costs and borrow added back.
+
+| variant | start | sharpe_gross | sharpe | annual_return | annual_vol | max_drawdown | trades |
+|---|---|---|---|---|---|---|---|
+| TrendETF | 2004-07-01 | 0.539 | 0.471 | 0.037 | 0.085 | -0.200 | 2230 |
+| FXCarryETF | 2006-07-03 | -0.210 | -0.285 | -0.015 | 0.048 | -0.410 | 324 |
+| CryptoTrend | 2022-02-01 | 0.098 | 0.088 | 0.004 | 0.094 | -0.163 | 50 |
+| ETFBeta | 2003-06-03 | 0.682 | 0.669 | 0.054 | 0.084 | -0.267 | 3633 |
+| EWMAC | 2005-06-09 | 0.784 | 0.654 | 0.059 | 0.095 | -0.162 | 22252 |
+| v1 book | 2004-07-01 | 0.396 | 0.316 | 0.013 | 0.044 | -0.137 | 2596 |
+| beta+alpha book | 2003-06-03 | 0.849 | 0.762 | 0.054 | 0.072 | -0.121 | 25761 |
+
+**Cash swept at the 3-month USD rate** (`financing="USD"`, 50 bps on negative cash). Includes the interest, so these compare to T-bills, not to zero:
+
+| variant | sharpe | annual_return | annual_vol | max_drawdown |
+|---|---|---|---|---|
+| FXCarryETF | 0.124 | 0.005 | 0.047 | -0.321 |
+| v1 book | 0.517 | 0.021 | 0.042 | -0.098 |
+| beta+alpha book | 0.786 | 0.058 | 0.075 | -0.107 |
 
 ## Signal vs beta
 
@@ -165,8 +187,8 @@ Each sleeve's live net returns regressed on its own universe: the daily-rebalanc
 |---|---|---|---|---|---|---|---|
 | TrendETF | 1/N | 0.626 | 0.471 | +2.17% | 1.30 | 0.268 | 0.273 |
 | TrendETF | 1/N vol-targeted | 0.611 | 0.471 | +1.84% | 1.14 | 0.346 | 0.238 |
-| FXCarryETF | 1/N | 0.076 | -0.289 | -1.47% | -1.41 | 0.147 | -0.313 |
-| FXCarryETF | 1/N vol-targeted | 0.017 | -0.289 | -1.41% | -1.34 | 0.097 | -0.298 |
+| FXCarryETF | 1/N | 0.076 | -0.285 | -1.45% | -1.39 | 0.147 | -0.309 |
+| FXCarryETF | 1/N vol-targeted | 0.017 | -0.285 | -1.39% | -1.32 | 0.097 | -0.295 |
 | CryptoTrend | 1/N | 0.440 | 0.073 | -2.13% | -0.96 | 0.106 | -0.438 |
 | CryptoTrend | 1/N vol-targeted | 0.517 | 0.073 | -2.71% | -1.24 | 0.631 | -0.585 |
 | ETFBeta | 1/N | 0.670 | 0.669 | +0.73% | 0.82 | 0.674 | 0.175 |
@@ -182,4 +204,4 @@ Backtests above run with `kill_dd=None`. With the live 25% kill on, the sleeves 
 
 Best of 100 random series, 750 days: DSR purgedcv 0.6855 vs archive 0.6848; PSR 0.9970 vs 0.9970. purgedcv is pinned at 0.1.5 in requirements.txt.
 
-Tearsheet: `reports/tearsheet.html` (quantstats, SPY benchmark). 3141s.
+Tearsheet: `reports/tearsheet.html` (quantstats, SPY benchmark). 3519s.

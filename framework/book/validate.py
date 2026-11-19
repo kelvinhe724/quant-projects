@@ -13,6 +13,7 @@ import itertools
 import json
 import os
 import time
+from dataclasses import replace
 
 import numpy as np
 import pandas as pd
@@ -21,7 +22,8 @@ from purgedcv import (WalkForwardSplit, deflated_sharpe_ratio, min_track_record_
 from scipy.stats import kurtosis, skew
 
 from framework.book import allocate, optimizer, universe
-from framework.book.strategies import BOOKS, EWMAC, SPEEDS, TrendETF, book_config, ex_ante_vol, sleeves
+from framework.book.strategies import (BOOKS, EWMAC, SPEEDS, FXCarryETF, TrendETF, book_config, ex_ante_vol,
+                                       sleeves)
 from framework.engine import Strategy, drawdown, run, sharpe
 
 REPORTS = allocate.REPORTS
@@ -363,6 +365,18 @@ def main():
     gate_table, _ = allocate.compare(gate_oos)
     cand_table, cand_streams, cand_paths, fin_source, reg = candidate_allocator(books_res, bars, hold)
 
+    # Whole-panel rows behind the README's headline table and its cash convention. Not trials: the
+    # sleeve and 1/N book streams are logged above, and a cash sweep is a cash convention, not a rule.
+    whole = {**every, "v1 book": books_res["v1"], f"{allocate.LIVE_BOOK} book": book}
+    sleeve_table = {k: window_stats(res, res.returns.ne(0).idxmax()) for k, res in whole.items()}
+
+    def swept(strats, allocations=None):
+        cfg = replace(book_config(kill=False, allocations=allocations), financing="USD", financing_spread_bps=50.0)
+        return stats(run(strats, bars, config=cfg).returns)
+
+    cash_sweep = {"FXCarryETF": swept(FXCarryETF()), "v1 book": swept(sleeves("v1")),
+                  f"{allocate.LIVE_BOOK} book": swept(sleeves(allocate.LIVE_BOOK), live)}
+
     # Every configuration above is now in trials.csv; count after, not before.
     tr = trials()
     n_trials = len(tr)
@@ -407,6 +421,7 @@ def main():
                                            "rule": ALLOCATOR_PROMOTION, "live_allocator": allocate.LIVE_ALLOCATOR,
                                            "registry_trials": reg.trials()},
                    "attribution": attr, "dsr_crosscheck": xcheck, "kill_dates": kill_dates,
+                   "sleeves": sleeve_table, "cash_sweep": cash_sweep,
                    "panel_hash": universe.panel_hash(bars),
                    "run_at": pd.Timestamp.now().isoformat(timespec="seconds")}, fh, indent=2, default=str)
 
@@ -512,6 +527,12 @@ def main():
         f"against the best 1/N book `{oos_winner}` at {books_table[oos_winner]['oos_sharpe']:.3f}. "
         f"**Promoted: {'yes' if cand_promoted else 'no'}.** `allocate.LIVE_ALLOCATOR = \"{allocate.LIVE_ALLOCATOR}\"`. "
         "The live book's candidate weight path is in `mvo_weights.csv`.", "",
+        "## Sleeves and books alone, whole panel", "",
+        "Kill off, from each one's first live day. Gross is the same path with costs and borrow added back.", "",
+        md_table(sleeve_table, ("start", "sharpe_gross", "sharpe", "annual_return", "annual_vol", "max_drawdown",
+                                "trades")), "",
+        "**Cash swept at the 3-month USD rate** (`financing=\"USD\"`, 50 bps on negative cash). Includes the "
+        "interest, so these compare to T-bills, not to zero:", "", md_table(cash_sweep), "",
         "## Signal vs beta", "",
         "Each sleeve's live net returns regressed on its own universe: the daily-rebalanced 1/N return of its "
         "instruments, and that return scaled to the sleeves' 10% vol target (60-day EWMA vol, one-day lag, 3x "
