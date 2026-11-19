@@ -259,8 +259,20 @@ def run_once(dry_run=False, session=None, now=None, ack_mode_change=False):
     return rows
 
 
+def exit_status(dry_run):
+    """3 after a real run that leaves framework/KILL in place (this run halted, or found it there), else 0.
+
+    run_once returns normally on a halt so the shadow row and dashboard still land; this exit status is what
+    makes launchd and the premia-book healthcheck see the halt, every run until a human deletes the file.
+    The same 3 as REFUSED: both need a human, and daemon.log says which.
+    """
+    return 3 if not dry_run and killed() else 0  # broker.KILL, the path halt() writes and run_once gates on
+
+
 if __name__ == "__main__":
     # launchd sends stdout and stderr to one file; line-buffer stdout so a crash's Traceback lands after this run's
     # own lines, the order report.substituted_bars assumes when it drops a crashed run's pending substitutions
     sys.stdout.reconfigure(line_buffering=True)
-    run_once(dry_run="--dry-run" in sys.argv, ack_mode_change="--ack-mode-change" in sys.argv)
+    dry = "--dry-run" in sys.argv
+    run_once(dry_run=dry, ack_mode_change="--ack-mode-change" in sys.argv)
+    sys.exit(exit_status(dry))
