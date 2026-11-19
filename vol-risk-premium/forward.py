@@ -9,9 +9,20 @@ settles at intrinsic on the expiry session (a missing expiry session
 settles in a row dated at expiry at that day's Yahoo closes). Append-only CSVs; a session already
 marked is never marked twice. Per unit: sizing is a separate, pre-registered rule.
 
+The hedge is booked on SPY total return (PREREG.md §3, amendment 4): a mark adds shares x dividend for every
+SPY ex-date after the last mark that booked the hedge, with Yahoo's dividends fetched once per run; no
+dividends, no marks that run, and a session on or after an expected quarterly ex-date Yahoo has not posted
+stops that run's marking there. §6 flatten: a booked day worse than -10% of the open notional (strike x 100 x
+units) closes the cycle at the next marked session, straddle bought back at the mid plus the §4 spread and
+commission, hedge closed with its slippage; status 'flattened', and the entry rule decides the next cycle. A
+catch-up mark after a 'no quote' or 'no mark' session books two or more sessions' P&L in one row, and it counts
+as one booked day for that trigger. run() returns an alert flag, and the script exits 2 on it, when this run
+skipped marking (dividend fetch failed, or an ex-date Yahoo has not posted) or the §6 retire condition holds.
+
 Run:  ../.venv/bin/python3 forward.py                 the XSP track -> reports/forward/
       ../.venv/bin/python3 forward.py --ticker SPY --dry   mechanics on SPY snapshots -> reports/forward-dry/
 """
+import json
 import os
 import sys
 
@@ -22,6 +33,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(os.path.dirname(HERE), "data-lake"))
 sys.path.insert(0, os.path.dirname(HERE))
 import lake  # noqa: E402
+import measure_spread  # noqa: E402
 from framework.book.universe import sessions as nyse_sessions  # noqa: E402
 from vrp import straddle_delta  # noqa: E402
 
@@ -32,6 +44,8 @@ MULTIPLIER = 100
 HEDGE_BPS = 1.0
 UNITS = 1                      # per-unit track; PREREG.md §3 sizing is applied in reporting, not here
 COMMISSION = 0.65              # per contract per leg, Alpaca options paper schedule
+FLATTEN = -0.10                # §6: one booked day below this fraction of open notional flattens at the next close
+RETIRE_FLATTENS, RETIRE_SESSIONS = 2, 126   # §6: retire on >= 2 flatten events in any 126 sessions
 
 CYCLE_COLS = ["start", "expiry", "strike", "spot", "units", "entry_bid", "entry_mid", "spread_pct", "iv", "vix", "monthly"]
 MARK_COLS = ["date", "start", "spot", "spy", "straddle_mid", "hedge_shares", "pnl_option", "pnl_hedge", "cost",
@@ -43,6 +57,37 @@ def vix_closes(start, end):
     v = yf.download("^VIX", start=start, end=end, progress=False, auto_adjust=True)["Close"]
     v = v.iloc[:, 0] if isinstance(v, pd.DataFrame) else v
     return v.dropna()
+
+
+def spy_dividends():
+    """SPY cash dividend per share by ex-date, or None when Yahoo fails (the run then marks nothing)."""
+    import yfinance as yf
+    try:
+        d = yf.Ticker("SPY").dividends
+    except Exception as e:
+        d, why = None, e
+    else:
+        why = "empty series"      # SPY has paid every quarter since 1993: empty is a failed fetch, not no dividends
+    if d is None or d.empty:
+        print(f"SPY dividends from Yahoo failed ({why}): no session marked this run, the next run catches up")
+        return None
+    d.index = pd.DatetimeIndex(d.index).tz_localize(None).normalize()
+    return d.astype(float)
+
+
+def expected_exdates(start, end):
+    """SPY's quarterly ex-dates expected in (start, end]: the third Friday of Mar/Jun/Sep/Dec, or the NYSE session
+    before it when that Friday is a holiday (2026-06-18). A guard on Yahoo lagging, not a dividend source."""
+    fris = pd.date_range(start, end + pd.Timedelta(days=7), freq="WOM-3FRI")
+    exp = [nyse_sessions(f - pd.Timedelta(days=7), f)[-1] for f in fris if f.month % 3 == 0]
+    return [x for x in exp if start < x <= end]
+
+
+def flatten_spread():
+    """PREREG §4 straddle spread as a fraction of mid: frozen once measure_spread.py wrote it, provisional before."""
+    if os.path.exists(measure_spread.FROZEN):
+        return float(json.load(open(measure_spread.FROZEN))["spread"])
+    return measure_spread.PROVISIONAL
 
 
 def expiry_close(ticker, day):
@@ -129,7 +174,11 @@ def run(ticker="^XSP", out=None, units=UNITS):
     days, spy = sessions(ticker)
     if not days:
         print(f"no {ticker} snapshots in the lake")
-        return cycles, marks
+        return cycles, marks, False
+    divs = spy_dividends()
+    if divs is None:
+        return cycles, marks, True   # append-only marks are never revisited, so none is written without the dividend
+    alert = False                   # set when this run skips marking or §6 says retire: __main__ exits 2 on it
     vix = vix_closes(min(days) - pd.Timedelta(days=7), max(days) + pd.Timedelta(days=1))
     done = set(marks.date) if len(marks) else set()
     new_c, new_m = [], []
@@ -137,7 +186,7 @@ def run(ticker="^XSP", out=None, units=UNITS):
         if day in done:
             continue
         chain = days[day]
-        gone = {pd.Timestamp(m["start"]) for m in new_m if m["status"] == "settled"}   # settled earlier in this run
+        gone = {pd.Timestamp(m["start"]) for m in new_m if m["status"] in ("settled", "flattened")}   # closed earlier this run
         open_c = [c for c in (list(cycles.to_dict("records")) + new_c)
                   if c.get("status", "open") == "open" and pd.Timestamp(c["start"]) not in gone]
         if open_c:
@@ -156,12 +205,23 @@ def run(ticker="^XSP", out=None, units=UNITS):
             else:
                 spot, smid, T, settled = mark(chain, c["strike"], exp)
                 spy_now = spy.get(day, np.nan)
+            # Yahoo can lag the ex-date it has not posted yet; a mark booked without it is never revisited, so stop here
+            late = [x for x in expected_exdates(pd.Timestamp(c["start"]), mday)
+                    if not (abs(divs.index - x) <= pd.Timedelta(days=3)).any()]
+            if late:
+                print(f"SPY ex-date expected {late[0].date()} not in Yahoo's dividends yet: marking stops at "
+                      f"{mday.date()} this run, the next run catches up")
+                alert = True
+                break
             prev = [m for m in (list(marks.to_dict("records")) + new_m) if pd.Timestamp(m["start"]) == pd.Timestamp(c["start"])]
             valid = [m for m in prev if not pd.isna(m["straddle_mid"])]
             last_mid = valid[-1]["straddle_mid"] if valid else c["entry_mid"]   # "no quote" sessions carry no mid
             last_sh = prev[-1]["hedge_shares"] if prev else 0.0
             hedged = [m for m in prev if not pd.isna(m["spy"])]                  # "no mark" sessions carry no spy
             last_spy = hedged[-1]["spy"] if hedged else spy.get(pd.Timestamp(c["start"]), np.nan)
+            # total return: every ex-date after the last mark that booked the hedge, at the shares held into it
+            since_hdg = pd.Timestamp(hedged[-1]["date"]) if hedged else pd.Timestamp(c["start"])
+            div = last_sh * float(divs[(divs.index > since_hdg) & (divs.index <= mday)].sum())
             if np.isnan(spy_now):
                 # no SPY spot: book nothing; both legs catch up at the next fully marked session, so the mid is not kept
                 new_m.append({"date": day, "start": c["start"], "spot": spot, "spy": spy_now, "straddle_mid": np.nan,
@@ -171,20 +231,27 @@ def run(ticker="^XSP", out=None, units=UNITS):
             if np.isnan(smid):
                 # no option quote: the hedge still moved, so book it; the option leg is booked against the last valid
                 # mid at the next quoted session; the hedge is not re-struck without a mark
-                pnl_hdg = last_sh * (spy_now - last_spy)
+                pnl_hdg = last_sh * (spy_now - last_spy) + div
                 new_m.append({"date": day, "start": c["start"], "spot": spot, "spy": spy_now, "straddle_mid": np.nan,
                               "hedge_shares": last_sh, "pnl_option": 0.0, "pnl_hedge": pnl_hdg, "cost": 0.0,
                               "pnl": pnl_hdg, "status": "no quote"})
                 continue
+            # §6: an earlier booked day below -10% of open notional flattens at this, the next marked, close
+            notional = c["strike"] * MULTIPLIER * units
+            flatten = not settled and any(m["status"] in ("open", "no quote") and m["pnl"] < FLATTEN * notional
+                                          for m in prev)
+            closing = settled or flatten
             pnl_opt = (last_mid - smid) * MULTIPLIER * units
-            pnl_hdg = last_sh * (spy_now - last_spy)
-            sh_new = 0.0 if settled else -(-straddle_delta(spot, c["strike"], max(T, 1e-6), c["iv"])) * MULTIPLIER * units * (spot / spy_now)
-            cost = abs(sh_new - last_sh) * spy_now * HEDGE_BPS / 1e4 + (2 * COMMISSION * units if settled else 0.0)
+            pnl_hdg = last_sh * (spy_now - last_spy) + div
+            sh_new = 0.0 if closing else -(-straddle_delta(spot, c["strike"], max(T, 1e-6), c["iv"])) * MULTIPLIER * units * (spot / spy_now)
+            cost = (abs(sh_new - last_sh) * spy_now * HEDGE_BPS / 1e4 + (2 * COMMISSION * units if closing else 0.0)
+                    + (flatten_spread() * smid * MULTIPLIER * units if flatten else 0.0))   # bought back at mid + §4 spread
+            status = "settled" if settled else "flattened" if flatten else "open"
             new_m.append({"date": mday, "start": c["start"], "spot": spot, "spy": spy_now, "straddle_mid": smid,
                           "hedge_shares": sh_new, "pnl_option": pnl_opt, "pnl_hedge": pnl_hdg, "cost": cost,
-                          "pnl": pnl_opt + pnl_hdg - cost, "status": "settled" if settled else "open"})
-            if settled:
-                c["status"] = "settled"
+                          "pnl": pnl_opt + pnl_hdg - cost, "status": status})
+            if closing:
+                c["status"] = status
             if mday == day:
                 continue        # a late settle falls through: this session is then flat or an entry like any other
         starts = [pd.Timestamp(c["start"]) for c in (list(cycles.to_dict("records")) + new_c)]
@@ -216,18 +283,26 @@ def run(ticker="^XSP", out=None, units=UNITS):
                       "pnl": (p["entry_bid"] - p["entry_mid"]) * MULTIPLIER * units - cost, "status": "open"})
     cycles = pd.concat([cycles, pd.DataFrame(new_c)], ignore_index=True) if new_c else cycles
     if len(cycles):
-        settled_starts = {pd.Timestamp(m["start"]) for m in new_m if m["status"] == "settled"}
-        cycles["status"] = [("settled" if pd.Timestamp(s) in settled_starts else st)
+        closed = {pd.Timestamp(m["start"]): m["status"] for m in new_m if m["status"] in ("settled", "flattened")}
+        cycles["status"] = [closed.get(pd.Timestamp(s), st)
                             for s, st in zip(cycles.start, cycles.get("status", pd.Series(["open"] * len(cycles))))]
     marks = pd.concat([marks, pd.DataFrame(new_m)], ignore_index=True) if new_m else marks
+    if len(marks):
+        last = pd.Timestamp(marks.date.max())
+        recent = set(nyse_sessions(last - pd.Timedelta(days=200), last)[-RETIRE_SESSIONS:])
+        n_flat = sum(pd.Timestamp(d) in recent for d in marks.date[marks.status == "flattened"])
+        if n_flat >= RETIRE_FLATTENS:
+            print(f"RETIRE (PREREG.md §6): {n_flat} flatten events in the last {RETIRE_SESSIONS} sessions")
+            alert = True
     cycles.to_csv(cpath, index=False)
     marks.to_csv(mpath, index=False)
     print(f"{ticker}: {len(new_m)} sessions marked ({len(new_c)} cycles opened), {len(cycles)} cycles total, "
           f"P&L to date ${marks.pnl.sum():,.2f} per {units} unit(s) -> {out}")
-    return cycles, marks
+    return cycles, marks, alert
 
 
 if __name__ == "__main__":
     a = sys.argv[1:]
     t = a[a.index("--ticker") + 1] if "--ticker" in a else "^XSP"
-    run(t, out=os.path.join(HERE, "reports", "forward-dry") if "--dry" in a else None)
+    # exit 2 after the CSVs are written, so hc-run.sh reports the skipped mark or the retire line instead of a success
+    sys.exit(2 if run(t, out=os.path.join(HERE, "reports", "forward-dry") if "--dry" in a else None)[2] else 0)
