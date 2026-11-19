@@ -213,6 +213,36 @@ def load_fred(series_id, cache=CACHE, refresh=False):
     return df.iloc[:, 0].astype(float).rename(series_id)
 
 
+def load_ecb(key, cache=CACHE, refresh=False):
+    """Return one monthly ECB Data Portal series (e.g. FM.M.U2.EUR.RT.MM.EURIBOR3MD_.HSTA) the way load_fred does.
+
+    The cache is written in FRED's shape (observation_date, value, month M dated the first of M), so
+    a reader of either loader's files sees the same thing and load_rates's one-month shift holds.
+    """
+    os.makedirs(os.path.join(cache, "ecb"), exist_ok=True)
+    path = os.path.join(cache, "ecb", f"{key}.csv")
+    if refresh or not os.path.exists(path):
+        flow, rest = key.split(".", 1)
+        url = f"https://data-api.ecb.europa.eu/service/data/{flow}/{rest}?format=csvdata"
+        try:
+            r = requests.get(url, timeout=60)
+            r.raise_for_status()
+            # same rule as FRED: only a CSV body with the two columns we read may replace the cache
+            head = r.text.lstrip().split("\n", 1)[0].split(",")
+            if "TIME_PERIOD" not in head or "OBS_VALUE" not in head:
+                raise requests.RequestException(f"ECB {key}: body is not CSV ({r.text.lstrip()[:40]!r})")
+            raw = pd.read_csv(io.StringIO(r.text), usecols=["TIME_PERIOD", "OBS_VALUE"])
+            s = pd.Series(raw["OBS_VALUE"].astype(float).to_numpy(),
+                          index=pd.to_datetime(raw["TIME_PERIOD"], format="%Y-%m"), name=key).sort_index()
+            s.rename_axis("observation_date").to_csv(path)
+        except (requests.RequestException, ValueError) as e:
+            if not os.path.exists(path):
+                raise
+            print(f"ECB {key} unreachable or unreadable ({type(e).__name__}); using the cached copy")
+    df = pd.read_csv(path, index_col=0, parse_dates=True, na_values=".")
+    return df.iloc[:, 0].astype(float).rename(key)
+
+
 def synthetic(n_days=252 * 8, instruments=("A", "B", "C", "D"), vol=0.2, drift=0.0,
               start="2010-01-01", seed=0):
     """Random-walk OHLCV panel for offline checks."""

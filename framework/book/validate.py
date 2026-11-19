@@ -13,6 +13,7 @@ import itertools
 import json
 import os
 import time
+from dataclasses import replace
 
 import numpy as np
 import pandas as pd
@@ -21,7 +22,8 @@ from purgedcv import (WalkForwardSplit, deflated_sharpe_ratio, min_track_record_
 from scipy.stats import kurtosis, skew
 
 from framework.book import allocate, optimizer, universe
-from framework.book.strategies import BOOKS, EWMAC, SPEEDS, TrendETF, book_config, ex_ante_vol, sleeves
+from framework.book.strategies import (BOOKS, EWMAC, SPEEDS, FXCarryETF, TrendETF, book_config, ex_ante_vol,
+                                       sleeves)
 from framework.engine import Strategy, drawdown, run, sharpe
 
 REPORTS = allocate.REPORTS
@@ -35,7 +37,10 @@ PLACEBO_DRAWS = 20
 HOLDOUT = 0.2
 # Engine settings that change every configuration's return stream; logged
 # with each trial so a rerun after an engine change counts as a new look.
-ENGINE = {"buffer": book_config().risk.buffer}
+# "rates" names the carry rate sources (universe.FX_ETFS): change it whenever a
+# source changes, so the carry streams it moves are new trials and the old ones
+# stay counted. Absent on every run before 2026-11-19 (all-OECD).
+ENGINE = {"buffer": book_config().risk.buffer, "rates": "eur-ecb gbp-oecd+sonia"}
 PROMOTION = ("net Sharpe above zero on the untouched window, above TrendETF's on the same window, "
              "and a positive alpha t against the ETF universe there")
 ALLOCATOR_PROMOTION = ("the candidate allocator goes live only if its best book's Sharpe on the untouched window "
@@ -360,6 +365,19 @@ def main():
     gate_table, _ = allocate.compare(gate_oos)
     cand_table, cand_streams, cand_paths, fin_source, reg = candidate_allocator(books_res, bars, hold)
 
+    # Whole-panel rows behind the README's headline table and its cash convention. Not trials: the
+    # sleeve and 1/N book streams are logged above, and a cash sweep is a cash convention, not a rule.
+    whole = {**every, "v1 book": books_res["v1"], f"{allocate.LIVE_BOOK} book": book}
+    sleeve_table = {k: window_stats(res, res.returns.ne(0).idxmax()) for k, res in whole.items()}
+
+    def swept(k, strats, allocations=None):
+        # cash earns from day one, so start each row at its unswept first live day, as the sleeves table does
+        cfg = replace(book_config(kill=False, allocations=allocations), financing="USD", financing_spread_bps=50.0)
+        return stats(run(strats, bars, config=cfg).returns.loc[whole[k].returns.ne(0).idxmax():])
+
+    cash_sweep = {"FXCarryETF": swept("FXCarryETF", FXCarryETF()), "v1 book": swept("v1 book", sleeves("v1")),
+                  f"{allocate.LIVE_BOOK} book": swept(f"{allocate.LIVE_BOOK} book", sleeves(allocate.LIVE_BOOK), live)}
+
     # Every configuration above is now in trials.csv; count after, not before.
     tr = trials()
     n_trials = len(tr)
@@ -404,6 +422,7 @@ def main():
                                            "rule": ALLOCATOR_PROMOTION, "live_allocator": allocate.LIVE_ALLOCATOR,
                                            "registry_trials": reg.trials()},
                    "attribution": attr, "dsr_crosscheck": xcheck, "kill_dates": kill_dates,
+                   "sleeves": sleeve_table, "cash_sweep": cash_sweep,
                    "panel_hash": universe.panel_hash(bars),
                    "run_at": pd.Timestamp.now().isoformat(timespec="seconds")}, fh, indent=2, default=str)
 
@@ -423,7 +442,7 @@ def main():
         f"variants, the candidate books, the candidate allocator) is appended to `trials.csv` ({head['n_runs_logged']} rows so far) and "
         f"identical return streams count once; the variance of their daily Sharpes is {var_sharpe:.2e}. Trials "
         f"are tagged with the engine settings ({ENGINE}), so the runs before the buffer moved into the engine "
-        "still count: they were looked at. The per-asset vol target is undone by the sleeve-level 10% target, so "
+        "and before the 2026-11-19 carry rate sources still count: they were looked at. The per-asset vol target is undone by the sleeve-level 10% target, so "
         f"the trend grid is really four lookbacks. The {fals['placebo']['draws']} placebo draws are a null, not "
         f"candidates; counting them too gives DSR {head['dsr_with_placebo']:.3f}. PSR is the probability the true "
         "Sharpe is above zero; DSR the same after deflating for selection. MinTRL is the track length needed to "
@@ -509,6 +528,12 @@ def main():
         f"against the best 1/N book `{oos_winner}` at {books_table[oos_winner]['oos_sharpe']:.3f}. "
         f"**Promoted: {'yes' if cand_promoted else 'no'}.** `allocate.LIVE_ALLOCATOR = \"{allocate.LIVE_ALLOCATOR}\"`. "
         "The live book's candidate weight path is in `mvo_weights.csv`.", "",
+        "## Sleeves and books alone, whole panel", "",
+        "Kill off, from each one's first live day. Gross is the same path with costs and borrow added back.", "",
+        md_table(sleeve_table, ("start", "sharpe_gross", "sharpe", "annual_return", "annual_vol", "max_drawdown",
+                                "trades")), "",
+        "**Cash swept at the 3-month USD rate** (`financing=\"USD\"`, 50 bps on negative cash). Includes the "
+        "interest, so these compare to T-bills, not to zero; each row starts at its unswept first live day:", "", md_table(cash_sweep), "",
         "## Signal vs beta", "",
         "Each sleeve's live net returns regressed on its own universe: the daily-rebalanced 1/N return of its "
         "instruments, and that return scaled to the sleeves' 10% vol target (60-day EWMA vol, one-day lag, 3x "
