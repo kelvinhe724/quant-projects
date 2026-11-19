@@ -64,9 +64,13 @@ splice current ECB deposit and SONIA prints onto EUR and GBP only; that was
 removed on 2026-09-09 because it ranked live EUR and GBP against three-month-old
 JPY, AUD, CAD, CHF and USD, which biases the sort in the two spliced currencies'
 favour. A uniform lag on a monthly-rebalanced sleeve costs less than a mixed one.
-The bill is real: with EUR and GBP still stopping at 2026-01 on FRED, the whole
-framework panel now ranks on the January 2026 average, a 7-month lag rather than
-the 3-month one the other five currencies could support.
+Since 2026-11-19 the framework takes EUR from the ECB EURIBOR 3M average and
+splices GBP onto monthly-average SONIA after 2026-01, under the same truncation,
+so the mixed-vintage objection does not apply (see `framework/README.md` Rates).
+fx-carry's own numbers are unchanged.
+Before that the bill was real: with EUR and GBP stopping at 2026-01 on FRED, the
+whole framework panel ranked on the January 2026 average, a 7-month lag rather
+than the 3-month one the other five currencies could support.
 The real upgrade, if this sleeve ever carries meaningful capital, is a per-
 currency overnight series for all of them — ESTR, SONIA, TONAR, RBA cash, CORRA,
 SARON, EFFR — spliced on the same rule, not for two currencies out of seven.
