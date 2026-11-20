@@ -1,8 +1,8 @@
 {
  "hourly": {
   "command": "hourly",
-  "started": "2026-11-20T08:41:53+00:00",
-  "finished": "2026-11-20T08:42:00+00:00",
+  "started": "2026-11-20T17:43:52+00:00",
+  "finished": "2026-11-20T17:44:01+00:00",
   "steps": [
    {
     "step": "kalshi",
@@ -12,12 +12,13 @@
  },
  "kalshi-books": {
   "command": "kalshi-books",
-  "started": "2026-11-20T08:55:36+00:00",
-  "finished": "2026-11-20T08:57:04+00:00",
+  "started": "2026-11-20T18:19:56+00:00",
+  "finished": "2026-11-20T18:24:34+00:00",
   "steps": [
    {
     "step": "kalshi_books",
-    "status": "ok"
+    "status": "failed",
+    "error": "RuntimeError: kalshi_books_5m: only 33 of 300 books came back"
    }
   ]
  },
