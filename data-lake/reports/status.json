@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-11-20T17:44:01.719707+00:00",
+ "generated_at": "2026-11-20T23:44:00.204477+00:00",
  "datasets": {
   "equities_daily": {
    "parts": 695,
@@ -41,8 +41,8 @@
   },
   "kalshi_markets": {
    "parts": 61,
-   "rows": 4835000,
-   "last": "2026-11-20 17:43:52+00:00",
+   "rows": 4850000,
+   "last": "2026-11-20 23:43:50+00:00",
    "stale": false,
    "gaps": [
     {
@@ -76,6 +76,11 @@
      "missing": 3
     },
     {
+     "after": "2026-11-20 20:01:32+00:00",
+     "before": "2026-11-20 23:43:50+00:00",
+     "missing": 3
+    },
+    {
      "after": "2026-11-18 18:05:14+00:00",
      "before": "2026-11-18 20:47:06+00:00",
      "missing": 2
@@ -88,11 +93,6 @@
     {
      "after": "2026-11-16 07:10:03+00:00",
      "before": "2026-11-16 08:46:29+00:00",
-     "missing": 1
-    },
-    {
-     "after": "2026-11-16 17:48:22+00:00",
-     "before": "2026-11-16 19:48:10+00:00",
      "missing": 1
     }
    ],
@@ -100,8 +100,8 @@
   },
   "kalshi_books": {
    "parts": 61,
-   "rows": 5961780,
-   "last": "2026-11-20 17:43:52+00:00",
+   "rows": 5981922,
+   "last": "2026-11-20 23:43:50+00:00",
    "stale": false,
    "gaps": [
     {
@@ -135,6 +135,11 @@
      "missing": 3
     },
     {
+     "after": "2026-11-20 20:01:32+00:00",
+     "before": "2026-11-20 23:43:50+00:00",
+     "missing": 3
+    },
+    {
      "after": "2026-11-18 18:05:14+00:00",
      "before": "2026-11-18 20:47:06+00:00",
      "missing": 2
@@ -148,21 +153,22 @@
      "after": "2026-11-16 07:10:03+00:00",
      "before": "2026-11-16 08:46:29+00:00",
      "missing": 1
-    },
-    {
-     "after": "2026-11-16 17:48:22+00:00",
-     "before": "2026-11-16 19:48:10+00:00",
-     "missing": 1
     }
    ],
    "dupes": 0
   },
   "kalshi_books_5m": {
-   "parts": 601,
-   "rows": 19141573,
-   "last": "2026-11-20 17:40:55+00:00",
-   "stale": false,
-   "gaps": [],
+   "parts": 604,
+   "rows": 19258020,
+   "last": "2026-11-20 20:53:15+00:00",
+   "stale": true,
+   "gaps": [
+    {
+     "after": "2026-11-20 18:19:56+00:00",
+     "before": "2026-11-20 18:43:04+00:00",
+     "missing": 4
+    }
+   ],
    "dupes": 0
   },
   "edgar_8k": {
@@ -174,14 +180,44 @@
    "dupes": 0
   },
   "crypto_l2": {
-   "parts": 1383,
-   "rows": 7200878,
-   "last": "2026-11-20 17:43:48+00:00",
-   "stale": false,
+   "parts": 1387,
+   "rows": 7221353,
+   "last": "2026-11-20 22:15:16+00:00",
+   "stale": true,
    "gaps": [
     {
-     "after": "2026-11-20 09:20:35+00:00",
-     "before": "2026-11-20 09:21:11+00:00",
+     "after": "2026-11-20 20:54:01+00:00",
+     "before": "2026-11-20 22:15:10+00:00",
+     "missing": 4868
+    },
+    {
+     "after": "2026-11-20 20:54:01+00:00",
+     "before": "2026-11-20 22:15:09+00:00",
+     "missing": 4867
+    },
+    {
+     "after": "2026-11-20 18:25:19+00:00",
+     "before": "2026-11-20 18:40:16+00:00",
+     "missing": 896
+    },
+    {
+     "after": "2026-11-20 18:25:19+00:00",
+     "before": "2026-11-20 18:40:16+00:00",
+     "missing": 896
+    },
+    {
+     "after": "2026-11-20 18:20:02+00:00",
+     "before": "2026-11-20 18:24:34+00:00",
+     "missing": 271
+    },
+    {
+     "after": "2026-11-20 18:20:02+00:00",
+     "before": "2026-11-20 18:24:34+00:00",
+     "missing": 271
+    },
+    {
+     "after": "2026-11-20 09:38:51+00:00",
+     "before": "2026-11-20 09:39:27+00:00",
      "missing": 35
     },
     {
@@ -195,39 +231,9 @@
      "missing": 35
     },
     {
-     "after": "2026-11-20 09:38:51+00:00",
-     "before": "2026-11-20 09:39:27+00:00",
+     "after": "2026-11-20 09:20:35+00:00",
+     "before": "2026-11-20 09:21:11+00:00",
      "missing": 35
-    },
-    {
-     "after": "2026-11-20 10:55:59+00:00",
-     "before": "2026-11-20 10:56:32+00:00",
-     "missing": 32
-    },
-    {
-     "after": "2026-11-20 10:55:59+00:00",
-     "before": "2026-11-20 10:56:32+00:00",
-     "missing": 32
-    },
-    {
-     "after": "2026-11-20 09:54:12+00:00",
-     "before": "2026-11-20 09:54:44+00:00",
-     "missing": 31
-    },
-    {
-     "after": "2026-11-20 09:54:12+00:00",
-     "before": "2026-11-20 09:54:43+00:00",
-     "missing": 30
-    },
-    {
-     "after": "2026-11-19 19:26:59+00:00",
-     "before": "2026-11-19 19:27:04+00:00",
-     "missing": 4
-    },
-    {
-     "after": "2026-11-19 19:26:59+00:00",
-     "before": "2026-11-19 19:27:04+00:00",
-     "missing": 4
     }
    ],
    "dupes": 0
@@ -250,63 +256,73 @@
   },
   "options": {
    "parts": 8,
-   "rows": 367907,
-   "last": "2026-11-19 21:35:05",
+   "rows": 354478,
+   "last": "2026-11-20 21:45:14",
    "stale": false,
    "gaps": [],
    "dupes": 0,
    "sessions": {
     "open": "2026-11-20",
-    "midday": "2026-11-19",
-    "close": "2026-11-19"
+    "midday": "2026-11-20",
+    "close": "2026-11-20"
    }
   }
  },
  "disk": {
-  "bytes": 3665445007,
-  "free_bytes": 58425344000,
-  "window_days": 6.46,
-  "growth_per_day": 55744706.59295372,
-  "runway_days": 1048.0877480730182,
+  "bytes": 3682987796,
+  "free_bytes": 56951611392,
+  "window_days": 6.71,
+  "growth_per_day": 56282034.217489645,
+  "runway_days": 1011.8968190084054,
   "low": false,
   "datasets": {
-   "equities_daily": {
-    "bytes": 155067180,
-    "growth_per_day": 20822.819985394148,
-    "runway_days": 2805832.4492543074
-   },
-   "kalshi_books": {
-    "bytes": 19773418,
-    "growth_per_day": 376150.1851032482,
-    "runway_days": 155324.51215985185
-   },
-   "options": {
-    "bytes": 560617815,
-    "growth_per_day": 14981946.578119945,
-    "runway_days": 3899.716481790558
-   },
    "crypto_klines_1m": {
     "bytes": 215949475,
-    "growth_per_day": 194511.23409794987,
-    "runway_days": 300370.0237209888
+    "growth_per_day": 187268.9387899833,
+    "runway_days": 304116.69847646
    },
-   "crypto_funding": {
-    "bytes": 157655,
-    "growth_per_day": 0.0,
-    "runway_days": null
+   "options": {
+    "bytes": 569385218,
+    "growth_per_day": 15729968.273893507,
+    "runway_days": 3620.580181749041
    },
-   "crypto_l2": {
-    "bytes": 2104300346,
-    "growth_per_day": 36644247.776211925,
-    "runway_days": 1594.3933235253241
+   "fred": {
+    "bytes": 2086799,
+    "growth_per_day": 93.83450071954141,
+    "runway_days": 606936797.8225902
+   },
+   "kalshi_markets": {
+    "bytes": 53910872,
+    "growth_per_day": 809162.6032238656,
+    "runway_days": 70383.39533376035
    },
    "edgar_8k": {
     "bytes": 211179099,
-    "growth_per_day": 171924.32685796465,
-    "runway_days": 339831.744976196
+    "growth_per_day": 165523.0166637075,
+    "runway_days": 344070.646728898
+   },
+   "crypto_l2 2": {
+    "bytes": 871329,
+    "growth_per_day": 0.0,
+    "runway_days": null
    },
    "crypto_perp_klines_1m": {
     "bytes": 179085950,
+    "growth_per_day": 0.0,
+    "runway_days": null
+   },
+   "kalshi_books_5m": {
+    "bytes": 50492170,
+    "growth_per_day": 1508820.4930516784,
+    "runway_days": 37745.783315026434
+   },
+   "kalshi_books": {
+    "bytes": 19844992,
+    "growth_per_day": 372805.3650206496,
+    "runway_days": 152764.9994759208
+   },
+   "crypto_funding": {
+    "bytes": 157655,
     "growth_per_day": 0.0,
     "runway_days": null
    },
@@ -317,28 +333,18 @@
    },
    "crypto_bookdepth": {
     "bytes": 107724603,
-    "growth_per_day": 1024156.2254738378,
-    "runway_days": 57047.296639698536
+    "growth_per_day": 986023.5085602286,
+    "runway_days": 57758.87785389578
    },
-   "kalshi_markets": {
-    "bytes": 53699648,
-    "growth_per_day": 807778.3849565092,
-    "runway_days": 72328.43201560242
+   "equities_daily": {
+    "bytes": 155067180,
+    "growth_per_day": 20047.517663252118,
+    "runway_days": 2840831.086852939
    },
-   "crypto_l2 2": {
-    "bytes": 871329,
-    "growth_per_day": 0.0,
-    "runway_days": null
-   },
-   "kalshi_books_5m": {
-    "bytes": 50207110,
-    "growth_per_day": 1523071.5987627169,
-    "runway_days": 38360.20844158767
-   },
-   "fred": {
-    "bytes": 2086799,
-    "growth_per_day": 97.46338423155107,
-    "runway_days": 599459422.2297322
+   "crypto_l2": {
+    "bytes": 2112507874,
+    "growth_per_day": 36502320.66612206,
+    "runway_days": 1560.2189217754863
    }
   },
   "history": [
@@ -478,6 +484,7 @@
   ]
  },
  "problems": [
+  "stale: kalshi_books_5m, crypto_l2",
   "crypto_l2 bybit: no rows in 24h",
   "kalshi_books_5m: 151 of 288 snapshots on 2026-11-19, under 60%"
  ],
@@ -1931,5 +1938,5 @@
   "adj_count": 550,
   "jump_count": 5
  },
- "summary": "crypto_l2 bybit: no rows in 24h; kalshi_books_5m: 151 of 288 snapshots on 2026-11-19, under 60%; lake 3.7 GB, +56 MB/day, disk full in 1,048 days"
+ "summary": "stale: kalshi_books_5m, crypto_l2; crypto_l2 bybit: no rows in 24h; kalshi_books_5m: 151 of 288 snapshots on 2026-11-19, under 60%; lake 3.7 GB, +56 MB/day, disk full in 1,012 days"
 }
