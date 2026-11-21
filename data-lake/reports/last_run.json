@@ -12,20 +12,19 @@
  },
  "kalshi-books": {
   "command": "kalshi-books",
-  "started": "2026-11-21T04:04:35+00:00",
-  "finished": "2026-11-21T05:00:01+00:00",
+  "started": "2026-11-21T18:03:58+00:00",
+  "finished": "2026-11-21T18:32:59+00:00",
   "steps": [
    {
     "step": "kalshi_books",
-    "status": "failed",
-    "error": "RuntimeError: kalshi_books_5m: only 3 of 300 books came back"
+    "status": "ok"
    }
   ]
  },
  "daily": {
   "command": "daily",
-  "started": "2026-11-20T03:30:05+00:00",
-  "finished": "2026-11-20T03:33:21+00:00",
+  "started": "2026-11-21T03:32:07+00:00",
+  "finished": "2026-11-21T14:45:22+00:00",
   "steps": [
    {
     "step": "equities",
@@ -33,7 +32,8 @@
    },
    {
     "step": "fred",
-    "status": "ok"
+    "status": "failed",
+    "error": "ChunkedEncodingError: (\"Connection broken: ConnectionResetError(54, 'Connection reset by peer')\", ConnectionResetError(54, 'Connection reset by peer'))"
    },
    {
     "step": "edgar",
@@ -41,7 +41,8 @@
    },
    {
     "step": "archive",
-    "status": "ok"
+    "status": "failed",
+    "error": "ConnectionError: HTTPSConnectionPool(host='data.binance.vision', port=443): Read timed out."
    }
   ]
  }

@@ -1,10 +1,10 @@
 {
- "generated_at": "2026-11-20T23:44:00.204477+00:00",
+ "generated_at": "2026-11-21T14:45:22.691461+00:00",
  "datasets": {
   "equities_daily": {
    "parts": 695,
-   "rows": 3461829,
-   "last": "2026-11-19 00:00:00",
+   "rows": 3462581,
+   "last": "2026-11-20 00:00:00",
    "stale": false,
    "gaps": [
     {
@@ -17,8 +17,8 @@
   },
   "fred": {
    "parts": 20,
-   "rows": 193740,
-   "last": "2026-11-18 00:00:00",
+   "rows": 193752,
+   "last": "2026-11-19 00:00:00",
    "stale": false,
    "gaps": [
     {
@@ -43,7 +43,7 @@
    "parts": 61,
    "rows": 4850000,
    "last": "2026-11-20 23:43:50+00:00",
-   "stale": false,
+   "stale": true,
    "gaps": [
     {
      "after": "2026-11-15 01:13:25+00:00",
@@ -102,7 +102,7 @@
    "parts": 61,
    "rows": 5981922,
    "last": "2026-11-20 23:43:50+00:00",
-   "stale": false,
+   "stale": true,
    "gaps": [
     {
      "after": "2026-11-15 01:13:25+00:00",
@@ -158,33 +158,73 @@
    "dupes": 0
   },
   "kalshi_books_5m": {
-   "parts": 604,
-   "rows": 19258020,
-   "last": "2026-11-20 20:53:15+00:00",
+   "parts": 607,
+   "rows": 19266624,
+   "last": "2026-11-21 13:00:18+00:00",
    "stale": true,
    "gaps": [
     {
+     "after": "2026-11-21 04:04:35+00:00",
+     "before": "2026-11-21 13:00:18+00:00",
+     "missing": 106
+    },
+    {
+     "after": "2026-11-20 23:53:25+00:00",
+     "before": "2026-11-21 04:04:35+00:00",
+     "missing": 49
+    },
+    {
+     "after": "2026-11-20 20:53:15+00:00",
+     "before": "2026-11-20 23:27:21+00:00",
+     "missing": 30
+    },
+    {
      "after": "2026-11-20 18:19:56+00:00",
      "before": "2026-11-20 18:43:04+00:00",
+     "missing": 4
+    },
+    {
+     "after": "2026-11-20 23:27:21+00:00",
+     "before": "2026-11-20 23:53:25+00:00",
      "missing": 4
     }
    ],
    "dupes": 0
   },
   "edgar_8k": {
-   "parts": 996,
-   "rows": 12306,
-   "last": "2026-11-19 00:00:00",
+   "parts": 997,
+   "rows": 12335,
+   "last": "2026-11-20 00:00:00",
    "stale": false,
    "gaps": [],
    "dupes": 0
   },
   "crypto_l2": {
-   "parts": 1387,
-   "rows": 7221353,
-   "last": "2026-11-20 22:15:16+00:00",
+   "parts": 1398,
+   "rows": 7222272,
+   "last": "2026-11-21 13:22:01+00:00",
    "stale": true,
    "gaps": [
+    {
+     "after": "2026-11-21 09:12:59+00:00",
+     "before": "2026-11-21 13:21:57+00:00",
+     "missing": 14937
+    },
+    {
+     "after": "2026-11-21 09:12:59+00:00",
+     "before": "2026-11-21 13:21:57+00:00",
+     "missing": 14937
+    },
+    {
+     "after": "2026-11-20 22:15:16+00:00",
+     "before": "2026-11-20 23:43:28+00:00",
+     "missing": 5291
+    },
+    {
+     "after": "2026-11-20 22:15:16+00:00",
+     "before": "2026-11-20 23:43:28+00:00",
+     "missing": 5291
+    },
     {
      "after": "2026-11-20 20:54:01+00:00",
      "before": "2026-11-20 22:15:10+00:00",
@@ -196,52 +236,32 @@
      "missing": 4867
     },
     {
-     "after": "2026-11-20 18:25:19+00:00",
-     "before": "2026-11-20 18:40:16+00:00",
-     "missing": 896
+     "after": "2026-11-21 02:52:09+00:00",
+     "before": "2026-11-21 04:04:29+00:00",
+     "missing": 4339
     },
     {
-     "after": "2026-11-20 18:25:19+00:00",
-     "before": "2026-11-20 18:40:16+00:00",
-     "missing": 896
+     "after": "2026-11-21 02:52:09+00:00",
+     "before": "2026-11-21 04:04:29+00:00",
+     "missing": 4339
     },
     {
-     "after": "2026-11-20 18:20:02+00:00",
-     "before": "2026-11-20 18:24:34+00:00",
-     "missing": 271
+     "after": "2026-11-21 06:00:13+00:00",
+     "before": "2026-11-21 07:01:22+00:00",
+     "missing": 3668
     },
     {
-     "after": "2026-11-20 18:20:02+00:00",
-     "before": "2026-11-20 18:24:34+00:00",
-     "missing": 271
-    },
-    {
-     "after": "2026-11-20 09:38:51+00:00",
-     "before": "2026-11-20 09:39:27+00:00",
-     "missing": 35
-    },
-    {
-     "after": "2026-11-20 09:38:51+00:00",
-     "before": "2026-11-20 09:39:27+00:00",
-     "missing": 35
-    },
-    {
-     "after": "2026-11-20 09:20:35+00:00",
-     "before": "2026-11-20 09:21:11+00:00",
-     "missing": 35
-    },
-    {
-     "after": "2026-11-20 09:20:35+00:00",
-     "before": "2026-11-20 09:21:11+00:00",
-     "missing": 35
+     "after": "2026-11-21 06:00:13+00:00",
+     "before": "2026-11-21 07:01:21+00:00",
+     "missing": 3667
     }
    ],
    "dupes": 0
   },
   "crypto_klines_1m": {
    "parts": 35,
-   "rows": 3021120,
-   "last": "2026-11-19 23:59:00+00:00",
+   "rows": 3024000,
+   "last": "2026-11-20 23:59:00+00:00",
    "stale": false,
    "gaps": [],
    "dupes": 0
@@ -269,40 +289,40 @@
   }
  },
  "disk": {
-  "bytes": 3682987796,
-  "free_bytes": 56951611392,
-  "window_days": 6.71,
-  "growth_per_day": 56282034.217489645,
-  "runway_days": 1011.8968190084054,
+  "bytes": 3684280337,
+  "free_bytes": 57222606848,
+  "window_days": 5.48,
+  "growth_per_day": 62184135.04296548,
+  "runway_days": 920.2123147401285,
   "low": false,
   "datasets": {
-   "crypto_klines_1m": {
-    "bytes": 215949475,
-    "growth_per_day": 187268.9387899833,
-    "runway_days": 304116.69847646
+   "kalshi_books_5m": {
+    "bytes": 50532744,
+    "growth_per_day": 1582421.1303109005,
+    "runway_days": 36161.42741771743
    },
-   "options": {
-    "bytes": 569385218,
-    "growth_per_day": 15729968.273893507,
-    "runway_days": 3620.580181749041
+   "crypto_klines_1m": {
+    "bytes": 216165471,
+    "growth_per_day": 268687.68644867366,
+    "runway_days": 212970.70812707677
    },
    "fred": {
-    "bytes": 2086799,
-    "growth_per_day": 93.83450071954141,
-    "runway_days": 606936797.8225902
+    "bytes": 2086893,
+    "growth_per_day": 132.03594965678622,
+    "runway_days": 433386566.28550214
    },
-   "kalshi_markets": {
-    "bytes": 53910872,
-    "growth_per_day": 809162.6032238656,
-    "runway_days": 70383.39533376035
-   },
-   "edgar_8k": {
-    "bytes": 211179099,
-    "growth_per_day": 165523.0166637075,
-    "runway_days": 344070.646728898
+   "crypto_l2": {
+    "bytes": 2113361969,
+    "growth_per_day": 38372423.0078666,
+    "runway_days": 1491.2429907350127
    },
    "crypto_l2 2": {
     "bytes": 871329,
+    "growth_per_day": 0.0,
+    "runway_days": null
+   },
+   "crypto_funding": {
+    "bytes": 157655,
     "growth_per_day": 0.0,
     "runway_days": null
    },
@@ -311,62 +331,43 @@
     "growth_per_day": 0.0,
     "runway_days": null
    },
-   "kalshi_books_5m": {
-    "bytes": 50492170,
-    "growth_per_day": 1508820.4930516784,
-    "runway_days": 37745.783315026434
+   "edgar_8k": {
+    "bytes": 211332009,
+    "growth_per_day": 230556.47014219785,
+    "runway_days": 248193.45478661876
    },
    "kalshi_books": {
     "bytes": 19844992,
-    "growth_per_day": 372805.3650206496,
-    "runway_days": 152764.9994759208
+    "growth_per_day": 393372.2975271932,
+    "runway_days": 145466.79369063678
    },
-   "crypto_funding": {
-    "bytes": 157655,
-    "growth_per_day": 0.0,
-    "runway_days": null
+   "crypto_bookdepth": {
+    "bytes": 107724603,
+    "growth_per_day": 1207310.2799977027,
+    "runway_days": 47396.769327690046
    },
    "okx_trades_1m": {
     "bytes": 4724580,
     "growth_per_day": 0.0,
     "runway_days": null
    },
-   "crypto_bookdepth": {
-    "bytes": 107724603,
-    "growth_per_day": 986023.5085602286,
-    "runway_days": 57758.87785389578
+   "options": {
+    "bytes": 569385218,
+    "growth_per_day": 19260141.60538581,
+    "runway_days": 2971.037701612669
+   },
+   "kalshi_markets": {
+    "bytes": 53910872,
+    "growth_per_day": 839278.4897091284,
+    "runway_days": 68180.71420826219
    },
    "equities_daily": {
-    "bytes": 155067180,
-    "growth_per_day": 20047.517663252118,
-    "runway_days": 2840831.086852939
-   },
-   "crypto_l2": {
-    "bytes": 2112507874,
-    "growth_per_day": 36502320.66612206,
-    "runway_days": 1560.2189217754863
+    "bytes": 155096052,
+    "growth_per_day": 29812.03962761719,
+    "runway_days": 1919446.22249161
    }
   },
   "history": [
-   {
-    "at": "2026-11-13T07:17:41.152599+00:00",
-    "bytes": {
-     "crypto_funding": 157655,
-     "edgar_8k": 209924612,
-     "okx_trades_1m": 4724580,
-     "options": 444273612,
-     "equities_daily": 154906989,
-     "kalshi_markets": 47861636,
-     "fred": 2085957,
-     "crypto_l2": 1843707664,
-     "kalshi_books_5m": 39252319,
-     "crypto_l2 2": 871329,
-     "crypto_bookdepth": 100090774,
-     "crypto_klines_1m": 214476951,
-     "kalshi_books": 17108684,
-     "crypto_perp_klines_1m": 179085950
-    }
-   },
    {
     "at": "2026-11-14T06:35:55.059007+00:00",
     "bytes": {
@@ -480,13 +481,33 @@
      "edgar_8k": 211179099,
      "kalshi_markets": 53174679
     }
+   },
+   {
+    "at": "2026-11-21T14:45:22.691461+00:00",
+    "bytes": {
+     "kalshi_books_5m": 50532744,
+     "crypto_klines_1m": 216165471,
+     "fred": 2086893,
+     "crypto_l2": 2113361969,
+     "crypto_l2 2": 871329,
+     "crypto_funding": 157655,
+     "crypto_perp_klines_1m": 179085950,
+     "edgar_8k": 211332009,
+     "kalshi_books": 19844992,
+     "crypto_bookdepth": 107724603,
+     "okx_trades_1m": 4724580,
+     "options": 569385218,
+     "kalshi_markets": 53910872,
+     "equities_daily": 155096052
+    }
    }
   ]
  },
  "problems": [
-  "stale: kalshi_books_5m, crypto_l2",
-  "crypto_l2 bybit: no rows in 24h",
-  "kalshi_books_5m: 151 of 288 snapshots on 2026-11-19, under 60%"
+  "stale: kalshi_markets, kalshi_books, kalshi_books_5m, crypto_l2",
+  "daily run 2026-11-21T03:32Z: fred failed: ChunkedEncodingError: (\"Connection broken: ConnectionResetError(54, 'Connection reset by peer')\", ConnectionResetError(5",
+  "daily run 2026-11-21T03:32Z: archive failed: ConnectionError: HTTPSConnectionPool(host='data.binance.vision', port=443): Read timed out.",
+  "crypto_l2 bybit: no rows in 24h"
  ],
  "ok": false,
  "splices": {
@@ -568,6 +589,9 @@
    "AMG": [
     "2026-10-15"
    ],
+   "AMGN": [
+    "2026-10-15"
+   ],
    "AMP": [
     "2026-10-15"
    ],
@@ -630,6 +654,9 @@
    "BAX": [
     "2026-08-28"
    ],
+   "BBWI": [
+    "2026-10-15"
+   ],
    "BBY": [
     "2026-09-10"
    ],
@@ -666,6 +693,12 @@
    ],
    "BRO": [
     "2026-09-28"
+   ],
+   "BTU": [
+    "2026-10-15"
+   ],
+   "BUD": [
+    "2026-10-15"
    ],
    "BWA": [
     "2026-09-01"
@@ -712,6 +745,9 @@
    ],
    "CCL": [
     "2026-09-29"
+   ],
+   "CCU": [
+    "2026-10-15"
    ],
    "CE": [
     "2026-09-28"
@@ -913,6 +949,9 @@
    "ETR": [
     "2026-10-15"
    ],
+   "EVRG": [
+    "2026-10-15"
+   ],
    "EXC": [
     "2026-08-28",
     "2026-09-04"
@@ -945,6 +984,9 @@
    ],
    "FE": [
     "2026-09-29"
+   ],
+   "FERG": [
+    "2026-10-15"
    ],
    "FHN": [
     "2026-09-03"
@@ -1300,6 +1342,9 @@
    "MCK": [
     "2026-09-01"
    ],
+   "MCO": [
+    "2026-10-15"
+   ],
    "MDLZ": [
     "2026-09-22"
    ],
@@ -1582,6 +1627,9 @@
    "REG": [
     "2026-09-03"
    ],
+   "REGN": [
+    "2026-10-15"
+   ],
    "RF": [
     "2026-09-01"
    ],
@@ -1616,6 +1664,9 @@
     "2026-09-24",
     "2026-09-28"
    ],
+   "RTX": [
+    "2026-10-15"
+   ],
    "RVTY": [
     "2026-09-28"
    ],
@@ -1649,6 +1700,9 @@
    "SLM": [
     "2026-08-28",
     "2026-09-04"
+   ],
+   "SNA": [
+    "2026-10-15"
    ],
    "SO": [
     "2026-10-15"
@@ -1712,6 +1766,9 @@
     "2026-08-28"
    ],
    "TECH": [
+    "2026-10-15"
+   ],
+   "TEL": [
     "2026-10-15"
    ],
    "TER": [
@@ -1828,7 +1885,8 @@
     "2026-09-25"
    ],
    "VNT": [
-    "2026-09-03"
+    "2026-09-03",
+    "2026-10-15"
    ],
    "VRSK": [
     "2026-09-04",
@@ -1935,8 +1993,8 @@
     "2026-10-15"
    ]
   },
-  "adj_count": 550,
+  "adj_count": 563,
   "jump_count": 5
  },
- "summary": "stale: kalshi_books_5m, crypto_l2; crypto_l2 bybit: no rows in 24h; kalshi_books_5m: 151 of 288 snapshots on 2026-11-19, under 60%; lake 3.7 GB, +56 MB/day, disk full in 1,012 days"
+ "summary": "stale: kalshi_markets, kalshi_books, kalshi_books_5m, crypto_l2; daily run 2026-11-21T03:32Z: fred failed: ChunkedEncodingError: (\"Connection broken: ConnectionResetError(54, 'Connection reset by peer')\", ConnectionResetError(5; daily run 2026-11-21T03:32Z: archive failed: ConnectionError: HTTPSConnectionPool(host='data.binance.vision', port=443): Read timed out.; crypto_l2 bybit: no rows in 24h; lake 3.7 GB, +62 MB/day, disk full in 920 days"
 }
