@@ -1,8 +1,8 @@
 {
  "hourly": {
   "command": "hourly",
-  "started": "2026-11-22T08:11:00+00:00",
-  "finished": "2026-11-22T08:11:09+00:00",
+  "started": "2026-11-22T11:11:38+00:00",
+  "finished": "2026-11-22T11:11:47+00:00",
   "steps": [
    {
     "step": "kalshi",
@@ -12,12 +12,13 @@
  },
  "kalshi-books": {
   "command": "kalshi-books",
-  "started": "2026-11-22T08:55:17+00:00",
-  "finished": "2026-11-22T08:56:45+00:00",
+  "started": "2026-11-22T14:45:50+00:00",
+  "finished": "2026-11-22T17:04:59+00:00",
   "steps": [
    {
     "step": "kalshi_books",
-    "status": "ok"
+    "status": "failed",
+    "error": "ConnectionError: HTTPSConnectionPool(host='api.elections.kalshi.com', port=443): Max retries exceeded with url: /trade-api/v2/markets?status=open&limit=1000&mve_filter=exclude (Caused by NameResolutionError(\"HTTPSConnection(host='api.elections.kalshi.com', port=443): Failed to resolve 'api.elections.kalshi.com' ([Errno 8] nodename nor servname provided, or not known)\"))"
    }
   ]
  },

@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-11-22T08:11:09.571749+00:00",
+ "generated_at": "2026-11-22T11:11:47.537672+00:00",
  "datasets": {
   "equities_daily": {
    "parts": 695,
@@ -41,8 +41,8 @@
   },
   "kalshi_markets": {
    "parts": 62,
-   "rows": 4860000,
-   "last": "2026-11-22 08:11:00+00:00",
+   "rows": 4875000,
+   "last": "2026-11-22 11:11:38+00:00",
    "stale": false,
    "gaps": [
     {
@@ -100,8 +100,8 @@
   },
   "kalshi_books": {
    "parts": 62,
-   "rows": 6001045,
-   "last": "2026-11-22 08:11:00+00:00",
+   "rows": 6024143,
+   "last": "2026-11-22 11:11:38+00:00",
    "stale": false,
    "gaps": [
     {
@@ -158,9 +158,9 @@
    "dupes": 0
   },
   "kalshi_books_5m": {
-   "parts": 615,
-   "rows": 19335584,
-   "last": "2026-11-22 08:03:28+00:00",
+   "parts": 618,
+   "rows": 19444631,
+   "last": "2026-11-22 11:04:49+00:00",
    "stale": false,
    "gaps": [
     {
@@ -225,9 +225,9 @@
    "dupes": 0
   },
   "crypto_l2": {
-   "parts": 1417,
-   "rows": 7231575,
-   "last": "2026-11-22 08:11:00+00:00",
+   "parts": 1420,
+   "rows": 7253189,
+   "last": "2026-11-22 11:11:07+00:00",
    "stale": false,
    "gaps": [
     {
@@ -271,14 +271,14 @@
      "missing": 3756
     },
     {
-     "after": "2026-11-21 06:00:13+00:00",
-     "before": "2026-11-21 07:01:22+00:00",
-     "missing": 3668
+     "after": "2026-11-21 15:54:47+00:00",
+     "before": "2026-11-21 16:55:38+00:00",
+     "missing": 3650
     },
     {
-     "after": "2026-11-21 06:00:13+00:00",
-     "before": "2026-11-21 07:01:21+00:00",
-     "missing": 3667
+     "after": "2026-11-21 15:54:47+00:00",
+     "before": "2026-11-21 16:55:38+00:00",
+     "missing": 3650
     }
    ],
    "dupes": 0
@@ -314,82 +314,82 @@
   }
  },
  "disk": {
-  "bytes": 3688471352,
-  "free_bytes": 57164857344,
-  "window_days": 6.21,
-  "growth_per_day": 55586373.682441026,
-  "runway_days": 1028.3969533716424,
+  "bytes": 3697042969,
+  "free_bytes": 56854405120,
+  "window_days": 6.34,
+  "growth_per_day": 55838763.03260687,
+  "runway_days": 1018.1888357161503,
   "low": false,
   "datasets": {
-   "equities_daily": {
-    "bytes": 155096052,
-    "growth_per_day": 26325.400427717315,
-    "runway_days": 2171471.5223785406
-   },
-   "kalshi_markets": {
-    "bytes": 54038684,
-    "growth_per_day": 761704.4535550805,
-    "runway_days": 75048.60589589068
-   },
-   "crypto_bookdepth": {
-    "bytes": 107724603,
-    "growth_per_day": 1066110.4358655172,
-    "runway_days": 53620.01479480027
+   "edgar_8k": {
+    "bytes": 211332009,
+    "growth_per_day": 199560.646975292,
+    "runway_days": 284897.8793250718
    },
    "crypto_klines_1m": {
     "bytes": 216165471,
-    "growth_per_day": 237263.56948773595,
-    "runway_days": 240933.98521914604
+    "growth_per_day": 232565.53376672268,
+    "runway_days": 244466.16916601412
+   },
+   "crypto_bookdepth": {
+    "bytes": 107724603,
+    "growth_per_day": 1045000.4739735373,
+    "runway_days": 54406.10462482884
+   },
+   "options": {
+    "bytes": 569385218,
+    "growth_per_day": 16670823.929755585,
+    "runway_days": 3410.4136279983827
    },
    "crypto_l2 2": {
     "bytes": 871329,
     "growth_per_day": 0.0,
     "runway_days": null
    },
-   "okx_trades_1m": {
-    "bytes": 4724580,
-    "growth_per_day": 0.0,
-    "runway_days": null
-   },
-   "kalshi_books": {
-    "bytes": 19920067,
-    "growth_per_day": 359455.9745500528,
-    "runway_days": 159031.5960544426
+   "equities_daily": {
+    "bytes": 155096052,
+    "growth_per_day": 25804.133417166897,
+    "runway_days": 2203306.1215757034
    },
    "kalshi_books_5m": {
-    "bytes": 50770221,
-    "growth_per_day": 1435594.1221292368,
-    "runway_days": 39819.65129476466
+    "bytes": 51077557,
+    "growth_per_day": 1455681.773445253,
+    "runway_days": 39056.891524745224
    },
    "crypto_funding": {
     "bytes": 157655,
     "growth_per_day": 0.0,
     "runway_days": null
    },
-   "options": {
-    "bytes": 569385218,
-    "growth_per_day": 17007589.765398603,
-    "runway_days": 3361.1380643893513
+   "fred": {
+    "bytes": 2086893,
+    "growth_per_day": 114.28514463833629,
+    "runway_days": 497478524.4391992
+   },
+   "kalshi_books": {
+    "bytes": 19995493,
+    "growth_per_day": 364244.59328467626,
+    "runway_days": 156088.5354736489
+   },
+   "okx_trades_1m": {
+    "bytes": 4724580,
+    "growth_per_day": 0.0,
+    "runway_days": null
    },
    "crypto_perp_klines_1m": {
     "bytes": 179085950,
     "growth_per_day": 0.0,
     "runway_days": null
    },
-   "fred": {
-    "bytes": 2086893,
-    "growth_per_day": 116.59380870904347,
-    "runway_days": 490290676.46853596
-   },
    "crypto_l2": {
-    "bytes": 2117112620,
-    "growth_per_day": 34488621.41331288,
-    "runway_days": 1657.4990533525329
+    "bytes": 2125164661,
+    "growth_per_day": 35076749.23468149,
+    "runway_days": 1620.8573017874262
    },
-   "edgar_8k": {
-    "bytes": 211332009,
-    "growth_per_day": 203591.95390548767,
-    "runway_days": 280781.51541557146
+   "kalshi_markets": {
+    "bytes": 54175498,
+    "growth_per_day": 768218.4281625076,
+    "runway_days": 74008.12455903897
    }
   },
   "history": [
@@ -2002,5 +2002,5 @@
   "adj_count": 563,
   "jump_count": 5
  },
- "summary": "daily run 2026-11-21T03:32Z: fred failed: ChunkedEncodingError: (\"Connection broken: ConnectionResetError(54, 'Connection reset by peer')\", ConnectionResetError(5; daily run 2026-11-21T03:32Z: archive failed: ConnectionError: HTTPSConnectionPool(host='data.binance.vision', port=443): Read timed out.; crypto_l2 bybit: no rows in 24h; kalshi_books_5m: 5 of 288 snapshots on 2026-11-21, under 60%; lake 3.7 GB, +56 MB/day, disk full in 1,028 days"
+ "summary": "daily run 2026-11-21T03:32Z: fred failed: ChunkedEncodingError: (\"Connection broken: ConnectionResetError(54, 'Connection reset by peer')\", ConnectionResetError(5; daily run 2026-11-21T03:32Z: archive failed: ConnectionError: HTTPSConnectionPool(host='data.binance.vision', port=443): Read timed out.; crypto_l2 bybit: no rows in 24h; kalshi_books_5m: 5 of 288 snapshots on 2026-11-21, under 60%; lake 3.7 GB, +56 MB/day, disk full in 1,018 days"
 }
