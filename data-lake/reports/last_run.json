@@ -12,8 +12,8 @@
  },
  "kalshi-books": {
   "command": "kalshi-books",
-  "started": "2026-11-23T00:24:48+00:00",
-  "finished": "2026-11-23T04:48:10+00:00",
+  "started": "2026-11-23T11:53:22+00:00",
+  "finished": "2026-11-23T13:01:30+00:00",
   "steps": [
    {
     "step": "kalshi_books",
