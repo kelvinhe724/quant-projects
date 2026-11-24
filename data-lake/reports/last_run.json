@@ -1,19 +1,20 @@
 {
  "hourly": {
   "command": "hourly",
-  "started": "2026-11-22T11:11:38+00:00",
-  "finished": "2026-11-22T11:11:47+00:00",
+  "started": "2026-11-24T06:51:20+00:00",
+  "finished": "2026-11-24T08:46:04+00:00",
   "steps": [
    {
     "step": "kalshi",
-    "status": "ok"
+    "status": "failed",
+    "error": "ConnectionError: HTTPSConnectionPool(host='api.elections.kalshi.com', port=443): Max retries exceeded with url: /trade-api/v2/markets?status=open&limit=1000&mve_filter=exclude (Caused by NameResolutionError(\"HTTPSConnection(host='api.elections.kalshi.com', port=443): Failed to resolve 'api.elections.kalshi.com' ([Errno 8] nodename nor servname provided, or not known)\"))"
    }
   ]
  },
  "kalshi-books": {
   "command": "kalshi-books",
-  "started": "2026-11-23T11:53:22+00:00",
-  "finished": "2026-11-23T13:01:30+00:00",
+  "started": "2026-11-24T06:51:17+00:00",
+  "finished": "2026-11-24T08:46:01+00:00",
   "steps": [
    {
     "step": "kalshi_books",
@@ -24,8 +25,8 @@
  },
  "daily": {
   "command": "daily",
-  "started": "2026-11-21T03:32:07+00:00",
-  "finished": "2026-11-21T14:45:22+00:00",
+  "started": "2026-11-24T03:30:05+00:00",
+  "finished": "2026-11-24T03:34:11+00:00",
   "steps": [
    {
     "step": "equities",
@@ -33,8 +34,7 @@
    },
    {
     "step": "fred",
-    "status": "failed",
-    "error": "ChunkedEncodingError: (\"Connection broken: ConnectionResetError(54, 'Connection reset by peer')\", ConnectionResetError(54, 'Connection reset by peer'))"
+    "status": "ok"
    },
    {
     "step": "edgar",
@@ -42,8 +42,7 @@
    },
    {
     "step": "archive",
-    "status": "failed",
-    "error": "ConnectionError: HTTPSConnectionPool(host='data.binance.vision', port=443): Read timed out."
+    "status": "ok"
    }
   ]
  }
