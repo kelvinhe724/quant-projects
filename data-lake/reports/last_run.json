@@ -12,13 +12,13 @@
  },
  "kalshi-books": {
   "command": "kalshi-books",
-  "started": "2026-11-26T07:24:22+00:00",
-  "finished": "2026-11-26T07:45:30+00:00",
+  "started": "2026-11-26T16:30:14+00:00",
+  "finished": "2026-11-26T16:40:29+00:00",
   "steps": [
    {
     "step": "kalshi_books",
     "status": "failed",
-    "error": "RuntimeError: kalshi_books_5m: only 50 of 300 books came back"
+    "error": "RuntimeError: kalshi_books_5m: only 70 of 300 books came back"
    }
   ]
  },
